@@ -1,0 +1,5 @@
+nihao	你好	1000
+nihao	你号	100
+zhongguo	中国	1000
+shijie	世界	800
+ceshi	测试	500
