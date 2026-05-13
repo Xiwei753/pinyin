@@ -1,0 +1,5 @@
+# Linux specific settings
+linux:
+  candidate_count: 5
+  follow_cursor: true
+  theme_name: default

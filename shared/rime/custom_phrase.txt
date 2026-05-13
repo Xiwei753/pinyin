@@ -1,0 +1,4 @@
+# Rime custom phrase for Xiwei Pinyin
+# format: phrase	code	weight
+# example:
+# 希为	xiwei	100

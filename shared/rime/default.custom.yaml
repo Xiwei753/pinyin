@@ -1,0 +1,11 @@
+customization:
+  distribution_code_name: Weasel
+  distribution_version: 0.14.3
+  generator: "Xiwei"
+  modified_time: "2024-01-01 00:00:00"
+  rime_version: 1.5.3
+
+patch:
+  schema_list:
+    - schema: xiwei_pinyin
+    - schema: xiwei_t9

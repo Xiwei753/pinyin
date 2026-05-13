@@ -1,0 +1,10 @@
+# Rime dictionary for Xiwei Pinyin
+---
+name: xiwei_pinyin
+version: "0.1"
+sort: by_weight
+use_preset_vocabulary: true
+...
+测试	ce shi	100
+输入法	shu ru fa	100
+希为	xi wei	100

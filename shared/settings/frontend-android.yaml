@@ -1,0 +1,7 @@
+# Android specific settings
+android:
+  keyboard_layout: t9
+  enable_key_vibration: true
+  enable_key_sound: false
+  enable_smooth_animation: true
+  theme_name: default
