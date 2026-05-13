@@ -10,7 +10,7 @@ echo "=== 初始化私人用户数据仓库 ==="
 # 确保有 user.yaml
 if [ ! -f "shared/settings/user.yaml" ]; then
     echo "未找到 shared/settings/user.yaml，正在从模板复制..."
-    cp "shared/settings/user.example.yaml" "shared/settings/user.yaml"
+    cp "shared/settings/user.example.yaml" "shared/settings/user.yaml" || true
     echo "请配置 shared/settings/user.yaml 后再次运行此脚本。"
     exit 1
 fi

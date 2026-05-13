@@ -2,11 +2,11 @@
 schema:
   schema_id: xiwei_t9
   name: "希为九宫格"
-  version: "0.1"
+  version: "0.2"
   author:
     - Xiwei
   description: |
-    Personal customized T9 Pinyin schema.
+    Personal customized T9 Pinyin schema (Prototype).
 
 switches:
   - name: ascii_mode
@@ -34,8 +34,17 @@ engine:
     - script_translator
 
 speller:
-  alphabet: "0123456789"
+  alphabet: "23456789"
   delimiter: " '"
+  algebra:
+    - xform/[abc]/2/
+    - xform/[def]/3/
+    - xform/[ghi]/4/
+    - xform/[jkl]/5/
+    - xform/[mno]/6/
+    - xform/[pqrs]/7/
+    - xform/[tuv]/8/
+    - xform/[wxyz]/9/
 
 translator:
   dictionary: xiwei_pinyin

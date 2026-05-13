@@ -2,11 +2,10 @@
 
 这个项目不是一个单一的输入法 App，而是一个**跨端个人拼音输入法基层方案**。
 
-我们的目标是：
-1. **多端共享字库和设置**
-2. **通过 GitHub 私人仓库同步隐私数据**
-3. **Linux 和 Android 分别实现独立前端，追求各自平台的极致流畅**
-4. **两端共享核心能力，不强行共享 UI**
+## 当前阶段目标
+- 不是写完整 Android App。
+- 不是写完整 fcitx5 插件。
+- 是**先跑通 shared 层**：字库、设置、Rime 配置、私人同步规则。
 
 ## 项目架构
 
@@ -27,13 +26,23 @@
   - `validate/`: 配置文件、词库合法性校验工具。
 - **`personal-ime-core/`**: Python 实验室，用于研究词频、候选排序、九键逻辑等核心算法。它不是主线应用，而是研究和测试验证工具。
 
-## 仓库分工与隐私
+## 下一步测试方式
 
-本项目支持明确的 Public / Private 分流机制：
-- **Public 仓库 (此仓库)**：存放代码、目录模板、默认配置和开源基础词库。
-- **Private 仓库 (个人数据)**：存放个人的输入法字库、用户设定的配置 (`user.yaml`)、自定义短语 (`custom_phrase.txt`) 以及敏感词频。通过 `tools/sync` 的脚本在多设备之间自动同步。**切记：Token 不能写进仓库中，请使用 SSH Keys 或环境变量进行验证！**
+1. **Linux 端部署**
+   运行脚本：`frontends/linux-fcitx5/fcitx5/deploy-rime.sh`
+   此脚本会自动将配置部署至 `~/.local/share/fcitx5/rime/`。
 
-## 下一步计划
+2. **Android 端打包**
+   运行脚本：`frontends/android-ime/rime-package/package-rime-config.sh`
+   此脚本会在 `build/` 目录下生成打包文件，方便在 Android 平台中导入。
 
-1. 第一阶段：**跑通 Rime 最小可用配置**。通过 Rime 作为共享核心，完成在 PC 和手机端基础打字和私有仓库同步的流程。
-2. 后续阶段：逐步分离 Linux 和 Android 的专属前端，在基础完善后，如果 Rime 的性能和扩展性不能满足要求，再考虑 Rust 或 C++ 自研跨端共享核心。
+3. **私人同步**
+   先配置 `shared/settings/user.yaml`。
+   然后运行：`tools/sync/init-private-repo.sh` 初始化私人仓库。
+   之后可通过 `tools/sync/pull-private.sh` 和 `tools/sync/push-private.sh` 进行双向同步。
+
+## 注意事项
+
+- **九键状态**：目前的 `shared/rime/xiwei_t9.schema.yaml` 是初步的**实验性实现**方案，提供了基础的字母到数字映射，未来会继续优化。
+- **隐私保护**：**私人词库绝不能提交到 public 仓库中**。请务必确认私人文件已被加入 `.gitignore`。
+- **Token 安全**：切记不要将 GitHub token 写入代码，请使用环境变量或 SSH keys 验证权限。
