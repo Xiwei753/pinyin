@@ -1,4 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 自动定位仓库根目录
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+cd "$REPO_ROOT"
+
 # 备份旧配置
 echo "开始备份旧的 fcitx5 rime 配置..."
 if [ -d ~/.local/share/fcitx5/rime/ ]; then

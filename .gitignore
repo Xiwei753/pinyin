@@ -1,0 +1,11 @@
+.private_sync/
+build/
+*.zip
+*.userdb/
+*.userdb
+*.log
+.cache/
+.DS_Store
+__pycache__/
+.pytest_cache/
+.venv/

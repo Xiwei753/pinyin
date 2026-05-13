@@ -5,6 +5,18 @@ version: "0.1"
 sort: by_weight
 use_preset_vocabulary: true
 ...
-测试	ce shi	100
-输入法	shu ru fa	100
-希为	xi wei	100
+你好	ni hao	1000
+输入法	shu ru fa	900
+拼音	pin yin	800
+中国	zhong guo	700
+测试	ce shi	600
+Linux	linux	500
+Android	android	500
+九键	jiu jian	500
+词库	ci ku	400
+同步	tong bu	400
+设置	she zhi	400
+候选	hou xuan	300
+前端	qian duan	300
+核心	he xin	300
+仓库	cang ku	300
