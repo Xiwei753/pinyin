@@ -1,0 +1,6 @@
+# Example user settings
+# Please copy this to user.yaml and customize
+user:
+  name: "Xiwei"
+  private_repo_url: "git@github.com:username/private-ime-data.git"
+  auto_sync_interval_hours: 24

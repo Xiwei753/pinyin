@@ -1,0 +1,10 @@
+# Shared features configuration
+input:
+  enable_full_pinyin: true
+  enable_t9: true
+  enable_custom_phrase: true
+  enable_user_frequency: true
+  enable_fuzzy_pinyin: false
+  enable_emoji: false
+  enable_symbols: true
+  enable_simplified_chinese: true
