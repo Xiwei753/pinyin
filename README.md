@@ -26,20 +26,34 @@
   - `validate/`: 配置文件、词库合法性校验工具。
 - **`personal-ime-core/`**: Python 实验室，用于研究词频、候选排序、九键逻辑等核心算法。它不是主线应用，而是研究和测试验证工具。
 
-## 下一步测试方式
+## 第一轮 Linux 测试步骤
 
-1. **Linux 端部署**
-   运行脚本：`frontends/linux-fcitx5/fcitx5/deploy-rime.sh`
-   此脚本会自动将配置部署至 `~/.local/share/fcitx5/rime/`。
+如果您使用的是 openSUSE / Tumbleweed 等 Linux 发行版，可以按照以下步骤进行第一轮测试：
 
-2. **Android 端打包**
-   运行脚本：`frontends/android-ime/rime-package/package-rime-config.sh`
-   此脚本会在 `build/` 目录下生成打包文件，方便在 Android 平台中导入。
+```bash
+chmod +x frontends/linux-fcitx5/fcitx5/*.sh
+bash frontends/linux-fcitx5/fcitx5/install-fcitx5-rime.sh
+bash frontends/linux-fcitx5/fcitx5/backup-rime.sh
+bash frontends/linux-fcitx5/fcitx5/deploy-rime.sh
+python tools/validate/check-all.py
+```
 
-3. **私人同步**
-   先配置 `shared/settings/user.yaml`。
-   然后运行：`tools/sync/init-private-repo.sh` 初始化私人仓库。
-   之后可通过 `tools/sync/pull-private.sh` 和 `tools/sync/push-private.sh` 进行双向同步。
+部署并检查通过后，请按如下步骤使用：
+1. 重启 fcitx5 或重新部署 Rime。
+2. 在输入法方案里选择“希为拼音”。
+3. 先测试基础拼音输入（例如：`nihao`、`shurufa`、`pinyin`）。
+4. **注意**：九键当前是实验方案，先不要当成已完成日用功能。
+
+## 后续测试说明（供参考）
+
+**Android 端打包**
+运行脚本：`frontends/android-ime/rime-package/package-rime-config.sh`
+此脚本会在 `build/` 目录下生成打包文件，方便在 Android 平台中导入。
+
+**私人同步**
+先配置 `shared/settings/user.yaml`。
+然后运行：`tools/sync/init-private-repo.sh` 初始化私人仓库。
+之后可通过 `tools/sync/pull-private.sh` 和 `tools/sync/push-private.sh` 进行双向同步。
 
 ## 注意事项
 

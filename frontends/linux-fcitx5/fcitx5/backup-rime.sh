@@ -7,10 +7,21 @@ cd "$REPO_ROOT"
 
 # 备份旧配置
 echo "开始备份旧的 fcitx5 rime 配置..."
-if [ -d ~/.local/share/fcitx5/rime/ ]; then
-  mkdir -p ~/.local/share/fcitx5/rime_backup_$(date +%Y%m%d%H%M%S)/
-  cp -r ~/.local/share/fcitx5/rime/* ~/.local/share/fcitx5/rime_backup_$(date +%Y%m%d%H%M%S)/
-  echo "备份完成！"
+
+RIME_DIR="$HOME/.local/share/fcitx5/rime"
+
+if [ -d "$RIME_DIR" ]; then
+  # 检查目录是否为空
+  if [ -z "$(ls -A "$RIME_DIR")" ]; then
+    echo "现有 rime 配置目录为空，跳过备份。"
+  else
+    timestamp="$(date +%Y%m%d%H%M%S)"
+    backup_dir="$HOME/.local/share/fcitx5/rime_backup_$timestamp"
+
+    mkdir -p "$backup_dir"
+    cp -r "$RIME_DIR"/* "$backup_dir"/
+    echo "备份完成！备份路径: $backup_dir"
+  fi
 else
   echo "未找到现有配置，跳过备份。"
 fi

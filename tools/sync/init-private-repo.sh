@@ -28,7 +28,10 @@ if [ -d "$PRIVATE_DIR" ]; then
     echo "私人数据目录已存在：$PRIVATE_DIR"
 else
     echo "克隆私人仓库：$PRIVATE_REPO_URL 到 $PRIVATE_DIR"
-    git clone "$PRIVATE_REPO_URL" "$PRIVATE_DIR" || true
+    if ! git clone "$PRIVATE_REPO_URL" "$PRIVATE_DIR"; then
+        echo "错误：克隆私人仓库失败，请检查 URL 权限或网络。"
+        exit 1
+    fi
 fi
 
 echo "私人数据仓库初始化完成。"
