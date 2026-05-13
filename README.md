@@ -1,11 +1,27 @@
-# pinyin
+# 跨端个人拼音输入法底座
 
-本仓库当前包含 `personal-ime-core/`：一个 Python 3.11+ 实现的个人用中文拼音输入法核心最小原型。
+这个仓库不是单纯的 Python 原型。这是一个**跨 Linux 和 Android 的个人拼音输入法底座**。
 
-当前阶段仅实现 standalone IME core，尚未接入 fcitx5。
+## 核心理念
 
-详见 [`personal-ime-core/README.md`](personal-ime-core/README.md)。
+- **共享核心输入能力，不是 UI**：Linux 和 Android 前端完全分开编写，针对不同平台定制最原生的体验，但共用同一套底层输入契约。
+- **阶段性演进**：
+  - **第一阶段**：使用 **Rime (中州韵)** 作为核心实现，快速落地并在两端提供稳定体验。
+  - **未来演进**：如果 Rime 在特殊需求（如高度自定义的九键纠错、特殊词频记忆逻辑）下不够用，可逐步将核心替换为自研实现，而前端只遵守统一的 `core/` 契约，做到平滑过渡。
+- **保留实验室**：`personal-ime-core/` 目录已被保留，作为研究词频、候选排序、九键逻辑的 Python 实验室，暂不作为主线硬扩展。
+
+## 目录结构说明
+
+- `core/`: 共享核心契约层。定义了前端与核心的交互协议。
+- `rime/`: 第一阶段的输入法核心实现。包含了全拼（`xiwei_pinyin`）、九键（`xiwei_t9`）配置。
+- `config/`: 跨端通用的功能开关配置底座 (`features.yaml`)。
+- `dictionary/`: 词库层，包含基础词库、用户词库及外部导入词库的目录。
+- `linux/`: Linux 端部署脚本及配置（第一阶段依托 `fcitx5-rime`）。
+- `android/`: Android 端部署及打包脚本（第一阶段生成包供现有 Rime 宿主导入）。
+- `sync/`: 自动化的配置和词库同步脚本。
+- `tests/cases/`: 标准化的测试样例（包括全拼、九键和自定义短语），未来自研核心和 Rime 配置都需通过这些验收样例。
 
 ## 文档
 
+- [核心契约说明](core/README.md)
 - [词库格式说明](docs/dictionary-format.md)

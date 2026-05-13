@@ -1,0 +1,6 @@
+# 自定义短语测试样例
+cases:
+  - input: "sysdate"
+    expected_contains: "202"  # 期望包含当前年份或其他日期格式
+  - input: "mymail"
+    expected: "example@example.com"

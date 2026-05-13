@@ -1,0 +1,8 @@
+# 全拼测试样例
+cases:
+  - input: "nihao"
+    expected: "你好"
+  - input: "shurufa"
+    expected: "输入法"
+  - input: "pinyin"
+    expected: "拼音"

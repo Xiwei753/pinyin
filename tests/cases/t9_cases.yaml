@@ -1,0 +1,8 @@
+# 九键测试样例
+cases:
+  - input: "64426"
+    expected: "你好"
+  - input: "7487832"
+    expected: "输入法"
+  - input: "746946"
+    expected: "拼音"
