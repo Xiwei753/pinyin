@@ -16,7 +16,10 @@ fi
 
 cd "$PRIVATE_DIR"
 echo "正在从远程拉取最新更改..."
-git pull origin main || true
+if ! git pull origin main; then
+    echo "错误：拉取私人仓库数据失败，可能是网络问题或合并冲突。"
+    exit 1
+fi
 
 echo "同步文件到工作区..."
 # 这里是将 .private_sync/ 的文件覆盖到 shared/ 等对应位置

@@ -30,7 +30,10 @@ if [ -n "$(git status --porcelain 2>/dev/null || true)" ]; then
     echo "检测到更改，正在提交并推送..."
     git add .
     git commit -m "Auto-sync private data: $(date +'%Y-%m-%d %H:%M:%S')" || true
-    git push origin main || true
+    if ! git push origin main; then
+        echo "错误：推送私人仓库失败，请检查网络或是否需要先 pull 解决冲突。"
+        exit 1
+    fi
     echo "推送成功。"
 else
     echo "没有检测到需要同步的更改。"
