@@ -1,12 +1,10 @@
 package io.github.xiwei753.pinyin.t9.core
 
-import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
+import io.github.xiwei753.pinyin.t9.data.DictionaryProvider
 
-class T9Engine {
+class T9Engine(private val dictionary: DictionaryProvider) {
     var buffer = ""
         private set
-
-    private val builtinDictionary = BuiltinDictionary()
 
     fun inputDigit(digit: String) {
         if (digit.matches(Regex("^[2-9]$"))) {
@@ -25,7 +23,7 @@ class T9Engine {
     }
 
     fun getCandidates(): List<Candidate> {
-        return builtinDictionary.getCandidates(buffer)
+        return dictionary.getCandidates(buffer)
     }
 
     fun selectCandidate(index: Int): Candidate? {
