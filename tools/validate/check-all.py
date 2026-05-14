@@ -7,7 +7,8 @@ def main():
 
     scripts_to_run = [
         "tools/validate/validate_structure.py",
-        "tools/validate/validate_rime_files.py"
+        "tools/validate/validate_rime_files.py",
+        "tools/validate/validate_rime_smoke.py"
     ]
 
     all_passed = True

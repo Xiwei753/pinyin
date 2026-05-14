@@ -13,6 +13,7 @@ def main():
         sys.exit(0)
 
     required_files = [
+        "default.yaml",
         "default.custom.yaml",
         "xiwei_pinyin.schema.yaml",
         "xiwei_t9.schema.yaml",

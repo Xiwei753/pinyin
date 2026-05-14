@@ -44,6 +44,7 @@ def validate():
 
         # Check for essential Rime files
         essential_files = [
+            'external/data/rime/default.yaml',
             'external/data/rime/default.custom.yaml',
             'external/data/rime/xiwei_pinyin.schema.yaml',
             'external/data/rime/xiwei_t9.schema.yaml',

@@ -11,6 +11,12 @@ def main():
 
     success = True
 
+    # Check default.yaml non-empty
+    p = "shared/rime/default.yaml"
+    if not os.path.isfile(p) or os.path.getsize(p) == 0:
+        print(f"Error: {p} is missing or empty.")
+        success = False
+
     # Check default.custom.yaml non-empty
     p = "shared/rime/default.custom.yaml"
     if not os.path.isfile(p) or os.path.getsize(p) == 0:

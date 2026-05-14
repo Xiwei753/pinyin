@@ -1,0 +1,7 @@
+# Rime default settings
+schema_list:
+  - schema: xiwei_pinyin
+  - schema: xiwei_t9
+
+menu:
+  page_size: 5
