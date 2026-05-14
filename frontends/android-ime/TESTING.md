@@ -23,6 +23,7 @@
 - [ ] Trime 手动包 (trime)：确认压缩包内部文件均位于 `rime/` 目录下。
 - [ ] Fcitx5 数据包 (fcitx5-userdata)：确认包含 `metadata.json` 及 `external/data/rime/` 目录结构。
 - [ ] 确认包含必要文件（不管是在根目录还是在对应子目录）：
+  - `default.yaml`
   - `default.custom.yaml`
   - `xiwei_pinyin.schema.yaml`
   - `xiwei_t9.schema.yaml`

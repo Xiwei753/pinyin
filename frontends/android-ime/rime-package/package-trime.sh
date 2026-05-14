@@ -19,6 +19,7 @@ mkdir -p build/trime_temp/rime
 
 # 检查需要的文件是否存在
 REQUIRED_FILES=(
+    "default.yaml"
     "default.custom.yaml"
     "xiwei_pinyin.schema.yaml"
     "xiwei_t9.schema.yaml"
