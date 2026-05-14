@@ -91,6 +91,7 @@ Android 端第一阶段通过打包 Rime 配置，导入现有的 Android 宿主
 
 **私人同步**
 先配置 `shared/settings/user.yaml`。
+请注意：`custom-phrases.txt` 的标准格式为 `候选词<TAB>编码<TAB>权重`，请勿使用旧版 `编码<TAB>候选词` 的格式。
 然后运行：`tools/sync/init-private-repo.sh` 初始化私人仓库。
 之后可通过 `tools/sync/pull-private.sh` 和 `tools/sync/push-private.sh` 进行双向同步。
 

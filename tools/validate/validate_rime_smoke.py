@@ -113,6 +113,41 @@ def main():
         print(f"Error: {private_template_dir} is missing.")
         success = False
 
+    # 6. Check custom_phrase.txt format
+    custom_phrase_path = "shared/rime/custom_phrase.txt"
+    if os.path.exists(custom_phrase_path):
+        try:
+            with open(custom_phrase_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                if "狗屁通\tgpt" not in content:
+                    print(f"Error: {custom_phrase_path} is missing '狗屁通\\tgpt'")
+                    success = False
+                if "希为拼音\tpinyin" not in content:
+                    print(f"Error: {custom_phrase_path} is missing '希为拼音\\tpinyin'")
+                    success = False
+                if "gpt\t狗屁通" in content:
+                    print(f"Error: {custom_phrase_path} contains old format 'gpt\\t狗屁通'")
+                    success = False
+                if "pinyin\t希为拼音" in content:
+                    print(f"Error: {custom_phrase_path} contains old format 'pinyin\\t希为拼音'")
+                    success = False
+
+                # Check lines have 3 columns
+                f.seek(0)
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        parts = line.split('\t')
+                        if len(parts) < 3:
+                            print(f"Error: {custom_phrase_path} line does not have 3 columns: '{line}'")
+                            success = False
+        except Exception as e:
+            print(f"Error checking {custom_phrase_path}: {e}")
+            success = False
+    else:
+        print(f"Warning: {custom_phrase_path} is missing, skipping format check.")
+
+
     # Check that .private_sync is not committed (must be in .gitignore)
     try:
         gitignore_path = ".gitignore"

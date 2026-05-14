@@ -24,12 +24,41 @@ def main():
     if os.path.exists(custom_phrases_src):
         try:
             print(f"正在读取 {custom_phrases_src}...")
-            # 可以加入格式检查等逻辑
+            processed_lines = []
             with open(custom_phrases_src, 'r', encoding='utf-8') as f:
-                content = f.read()
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        processed_lines.append(line)
+                        continue
+
+                    parts = line.split('\t')
+                    if len(parts) >= 2:
+                        col1 = parts[0]
+                        col2 = parts[1]
+
+                        # 检查是否为旧格式：编码<TAB>候选词
+                        # 旧格式的特征：第一列全是 ASCII 字符（编码），第二列通常包含中文字符（候选词）
+                        if col1.isascii() and not col2.isascii():
+                            word = col2
+                            code = col1
+                            weight = "100000"
+                            processed_lines.append(f"{word}\t{code}\t{weight}")
+                            print(f"提示: 自动转换旧格式 '{line}' -> '{word}\\t{code}\\t{weight}'")
+                        # 检查是否为新格式：候选词<TAB>编码[<TAB>权重]
+                        # 新格式特征：第二列全是 ASCII 字符（编码）
+                        elif col2.isascii():
+                            word = col1
+                            code = col2
+                            weight = parts[2] if len(parts) >= 3 else "100000"
+                            processed_lines.append(f"{word}\t{code}\t{weight}")
+                        else:
+                            print(f"警告: 无法识别的短语格式，跳过此行: '{line}'")
+                    else:
+                        print(f"警告: 无法识别的短语格式，跳过此行: '{line}'")
 
             with open(custom_phrases_dest, 'w', encoding='utf-8') as f:
-                f.write(content)
+                f.write('\n'.join(processed_lines) + '\n')
             print(f"成功生成自定义短语文件: {custom_phrases_dest}")
         except Exception as e:
             print(f"错误: 处理 custom-phrases.txt 时出错: {e}")
