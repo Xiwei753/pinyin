@@ -1,7 +1,7 @@
 #!/bin/bash
 # Generates Fcitx5 Android User Data import package
 
-set -e
+set -euo pipefail
 
 # Setup directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,13 +24,13 @@ trap cleanup EXIT
 
 # 1. Create metadata.json
 # Fcitx5 Android UserDataManager.kt expects this to identify the package
-TIMESTAMP=$(date +%s%3N)
+EXPORT_TIME=$(date +%s%3N)
 cat <<JSON > "$STAGING_DIR/metadata.json"
 {
   "packageName": "org.fcitx.fcitx5.android",
   "versionCode": 0,
-  "versionName": "1.0.0",
-  "timestamp": $TIMESTAMP
+  "versionName": "generated",
+  "exportTime": $EXPORT_TIME
 }
 JSON
 
@@ -51,3 +51,5 @@ rm -f "$ZIP_OUTPUT"
 zip -r "$ZIP_OUTPUT" ./*
 
 echo "Successfully generated $ZIP_OUTPUT"
+echo "Zip contents:"
+unzip -l "$ZIP_OUTPUT"

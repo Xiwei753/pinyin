@@ -21,9 +21,21 @@ def validate():
 
         with z.open('metadata.json') as f:
             metadata = json.load(f)
+
+            if 'exportTime' not in metadata:
+                if 'timestamp' in metadata:
+                    print("Error: metadata.json uses 'timestamp' but 'exportTime' is missing.")
+                else:
+                    print("Error: metadata.json must contain 'exportTime'.")
+                return 1
+
             if metadata.get('packageName') != 'org.fcitx.fcitx5.android':
                 print(f"Error: Invalid packageName in metadata.json: {metadata.get('packageName')}")
                 return 1
+
+        if not any(f.startswith('external/') for f in files):
+            print("Error: 'external/' directory not found in the zip.")
+            return 1
 
         rime_files = [f for f in files if f.startswith('external/data/rime/')]
         if not rime_files:
@@ -32,8 +44,12 @@ def validate():
 
         # Check for essential Rime files
         essential_files = [
+            'external/data/rime/default.custom.yaml',
             'external/data/rime/xiwei_pinyin.schema.yaml',
-            'external/data/rime/default.custom.yaml'
+            'external/data/rime/xiwei_t9.schema.yaml',
+            'external/data/rime/xiwei_pinyin.dict.yaml',
+            'external/data/rime/custom_phrase.txt',
+            'external/data/rime/symbols.yaml'
         ]
 
         for required_file in essential_files:
