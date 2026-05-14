@@ -21,14 +21,24 @@ Android 第一阶段**不是**自研完整的输入法 App。
 
 请按照以下步骤进行 Android 端的导入与测试：
 
-1. **在电脑上打包：**
-   在项目根目录运行以下命令打包 Rime 配置：
+你可以通过 GitHub Actions 自动打包，也可以在电脑上本地打包。
+
+**方式一：通过 GitHub Actions 获取打包产物（推荐）**
+1. 每次推送到 `main` 分支或创建 Pull Request 时，GitHub Actions 会自动进行校验和打包。也可以在项目的 Actions 页面手动触发 (workflow_dispatch)。
+2. 打包完成后，在对应的 Actions 运行记录页面下载名为 `android-rime-config` 的 artifact。
+3. 下载后解压得到 `android-rime-config.zip` 文件。
+4. 注意：`build/` 目录和 zip 文件不会提交到代码仓库，仅作为 CI 产物提供下载。
+
+**方式二：在电脑上本地打包：**
+1. 在项目根目录运行以下命令打包 Rime 配置：
    ```bash
    bash frontends/android-ime/rime-package/package-rime-config.sh
    ```
+2. 在本地获取生成的 `build/android-rime-config.zip` 文件。
 
-2. **传输文件：**
-   将生成的 `build/android-rime-config.zip` 文件传送到手机上。
+**后续步骤：**
+1. **传输文件：**
+   将获取到的 `android-rime-config.zip` 文件传送到手机上。
 
 3. **导入配置：**
    在手机上打开支持 Rime 的安卓输入法前端，在设置中选择从 zip 文件导入或恢复 Rime 数据。
@@ -45,7 +55,7 @@ Android 第一阶段**不是**自研完整的输入法 App。
    - `tongbu`
 
 6. **检查全拼方案：**
-   如果输入法列表中能看到“希为拼音”并且输入正常，说明全拼方案加载成功。
+   如果输入法列表中能看到“希为拼音”并且输入正常，说明全拼方案加载成功。第一轮主要测试目标为希为拼音。
 
 7. **检查九键方案：**
-   如果能看到“希为九宫格”，说明九键方案至少被识别。九键的候选与输入效果后续再单独测试。
+   如果能看到“希为九宫格”，说明九键方案至少被识别。**注意：希为九宫格目前只是实验方案，第一轮 Android 测试只确认九键方案能被识别，不要求日用效果。**
