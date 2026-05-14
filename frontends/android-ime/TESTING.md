@@ -2,7 +2,15 @@
 
 本测试清单用于在将 Rime 配置导入到 Android 宿主输入法时，进行基础功能的验证。
 
-## 1. 打包测试
+## 1. 打包产物获取
+你可以选择本地打包或使用 GitHub Actions 自动构建产物。
+
+**方式一：GitHub Actions 获取（推荐）**
+- [ ] 在仓库的 Actions 页面找到最新的 validate-and-package 运行记录，或者手动触发 workflow_dispatch。
+- [ ] 下载名为 `android-rime-config` 的 artifact。
+- [ ] 解压下载好的 artifact，确认得到 `android-rime-config.zip` 文件。
+
+**方式二：本地打包**
 - [ ] 运行打包脚本：`bash frontends/android-ime/rime-package/package-rime-config.sh`
 - [ ] 脚本执行成功，不应该报错。
 - [ ] 成功生成打包文件：`build/android-rime-config.zip`
@@ -37,7 +45,7 @@
 ## 6. 九键识别测试
 - [ ] 方案列表中存在“希为九宫格”方案。
 - [ ] 切换至“希为九宫格”方案，不会引发崩溃。
-- [ ] *（注：九键候选与输入手感目前处于实验阶段，仅测试其能被正常识别与加载即可。）*
+- [ ] *（注：希为拼音是第一轮主要测试目标，希为九宫格目前只是实验方案。第一轮 Android 测试只确认九键方案能被识别，不要求日用效果。）*
 
 ---
 

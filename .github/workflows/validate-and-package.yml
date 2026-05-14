@@ -1,0 +1,44 @@
+name: Validate and Package
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y zip unzip python3
+
+    - name: Run Validations and Packaging
+      run: |
+        python tools/validate/check-all.py
+        bash -n frontends/linux-fcitx5/fcitx5/install-fcitx5-rime.sh
+        bash -n frontends/linux-fcitx5/fcitx5/backup-rime.sh
+        bash -n frontends/linux-fcitx5/fcitx5/deploy-rime.sh
+        bash -n frontends/android-ime/rime-package/package-rime-config.sh
+        bash -n tools/sync/init-private-repo.sh
+        bash -n tools/sync/pull-private.sh
+        bash -n tools/sync/push-private.sh
+        bash frontends/android-ime/rime-package/package-rime-config.sh
+        python tools/validate/validate_android_package.py
+        python tools/validate/check-all.py
+
+    - name: Upload Android Rime Config Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-rime-config
+        path: build/android-rime-config.zip

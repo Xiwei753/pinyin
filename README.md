@@ -48,18 +48,18 @@ fcitx5 -r
 
 ## 第一轮 Android 测试步骤
 
-Android 端第一阶段通过打包 Rime 配置，导入现有的 Android 宿主输入法中运行。
+Android 端第一阶段通过打包 Rime 配置，导入现有的 Android 宿主输入法中运行。希为拼音是第一轮主要测试目标。
 
-1. 运行打包与校验脚本：
-   ```bash
-   bash frontends/android-ime/rime-package/package-rime-config.sh
-   python tools/validate/validate_android_package.py
-   ```
-2. 将生成的 `build/android-rime-config.zip` 传到手机。
+每次推送到 `main` 分支或创建 Pull Request 时，GitHub Actions 会自动打包并提供下载。你也可以通过项目的 Actions 页面手动触发打包工作流。
+
+1. **获取打包产物**：
+   - 方式一：在 GitHub 仓库的 Actions 页面，选择最近一次的 validate-and-package 运行记录，下载名为 `android-rime-config` 的 artifact 并解压，得到 `android-rime-config.zip`。
+   - 方式二：在本地运行打包脚本：`bash frontends/android-ime/rime-package/package-rime-config.sh`，生成 `build/android-rime-config.zip`。
+2. 将得到的 `android-rime-config.zip` 传到手机。
 3. 在支持 Rime 的安卓输入法前端（如同文输入法）中导入该 zip 包并重新部署。
 4. 先测试全拼（如：`nihao`, `shurufa`）。
-5. **注意**：九键暂时是实验方案，仅供验证方案是否被识别。
-6. **注意**：请勿将 `build/` 目录或生成的 zip 包提交到代码仓库。
+5. **注意**：希为九宫格目前只是实验方案，第一轮 Android 测试只确认九键方案能被识别，不要求日用效果。
+6. **注意**：`build/` 目录和 zip 文件作为 CI 产物提供，请勿将它们提交到代码仓库。
 
 ## 后续测试说明（供参考）
 

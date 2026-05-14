@@ -24,6 +24,13 @@ def main():
     try:
         with zipfile.ZipFile(zip_path, 'r') as z:
             contained_files = z.namelist()
+            print("📦 Zip 内文件列表:")
+            for f in contained_files:
+                print(f"  - {f}")
+                if f.startswith("shared/") or f.startswith("rime/"):
+                    print(f"❌ 错误：zip 顶层结构错误，发现多余目录结构: {f}")
+                    sys.exit(1)
+
             missing_files = []
             for rf in required_files:
                 if rf not in contained_files:
