@@ -45,23 +45,33 @@ def main():
             if word not in content:
                 print(f"Error: {dict_path} is missing '{word}'")
                 success = False
+
+        if "import_tables:" not in content or "luna_pinyin" not in content:
+            print(f"Error: {dict_path} is missing 'import_tables: [luna_pinyin]'")
+            success = False
     except Exception as e:
         print(f"Error reading {dict_path}: {e}")
         success = False
 
-    # 3. Check default.yaml or default.custom.yaml contains xiwei_pinyin
+    # 3. Check default.yaml or default.custom.yaml contains xiwei_pinyin and a debugging fallback schema
     default_path = "shared/rime/default.yaml"
     default_custom_path = "shared/rime/default.custom.yaml"
     has_xiwei_pinyin = False
 
     try:
-        if os.path.exists(default_path) and "xiwei_pinyin" in read_file(default_path):
-            has_xiwei_pinyin = True
-        elif os.path.exists(default_custom_path) and "xiwei_pinyin" in read_file(default_custom_path):
+        default_content = read_file(default_path) if os.path.exists(default_path) else ""
+        default_custom_content = read_file(default_custom_path) if os.path.exists(default_custom_path) else ""
+
+        if "xiwei_pinyin" in default_content or "xiwei_pinyin" in default_custom_content:
             has_xiwei_pinyin = True
 
         if not has_xiwei_pinyin:
             print(f"Error: Neither {default_path} nor {default_custom_path} contains 'xiwei_pinyin'")
+            success = False
+
+        has_luna_pinyin = "luna_pinyin" in default_content or "luna_pinyin" in default_custom_content
+        if not has_luna_pinyin:
+            print(f"Error: Neither {default_path} nor {default_custom_path} contains 'luna_pinyin' or 'luna_pinyin_simp' as a debug fallback.")
             success = False
     except Exception as e:
         print(f"Error reading default configuration: {e}")
