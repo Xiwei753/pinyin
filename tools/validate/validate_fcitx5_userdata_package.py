@@ -33,13 +33,29 @@ def validate():
                 print(f"Error: Invalid packageName in metadata.json: {metadata.get('packageName')}")
                 return 1
 
-        if not any(f.startswith('external/') for f in files):
-            print("Error: 'external/' directory not found in the zip.")
-            return 1
+        required_dirs = ['shared_prefs/', 'databases/', 'external/', 'recently_used/']
+        for d in required_dirs:
+            if d not in files:
+                print(f"Error: {d} directory entry missing in the fcitx5 userdata zip.")
+                return 1
 
-        rime_files = [f for f in files if f.startswith('external/data/rime/')]
-        if not rime_files:
-            print("Error: Rime configuration directory 'external/data/rime/' not found or is empty in the zip.")
+        # Strict order checks for 'external/' hierarchy
+        try:
+            ext_idx = files.index('external/')
+            ext_data_idx = files.index('external/data/')
+            ext_data_rime_idx = files.index('external/data/rime/')
+
+            if not (ext_idx < ext_data_idx < ext_data_rime_idx):
+                print("Error: Order of external/ directory entries is incorrect.")
+                return 1
+
+            first_rime_file_idx = next(i for i, f in enumerate(files) if f.startswith('external/data/rime/') and f != 'external/data/rime/')
+            if ext_data_rime_idx > first_rime_file_idx:
+                print("Error: external/data/rime/ directory entry must appear before any files inside it.")
+                return 1
+
+        except ValueError as e:
+            print(f"Error: Missing required external directory entries: {e}")
             return 1
 
         # Check for essential Rime files

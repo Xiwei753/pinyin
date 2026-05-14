@@ -73,6 +73,7 @@ Android 端第一阶段通过打包 Rime 配置，导入现有的 Android 宿主
    - **Fcitx5**：通过输入法设置内的“导入用户数据”功能，导入 `android-rime-fcitx5-userdata.zip`。
    - **Trime**：界面无通用导入入口。需解压 `android-rime-trime.zip`，将其中的 `rime/` 文件夹用文件管理器手动复制至应用数据目录。
    - 无论哪种方式，完成后**必须重新部署**。
+   - （如果在 Fcitx5 导入 userdata 时遇到 `open failed: ENOENT` 报错，说明旧包的压缩结构不符合 Fcitx5 要求，最新源码已修复此问题，请重新下载最新构建的 artifact）。
    - 详细的手机测试步骤及文件覆盖路径，请参考 `docs/android-phone-only-test.md`。
 3. **测试功能**：
    先测试全拼（如：`nihao`, `shurufa`）。

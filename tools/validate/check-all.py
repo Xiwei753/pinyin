@@ -50,6 +50,15 @@ def main():
             except subprocess.CalledProcessError:
                 print(f"❌ 检查失败: {fcitx5_script}")
                 all_passed = False
+
+            simulate_extract_script = "tools/validate/simulate_fcitx5_zip_extract.py"
+            simulate_extract_script_path = os.path.join(repo_root, simulate_extract_script)
+            print(f"运行检查: {simulate_extract_script}")
+            try:
+                subprocess.run([sys.executable, simulate_extract_script_path], cwd=repo_root, check=True)
+            except subprocess.CalledProcessError:
+                print(f"❌ 检查失败: {simulate_extract_script}")
+                all_passed = False
         else:
             print("未检测到 Fcitx5 UserData 打包产物，如需检查请先运行 package-fcitx5-userdata.sh。")
 

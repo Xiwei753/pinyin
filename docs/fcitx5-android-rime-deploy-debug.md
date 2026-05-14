@@ -25,4 +25,7 @@
 - 如果内置方案有候选词，而自定义方案没有，说明这是自定义方案（例如依赖或词典文件格式）的问题。
 - 如果所有方案都没有候选词，可能是之前的编译缓存损坏。请尝试删除 `build/` 目录，然后重新部署。
 
+## 4. 导入用户数据包时出现 `open failed: ENOENT`
+如果你在导入 `android-rime-fcitx5-userdata.zip` 时收到该错误，这是由于旧版打包脚本未提供严格的 zip 目录顺序导致的解压失败。新版仓库已经修复了此问题，请重新下载最新构建的 `android-rime-fcitx5-userdata.zip` 导入。
+
 如果遇到其他问题，请参阅 `docs/android-rime-no-candidates-debug.md` 进行深入排查。
