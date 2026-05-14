@@ -102,6 +102,30 @@ def main():
         print(f"Error: {deploy_check_path} is missing.")
         success = False
 
+    # 5. Check private sync script and templates
+    build_user_rime_path = "tools/private/build-user-rime.py"
+    if not os.path.exists(build_user_rime_path):
+        print(f"Error: {build_user_rime_path} is missing.")
+        success = False
+
+    private_template_dir = "shared/private-template"
+    if not os.path.isdir(private_template_dir):
+        print(f"Error: {private_template_dir} is missing.")
+        success = False
+
+    # Check that .private_sync is not committed (must be in .gitignore)
+    try:
+        gitignore_path = ".gitignore"
+        if os.path.exists(gitignore_path):
+            with open(gitignore_path, "r") as f:
+                content = f.read()
+                if ".private_sync" not in content and ".private_sync/" not in content:
+                    print("Error: .private_sync must be in .gitignore")
+                    success = False
+    except Exception as e:
+        print(f"Error checking .gitignore: {e}")
+        success = False
+
     if success:
         print("Rime static smoke test passed.")
         sys.exit(0)

@@ -12,6 +12,20 @@ RIME_SOURCE_DIR="$PROJECT_ROOT/shared/rime"
 # Create build dir
 mkdir -p "$BUILD_DIR"
 
+# Build user data if private sync dir exists
+BUILD_USER_SCRIPT="$PROJECT_ROOT/tools/private/build-user-rime.py"
+PRIVATE_DIR="$PROJECT_ROOT/.private_sync"
+
+if [ -f "$BUILD_USER_SCRIPT" ]; then
+    if [ -d "$PRIVATE_DIR" ]; then
+        echo "Found private sync dir, building user rime data..."
+        python3 "$BUILD_USER_SCRIPT"
+    else
+        echo "Private sync dir not found, using template for dry-run..."
+        python3 "$BUILD_USER_SCRIPT" || true
+    fi
+fi
+
 # Create a temporary staging area
 STAGING_DIR="$(mktemp -d)"
 echo "Using staging dir: $STAGING_DIR"

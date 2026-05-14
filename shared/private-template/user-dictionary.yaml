@@ -1,0 +1,7 @@
+words:
+  - text: "狗屁通"
+    code: "gou pi tong"
+    weight: 100000
+  - text: "希为拼音"
+    code: "xi wei pin yin"
+    weight: 90000

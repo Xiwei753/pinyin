@@ -1,0 +1,9 @@
+input:
+  default_schema: xiwei_pinyin
+  simplified_first: true
+  candidate_count: 5
+
+sync:
+  sync_dictionary: true
+  sync_custom_phrases: true
+  sync_settings: true

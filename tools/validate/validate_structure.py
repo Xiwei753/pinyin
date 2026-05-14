@@ -29,9 +29,11 @@ def main():
     req_dirs = [
         "shared/rime",
         "shared/settings",
+        "shared/private-template",
         "frontends/linux-fcitx5",
         "frontends/android-ime",
-        "tools/sync"
+        "tools/sync",
+        "tools/private"
     ]
     for d in req_dirs:
         success &= check_dir(d)

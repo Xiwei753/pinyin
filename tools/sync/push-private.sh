@@ -27,7 +27,18 @@ fi
 cd "$PRIVATE_DIR"
 
 if [ -n "$(git status --porcelain 2>/dev/null || true)" ]; then
-    echo "检测到更改，正在提交并推送..."
+    echo "检测到私人仓库有待同步的更改："
+    git status -s
+
+    # 提示用户确认
+    read -p "是否确认要提交并推送到私人仓库？(y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "用户取消推送。"
+        exit 0
+    fi
+
+    echo "正在提交并推送..."
     git add .
     git commit -m "Auto-sync private data: $(date +'%Y-%m-%d %H:%M:%S')" || true
     if ! git push origin main; then

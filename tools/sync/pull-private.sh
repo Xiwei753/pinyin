@@ -22,13 +22,14 @@ if ! git pull origin main; then
 fi
 
 echo "同步文件到工作区..."
-# 这里是将 .private_sync/ 的文件覆盖到 shared/ 等对应位置
-if [ -f "$PRIVATE_DIR/custom_phrase.txt" ]; then
-    cp "$PRIVATE_DIR/custom_phrase.txt" "$REPO_ROOT/shared/rime/custom_phrase.txt"
-fi
-if [ -d "$PRIVATE_DIR/user_dict" ]; then
-    mkdir -p "$REPO_ROOT/shared/dictionary/user"
-    cp -r "$PRIVATE_DIR/user_dict/"* "$REPO_ROOT/shared/dictionary/user/" || true
+
+# 运行用户数据构建工具
+BUILD_SCRIPT="$REPO_ROOT/tools/private/build-user-rime.py"
+if [ -f "$BUILD_SCRIPT" ]; then
+    echo "运行用户 Rime 数据构建工具..."
+    python3 "$BUILD_SCRIPT"
+else
+    echo "警告：未找到 $BUILD_SCRIPT"
 fi
 
 echo "拉取私人数据完成。"
