@@ -1,7 +1,11 @@
 # Android specific settings
-android:
-  keyboard_layout: t9
+android_frontend:
+  stage: "rime_import"
+  target: "android_rime_frontend"
+  keyboard_layout: "t9"
   enable_key_vibration: true
   enable_key_sound: false
   enable_smooth_animation: true
-  theme_name: default
+  theme_name: "default"
+  candidate_bar_style: "compact"
+  note: "第一阶段只用于记录 Android 前端目标设置，具体效果取决于实际安卓前端支持。这些设置目前只是规划/配置，不一定被现成安卓前端全部支持（尚未实现极致流畅动画）。"

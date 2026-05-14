@@ -46,11 +46,22 @@ fcitx5 -r
 3. 先测试基础拼音输入（例如：`nihao`、`shurufa`、`pinyin`）。
 4. **注意**：九键当前是实验方案，先不要当成已完成日用功能。
 
-## 后续测试说明（供参考）
+## 第一轮 Android 测试步骤
 
-**Android 端打包**
-运行脚本：`frontends/android-ime/rime-package/package-rime-config.sh`
-此脚本会在 `build/` 目录下生成打包文件，方便在 Android 平台中导入。
+Android 端第一阶段通过打包 Rime 配置，导入现有的 Android 宿主输入法中运行。
+
+1. 运行打包与校验脚本：
+   ```bash
+   bash frontends/android-ime/rime-package/package-rime-config.sh
+   python tools/validate/validate_android_package.py
+   ```
+2. 将生成的 `build/android-rime-config.zip` 传到手机。
+3. 在支持 Rime 的安卓输入法前端（如同文输入法）中导入该 zip 包并重新部署。
+4. 先测试全拼（如：`nihao`, `shurufa`）。
+5. **注意**：九键暂时是实验方案，仅供验证方案是否被识别。
+6. **注意**：请勿将 `build/` 目录或生成的 zip 包提交到代码仓库。
+
+## 后续测试说明（供参考）
 
 **私人同步**
 先配置 `shared/settings/user.yaml`。
