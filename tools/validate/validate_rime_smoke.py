@@ -15,8 +15,8 @@ def main():
     schema_path = "shared/rime/xiwei_pinyin.schema.yaml"
     try:
         content = read_file(schema_path)
-        if "dictionary: xiwei_pinyin" not in content:
-            print(f"Error: {schema_path} is missing 'dictionary: xiwei_pinyin'")
+        if "dictionary: luna_pinyin" not in content:
+            print(f"Error: {schema_path} is missing 'dictionary: luna_pinyin'")
             success = False
         if "- script_translator" not in content:
             print(f"Error: {schema_path} is missing '- script_translator'")
@@ -70,11 +70,19 @@ def main():
             success = False
 
         has_luna_pinyin = "luna_pinyin" in default_content or "luna_pinyin" in default_custom_content
-        if not has_luna_pinyin:
+        has_luna_pinyin_simp = "luna_pinyin_simp" in default_content or "luna_pinyin_simp" in default_custom_content
+        if not has_luna_pinyin and not has_luna_pinyin_simp:
             print(f"Error: Neither {default_path} nor {default_custom_path} contains 'luna_pinyin' or 'luna_pinyin_simp' as a debug fallback.")
             success = False
+
     except Exception as e:
         print(f"Error reading default configuration: {e}")
+        success = False
+
+    # 4. Check DEPLOY_CHECK.txt
+    deploy_check_path = "shared/rime/DEPLOY_CHECK.txt"
+    if not os.path.exists(deploy_check_path):
+        print(f"Error: {deploy_check_path} is missing.")
         success = False
 
     if success:

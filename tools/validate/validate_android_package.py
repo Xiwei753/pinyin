@@ -20,7 +20,8 @@ def main():
         "xiwei_pinyin.dict.yaml",
         "custom_phrase.txt",
         "symbols.yaml",
-        "README.md"
+        "README.md",
+        "DEPLOY_CHECK.txt"
     ]
 
     if os.path.exists(generic_zip_path):

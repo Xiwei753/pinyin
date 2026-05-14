@@ -50,7 +50,8 @@ def validate():
             'external/data/rime/xiwei_t9.schema.yaml',
             'external/data/rime/xiwei_pinyin.dict.yaml',
             'external/data/rime/custom_phrase.txt',
-            'external/data/rime/symbols.yaml'
+            'external/data/rime/symbols.yaml',
+            'external/data/rime/DEPLOY_CHECK.txt'
         ]
 
         for required_file in essential_files:

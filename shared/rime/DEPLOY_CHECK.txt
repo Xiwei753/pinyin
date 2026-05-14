@@ -1,0 +1,2 @@
+如果你能在 Fcitx5 Android 的 data/rime/ 里看到这个文件，说明导入/复制路径正确。
+如果没有中文候选，请继续检查 data/rime/build/ 是否生成。

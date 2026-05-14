@@ -27,6 +27,7 @@ REQUIRED_FILES=(
     "custom_phrase.txt"
     "symbols.yaml"
     "README.md"
+    "DEPLOY_CHECK.txt"
 )
 
 echo "检查必要文件..."
