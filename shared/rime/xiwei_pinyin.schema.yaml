@@ -46,7 +46,7 @@ custom_phrase:
   db_class: stabledb
   enable_completion: false
   enable_sentence: false
-  initial_quality: 10
+  initial_quality: 100
 
 menu:
   page_size: 5
