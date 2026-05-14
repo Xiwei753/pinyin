@@ -24,6 +24,15 @@ def main():
         if "alphabet: abcdefghijklmnopqrstuvwxyz" not in content:
             print(f"Error: {schema_path} is missing 'alphabet: abcdefghijklmnopqrstuvwxyz'")
             success = False
+        if "- simplifier" not in content:
+            print(f"Error: {schema_path} is missing '- simplifier'")
+            success = False
+        if "- uniquifier" not in content:
+            print(f"Error: {schema_path} is missing '- uniquifier'")
+            success = False
+        if "name: simplification" not in content:
+            print(f"Error: {schema_path} is missing 'name: simplification'")
+            success = False
     except Exception as e:
         print(f"Error reading {schema_path}: {e}")
         success = False
@@ -39,11 +48,19 @@ def main():
         "中国\tzhong guo",
         "同步\ttong bu"
     ]
+    traditional_words = [
+        "妳好", "逆號", "擬好"
+    ]
     try:
         content = read_file(dict_path)
         for word in required_words:
             if word not in content:
                 print(f"Error: {dict_path} is missing '{word}'")
+                success = False
+
+        for word in traditional_words:
+            if word in content:
+                print(f"Error: {dict_path} incorrectly contains traditional word '{word}'")
                 success = False
 
         if "import_tables:" not in content or "luna_pinyin" not in content:
