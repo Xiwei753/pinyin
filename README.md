@@ -64,11 +64,14 @@ Android 端第一阶段通过打包 Rime 配置，导入现有的 Android 宿主
    - 详细的手机测试步骤及文件覆盖路径，请参考 `docs/android-phone-only-test.md`。
 3. **测试功能**：
    先测试全拼（如：`nihao`, `shurufa`）。
-4. **导入成功但没有中文候选怎么办**：
-   如果键盘显示了中州韵（希），但输入时只有预编辑字母，说明是方案配置问题。请重新下载最新的打包产物（本项目已修复此问题），并按照上述步骤重新导入和重新部署。你可以尝试切换到内置的“明月拼音·简化字” (`luna_pinyin_simp`) 以排查是环境问题还是方案问题。详情参阅 `docs/android-phone-only-test.md`，`docs/android-rime-no-candidates-debug.md` 以及 `docs/fcitx5-android-rime-deploy-debug.md`。
+4. **导入成功但遇到候选词问题怎么办**：
+   如果键盘显示了中州韵（希），但输入时只有预编辑字母，说明是方案配置问题。请重新下载最新的打包产物，并按照上述步骤重新导入和重新部署。你可以尝试切换到内置兜底的“明月拼音·简化字” (`luna_pinyin_simp`) 或“明月拼音” (`luna_pinyin`) 以排查是环境问题还是方案问题。
+   **如果出现了候选，但第一候选是“妳好”、“逆號”等繁体/异体字**，这说明部署已经成功，当前问题是缺少简体过滤。本项目现已为 `xiwei_pinyin` 增加了 `simplifier` 和 `uniquifier` 并默认开启简体，请下载最新的 artifact，导入并测试 `nihao` 的第一候选是否为“你好”。
+   详情参阅 `docs/android-phone-only-test.md`，`docs/android-rime-no-candidates-debug.md` 以及 `docs/fcitx5-android-rime-deploy-debug.md`。
 
-   **注意：如果能看到“中州韵（希）”，只能说明 schema 被识别，不代表词典已经部署成功。真正成功的标志是 `data/rime/build/` 生成部署产物，且输入 `nihao` 出现“你好”，或者至少有中文候选。**
-5. **注意**：希为九宫格目前只是实验方案，第一轮 Android 测试只确认九键方案能被识别，不要求日用效果。
+   **注意：如果能看到“中州韵（希）”，只能说明 schema 被识别，不代表词典已经部署成功。真正成功的标志是 `data/rime/build/` 生成部署产物，且输入 `nihao` 出现中文候选。**
+5. **注意**：当前 `xiwei_pinyin.dict.yaml` 主要是作为包含简体词汇的测试词库。为了稳定性，`xiwei_pinyin` 目前底层借用 `luna_pinyin`，后续会进入“主词库+个人词库叠加”的新结构。
+6. **注意**：希为九宫格目前只是实验方案，第一轮 Android 测试只确认九键方案能被识别，不要求日用效果。
 6. **注意**：`build/` 目录和 zip 文件作为 CI 产物提供，请勿将它们提交到代码仓库。
 
 ## 后续测试说明（供参考）

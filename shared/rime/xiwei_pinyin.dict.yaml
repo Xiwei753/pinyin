@@ -1,4 +1,9 @@
 # Rime dictionary for Xiwei Pinyin
+# Note: Currently, to ensure Android Rime candidates are stable, `xiwei_pinyin.schema.yaml`
+# uses the `luna_pinyin` dictionary directly. This `xiwei_pinyin.dict.yaml` is kept
+# as a test dictionary containing only simplified Chinese words. In a later phase,
+# we will implement a "main dictionary + user dictionary + simplified filter" structure
+# and this file will act as the user personal dictionary stacking on top.
 ---
 name: xiwei_pinyin
 version: "0.2"
