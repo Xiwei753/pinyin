@@ -4,21 +4,14 @@ import android.inputmethodservice.InputMethodService
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import io.github.xiwei753.pinyin.t9.core.T9Engine
 
 class XiweiT9ImeService : InputMethodService() {
 
     private lateinit var bufferText: TextView
     private lateinit var candidateBtn: Button
 
-    private var buffer = ""
-
-    private val dictionary = mapOf(
-        "64426" to "你好",
-        "748732" to "输入法",
-        "746946" to "拼音",
-        "9466446" to "中国",
-        "866428" to "同步"
-    )
+    private val engine = T9Engine()
 
     override fun onCreateInputView(): View {
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
@@ -71,13 +64,13 @@ class XiweiT9ImeService : InputMethodService() {
     }
 
     private fun onDigitPressed(digit: String) {
-        buffer += digit
+        engine.inputDigit(digit)
         updateUi()
     }
 
     private fun onDeletePressed() {
-        if (buffer.isNotEmpty()) {
-            buffer = buffer.substring(0, buffer.length - 1)
+        if (engine.buffer.isNotEmpty()) {
+            engine.backspace()
             updateUi()
         } else {
             // If buffer is empty, send a backspace to the app
@@ -87,7 +80,7 @@ class XiweiT9ImeService : InputMethodService() {
     }
 
     private fun onZeroPressed() {
-        if (buffer.isEmpty()) {
+        if (engine.buffer.isEmpty()) {
             currentInputConnection?.commitText(" ", 1)
         } else {
             // Can be used to cycle candidates later, ignoring for now
@@ -95,11 +88,11 @@ class XiweiT9ImeService : InputMethodService() {
     }
 
     private fun updateUi() {
-        bufferText.text = buffer
+        bufferText.text = engine.buffer
 
-        val candidate = dictionary[buffer]
-        if (candidate != null) {
-            candidateBtn.text = candidate
+        val candidates = engine.getCandidates()
+        if (candidates.isNotEmpty()) {
+            candidateBtn.text = candidates[0]
             candidateBtn.visibility = View.VISIBLE
         } else {
             candidateBtn.visibility = View.GONE
@@ -107,10 +100,9 @@ class XiweiT9ImeService : InputMethodService() {
     }
 
     private fun onCandidateClicked() {
-        val candidate = candidateBtn.text.toString()
-        if (candidate.isNotEmpty()) {
+        val candidate = engine.selectCandidate(0)
+        if (candidate != null) {
             currentInputConnection?.commitText(candidate, 1)
-            buffer = ""
             updateUi()
         }
     }
