@@ -50,17 +50,22 @@ fcitx5 -r
 
 Android 端第一阶段通过打包 Rime 配置，导入现有的 Android 宿主输入法中运行。希为拼音是第一轮主要测试目标。
 
-每次推送到 `main` 分支或创建 Pull Request 时，GitHub Actions 会自动打包并提供下载。你也可以通过项目的 Actions 页面手动触发打包工作流。
+由于不同 Android 前端行为差异极大，我们针对不同前端提供不同打包产物和导入方式：
 
 1. **获取打包产物**：
-   - 方式一：在 GitHub 仓库的 Actions 页面，选择最近一次的 validate-and-package 运行记录，根据需要下载 `android-rime-trime` 或 `android-rime-generic` artifact，解压得到相应的 zip 文件。
-   - 方式二：在本地运行打包脚本（位于 `frontends/android-ime/rime-package/` 下），生成对应的 zip。
-2. 将得到的 zip 传到手机。
-3. 在支持 Rime 的安卓输入法前端中尝试导入该 zip 包并重新部署。
-4. **如果界面里没有导入按钮**：部分前端不支持 zip 导入。如果找不到入口，请参考 `docs/android-import-strategy.md` 解压 zip 并使用 Material Files 等工具手动复制到应用的配置目录。
-5. 先测试全拼（如：`nihao`, `shurufa`）。
-6. **注意**：希为九宫格目前只是实验方案，第一轮 Android 测试只确认九键方案能被识别，不要求日用效果。
-7. **注意**：`build/` 目录和 zip 文件作为 CI 产物提供，请勿将它们提交到代码仓库。
+   在 GitHub 仓库 Actions 页面最新运行记录底部下载对应 Artifact：
+   - Fcitx5 for Android 用户：下载 `android-rime-fcitx5-userdata`
+   - Trime 用户：下载 `android-rime-trime`
+   解压下载的 artifact，得到真正的 `.zip` 产物。
+2. **导入配置（按前端）**：
+   - **Fcitx5**：通过输入法设置内的“导入用户数据”功能，导入 `android-rime-fcitx5-userdata.zip`。
+   - **Trime**：界面无通用导入入口。需解压 `android-rime-trime.zip`，将其中的 `rime/` 文件夹用文件管理器手动复制至应用数据目录。
+   - 无论哪种方式，完成后**必须重新部署**。
+   - 详细的手机测试步骤及文件覆盖路径，请参考 `docs/android-phone-only-test.md`。
+3. **测试功能**：
+   先测试全拼（如：`nihao`, `shurufa`）。
+4. **注意**：希为九宫格目前只是实验方案，第一轮 Android 测试只确认九键方案能被识别，不要求日用效果。
+5. **注意**：`build/` 目录和 zip 文件作为 CI 产物提供，请勿将它们提交到代码仓库。
 
 ## 后续测试说明（供参考）
 

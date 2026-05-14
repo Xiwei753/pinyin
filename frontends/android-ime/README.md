@@ -26,26 +26,25 @@ Android 第一阶段**不是**自研完整的输入法 App。
 **方式一：通过 GitHub Actions 获取打包产物（推荐）**
 1. 每次推送到 `main` 分支或创建 Pull Request 时，GitHub Actions 会自动进行校验和打包。也可以在项目的 Actions 页面手动触发 (workflow_dispatch)。
 2. 打包完成后，在对应的 Actions 运行记录页面下载相应的 artifact。
-   - 同文输入法 (Trime) 用户建议下载 `android-rime-trime`，解压得到 `android-rime-trime.zip`。
-   - 其他前端尝试下载 `android-rime-generic`，解压得到 `android-rime-generic.zip`。
+   - **Fcitx5 for Android 用户**：下载 `android-rime-fcitx5-userdata`。这是 Fcitx5 专用用户数据导入包，不是普通 Rime zip，需通过 Fcitx5 的“用户数据导入”功能导入。
+   - **同文输入法 (Trime) 用户**：下载 `android-rime-trime`。此包解压后得到 `rime/` 目录，需手动使用文件管理器将其复制到 Trime 的用户目录下（不再寻找界面的导入按钮）。
+   - **其他支持普通文件导入的前端**：下载 `android-rime-generic` 备用。
 3. 注意：`build/` 目录和 zip 文件不会提交到代码仓库，仅作为 CI 产物提供下载。
 
 **方式二：在电脑上本地打包：**
 1. 在项目根目录运行相应的命令打包：
+   - 生成 Fcitx5 专用包：`bash frontends/android-ime/rime-package/package-fcitx5-userdata.sh`
+   - 生成 Trime 手动复制包：`bash frontends/android-ime/rime-package/package-trime.sh`
    - 生成通用包：`bash frontends/android-ime/rime-package/package-generic-rime.sh`
-   - 生成 Trime 专用包：`bash frontends/android-ime/rime-package/package-trime.sh`
 2. 在本地获取生成的 `build/android-rime-*.zip` 文件。
 
 **后续步骤：**
-1. **传输文件：**
-   将获取到的对应 zip 文件传送到手机上。
+请根据你的前端选择导入方式：
 
-2. **导入配置：**
-   在手机上打开支持 Rime 的安卓输入法前端，在设置中尝试寻找从 zip 文件导入或恢复 Rime 数据的功能。
-   - ⚠️ 注意：目前不能保证 zip 一键导入能在所有前端生效（例如 Fcitx5 for Android 就不支持）。如果界面中找不到导入入口，请参阅本文档末尾的“如果界面里没有导入按钮怎么办”章节，以及 `docs/android-import-strategy.md` 了解替代方案。
+- **Fcitx5 for Android**：将 `android-rime-fcitx5-userdata.zip` 传至手机，在 Fcitx5 设置中寻找“导入用户数据”功能并选择该压缩包导入。
+- **Trime**：将 `android-rime-trime.zip` 传至手机解压，将解压出的 `rime/` 文件夹复制覆盖到 Trime 用户资料目录下。
 
-3. **重新部署：**
-   导入完成后，必须在输入法设置中点击“重新部署”或“重新加载 Rime 配置”。
+导入或覆盖完成后，必须在输入法设置中点击“重新部署”或“重新加载 Rime 配置”。
 
 5. **进行测试：**
    在任意文本框调出键盘，尝试输入以下拼音进行测试：
@@ -61,12 +60,10 @@ Android 第一阶段**不是**自研完整的输入法 App。
 7. **检查九键方案：**
    如果能看到“希为九宫格”，说明九键方案至少被识别。**注意：希为九宫格目前只是实验方案，第一轮 Android 测试只确认九键方案能被识别，不要求日用效果。**
 
-## 如果界面里没有导入按钮怎么办
+## 关于导入方式的重要说明
 
-不同的 Android 前端导入方式不统一，不要在设置里毫无目的地乱点。由于当前版本的部分前端（如 Fcitx5 for Android + RIME Plugin）可能根本没有提供 zip 导入入口，你需要改走手动复制路线：
+Android Rime 前端并没有统一的导入标准，不要在界面里瞎点寻找通用的 Rime zip 导入入口。
 
-1. **不要再试图通过 UI 导入**：如果你翻遍了设置也找不到恢复/导入功能，那多半就是没有。
-2. **解压文件**：把下载到的 zip 包在手机上解压，暴露出里面的配置文件。
-3. **手动覆盖**：借助 Material Files、MT 管理器或通过连接电脑，找到输入法的工作目录（通常位于 `Android/data/<包名>/files/` 下，具体参考 [Android 导入方式决策策略](../../docs/android-import-strategy.md)），将解压出来的文件复制并覆盖进去。
-4. **重新部署**：回到输入法 App 中点击“重新部署”。
-5. **联系开发者调整**：如果你找到了某种隐蔽的导入方式或遇到了特定前端，请截图并反馈，我们会根据反馈更新专用包脚本。
+1. **Trime 优先走手动复制**：当前 Trime 界面无明确 zip 导入按钮。获取 `android-rime-trime.zip` 后，请直接解压出 `rime/` 文件夹，使用文件管理器（如 Material Files / MT 管理器）复制到对应的用户数据目录（详见 `docs/android-phone-only-test.md`）。
+2. **Fcitx5 Android 优先走用户数据导入**：Fcitx5 的 RIME 插件不提供直接导入 Rime zip 的功能。必须使用 `android-rime-fcitx5-userdata.zip`，它遵循 Fcitx5 Android 用户数据的规范（内含 `metadata.json` 且按 `external/data/rime/` 组织）。
+3. **重新部署**：无论是覆盖目录还是通过数据恢复导入，最终都需要回到输入法应用中触发“重新部署”。

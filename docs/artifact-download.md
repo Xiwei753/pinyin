@@ -12,28 +12,22 @@
 
 3. **下载 Artifact**
    在运行记录页面的底部，找到 **Artifacts** 区域，根据你的前端下载对应的压缩包：
-   - Trime 用户下载 `android-rime-trime`
-   - 其他尝试通用 zip 的用户下载 `android-rime-generic`
+   - **Fcitx5 for Android 用户**：下载 `android-rime-fcitx5-userdata`
+   - **Trime 用户**：下载 `android-rime-trime`
+   - **其他前端备用**：下载 `android-rime-generic`
 
-4. **解压文件**
-   下载下来的文件解压后，你会得到一个带有 `.zip` 后缀的文件（例如 `android-rime-generic.zip`）。如果你的前端支持一键导入，**不需要**再解压这个里面的 zip。
+4. **解压外层 ZIP**
+   GitHub Actions 会自动把你生成的 zip 再包装一层 zip。所以下载下来后，你需要解压一次，暴露出里面真正的 `.zip` 产物（例如 `android-rime-fcitx5-userdata.zip` 或 `android-rime-trime.zip`）。
 
 ## 导入与测试
 
-1. **传输到手机**
-   将对应的 zip 文件传到你的 Android 手机上。
+详细在手机上的操作步骤，请参阅专门的无电脑测试文档：[`docs/android-phone-only-test.md`](android-phone-only-test.md)。
 
-2. **导入前端**
-   打开你使用的安卓 Rime 前端（如“同文输入法”等），在设置中找到“从 zip 文件恢复”或“导入配置”选项，选中你刚才传到手机的 zip 包。
+以下是简要指南：
 
-## 如果界面里没有导入按钮怎么办
-
-1. **不要一直找**：部分前端（如 Fcitx5 for Android 配合 RIME）并没有提供 zip 导入功能。
-2. **解压配置**：把手机上的 zip 包解压出来。
-3. **手动复制**：使用高级文件管理器（如 Material Files、MT 管理器），将文件直接放入输入法的专属数据目录。详情请见 `docs/android-import-strategy.md`。
-
-3. **重新部署**
-   导入完成后，务必在输入法设置中点击**重新部署**（Deploy），让新配置生效。
+- **Fcitx5 用户**：将 `android-rime-fcitx5-userdata.zip` 传到手机，通过 Fcitx5 设置中的“导入用户数据”进行导入。
+- **Trime 用户**：Trime 界面无导入入口。解压 `android-rime-trime.zip`，使用文件管理器将 `rime/` 文件夹复制覆盖至 Trime 数据目录。
+- **部署**：无论使用何种方式，最后都必须在输入法界面触发 **重新部署**。
 
 ## 注意事项
 
