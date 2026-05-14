@@ -25,13 +25,16 @@
             android:textStyle="bold"
             android:gravity="center_vertical" />
 
-        <Button
-            android:id="@+id/candidate_btn"
+        <HorizontalScrollView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:text=""
-            android:textSize="16sp" />
+            android:scrollbars="none">
+            <LinearLayout
+                android:id="@+id/candidate_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
 
     </LinearLayout>
 

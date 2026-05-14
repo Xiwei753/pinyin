@@ -24,7 +24,10 @@ class T9EngineTest {
         engine.inputDigit("6")
         assertEquals("64426", engine.buffer)
         val candidates = engine.getCandidates()
-        assertTrue(candidates.contains("你好"))
+        assertTrue(candidates.size >= 2)
+        assertEquals("你好", candidates[0].text)
+        assertEquals("妮好", candidates[1].text)
+        assertTrue(candidates[0].score > candidates[1].score)
     }
 
     @Test
@@ -32,7 +35,8 @@ class T9EngineTest {
         "748732".forEach { engine.inputDigit(it.toString()) }
         assertEquals("748732", engine.buffer)
         val candidates = engine.getCandidates()
-        assertEquals(listOf("输入法"), candidates)
+        assertEquals(1, candidates.size)
+        assertEquals("输入法", candidates[0].text)
     }
 
     @Test
@@ -54,7 +58,7 @@ class T9EngineTest {
     fun testSelectCandidate() {
         "64426".forEach { engine.inputDigit(it.toString()) }
         val selected = engine.selectCandidate(0)
-        assertEquals("你好", selected)
+        assertEquals("你好", selected?.text)
         assertEquals("", engine.buffer) // Should clear buffer after selection
     }
 

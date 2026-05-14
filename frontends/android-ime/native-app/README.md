@@ -17,6 +17,12 @@
 
 这是最小的 Android 九键输入法原型。暂不接 Rime，暂不接同步，暂不处理复杂候选。
 
+- T9Engine 已经从 Service 拆出
+- Candidate 是核心候选数据结构
+- BuiltinDictionary 是临时内置词库
+- 后续大词库 / 用户词库 / 同步都应该替换或扩展 data 层
+- Android Service 只负责 UI 和系统上屏
+
 构建命令如下：
 
 ```sh

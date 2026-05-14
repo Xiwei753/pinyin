@@ -3,13 +3,14 @@ package io.github.xiwei753.pinyin.t9
 import android.inputmethodservice.InputMethodService
 import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 
 class XiweiT9ImeService : InputMethodService() {
 
     private lateinit var bufferText: TextView
-    private lateinit var candidateBtn: Button
+    private lateinit var candidateContainer: LinearLayout
 
     private val engine = T9Engine()
 
@@ -17,11 +18,7 @@ class XiweiT9ImeService : InputMethodService() {
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
 
         bufferText = view.findViewById(R.id.buffer_text)
-        candidateBtn = view.findViewById(R.id.candidate_btn)
-
-        candidateBtn.setOnClickListener {
-            onCandidateClicked()
-        }
+        candidateContainer = view.findViewById(R.id.candidate_container)
 
         setupKeys(view)
 
@@ -90,19 +87,25 @@ class XiweiT9ImeService : InputMethodService() {
     private fun updateUi() {
         bufferText.text = engine.buffer
 
+        candidateContainer.removeAllViews()
+
         val candidates = engine.getCandidates()
-        if (candidates.isNotEmpty()) {
-            candidateBtn.text = candidates[0]
-            candidateBtn.visibility = View.VISIBLE
-        } else {
-            candidateBtn.visibility = View.GONE
+        for ((index, candidate) in candidates.withIndex()) {
+            val btn = Button(this).apply {
+                text = candidate.text
+                textSize = 16f
+                setOnClickListener {
+                    onCandidateClicked(index)
+                }
+            }
+            candidateContainer.addView(btn)
         }
     }
 
-    private fun onCandidateClicked() {
-        val candidate = engine.selectCandidate(0)
+    private fun onCandidateClicked(index: Int) {
+        val candidate = engine.selectCandidate(index)
         if (candidate != null) {
-            currentInputConnection?.commitText(candidate, 1)
+            currentInputConnection?.commitText(candidate.text, 1)
             updateUi()
         }
     }

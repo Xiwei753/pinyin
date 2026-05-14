@@ -26,3 +26,10 @@
 - 目前 Linux 端暂不急于自研前端。
 - Linux 环境下继续使用 fcitx5-rime 进行过渡。
 - 待自研核心稳定后，再通过 fcitx5 插件的形式接入 shared core。
+
+## 当前进展
+- T9Engine 已经从 Service 拆出
+- Candidate 是核心候选数据结构
+- BuiltinDictionary 是临时内置词库
+- 后续大词库 / 用户词库 / 同步都应该替换或扩展 data 层
+- Android Service 只负责 UI 和系统上屏
