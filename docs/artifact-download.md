@@ -5,7 +5,7 @@
 ## 下载步骤
 
 1. **进入 Actions 页面**
-   打开本 GitHub 仓库的 [Actions](https://github.com/USERNAME/REPO/actions) 页面（请根据实际项目地址替换）。
+   打开本 GitHub 仓库的 [Actions](https://github.com/Xiwei753/pinyin/actions) 页面。
 
 2. **选择最新运行记录**
    在左侧的 Workflows 列表中选择 `Validate and Package`，然后点击最新一次成功的运行记录（带有绿色打勾图标）。
