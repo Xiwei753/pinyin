@@ -5,9 +5,9 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$REPO_ROOT"
 
-ZIP_FILE="build/android-rime-config.zip"
+ZIP_FILE="build/android-rime-generic.zip"
 
-echo "开始打包 Android 端 Rime 配置文件..."
+echo "开始打包 Android 端 generic Rime 配置文件..."
 
 # 删除旧的 zip，避免旧文件混入
 if [ -f "$ZIP_FILE" ]; then
@@ -53,7 +53,7 @@ echo "压缩包内包含的文件列表："
 unzip -l "$ZIP_FILE"
 
 echo "--------------------------------------------------"
-echo "请将 build/android-rime-config.zip 传到手机，"
-echo "并在支持 Rime 的安卓输入法应用中导入该配置。"
+echo "请将 build/android-rime-generic.zip 传到手机，"
+echo "并在支持纯文件 zip 导入的安卓输入法应用中导入该配置。"
 echo "注意：请不要把 build/ 目录或 zip 提交到代码仓库。"
 echo "--------------------------------------------------"
