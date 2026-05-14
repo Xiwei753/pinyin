@@ -1,9 +1,11 @@
 # Rime dictionary for Xiwei Pinyin
 ---
 name: xiwei_pinyin
-version: "0.1"
+version: "0.2"
 sort: by_weight
 use_preset_vocabulary: true
+import_tables:
+  - luna_pinyin
 ...
 你	ni	1000
 好	hao	1000

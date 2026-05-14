@@ -42,7 +42,18 @@ TARGET_DIR="$STAGING_DIR/external/data/rime"
 mkdir -p "$TARGET_DIR"
 
 # 3. Copy Rime files
-cp -r "$RIME_SOURCE_DIR"/* "$TARGET_DIR/"
+# Make sure we do not copy the build/ cache to avoid breaking the import
+rsync -av --exclude="build/" "$RIME_SOURCE_DIR"/ "$TARGET_DIR/"
+
+# Add a README.txt to instruct users to reload configuration or restart Fcitx after importing
+cat <<EOF > "$TARGET_DIR/README.txt"
+重要提示：
+导入此用户数据包后，由于 Rime 配置发生变更，必须让 Fcitx5 重新加载。
+如果你发现没有候选词，请：
+1. 删除已有 data/rime/build 目录（如果有）
+2. 在 Fcitx5 设置中点击 RIME 的“重新部署”或彻底重启 Fcitx5 实例。
+更多排查信息详见 docs/android-rime-no-candidates-debug.md
+EOF
 
 # 4. Create the zip
 cd "$STAGING_DIR"
