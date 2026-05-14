@@ -1,0 +1,4 @@
+- query: "gou pi tong"
+  expected: "狗屁通"
+- query: "xi wei pin yin"
+  expected: "希为拼音"

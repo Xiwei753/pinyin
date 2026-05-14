@@ -34,10 +34,19 @@ engine:
     - fallback_segmentor
   translators:
     - punct_translator
+    - custom_phrase
     - script_translator
   filters:
     - simplifier
     - uniquifier
+
+custom_phrase:
+  dictionary: ""
+  user_dict: custom_phrase
+  db_class: stabledb
+  enable_completion: false
+  enable_sentence: false
+  initial_quality: 10
 
 menu:
   page_size: 5
