@@ -11,14 +11,14 @@
 ## Trime / 同文输入法路线
 Trime 具有自己的数据目录结构，通常位于外部存储。
 - **配置位置**：Trime 一般要求将 Rime 配置文件放置于其特定的工作目录中（例如 `Android/data/com.osfans.trime/files/rime/` 或用户自行设定的外部目录）。
-- **打包要求**：如果使用 zip 导入或解压工具恢复，文件在 zip 内通常需要带有 `rime/` 的顶层目录，解压时才不会散落在错误的层级。
-- **测试建议**：优先尝试下载专用包 `android-rime-trime.zip`。如果界面内确实没有导入功能，可以将解压后的 `rime/` 文件夹通过文件管理器手动覆盖。
+- **打包要求**：文件在 zip 内通常需要带有 `rime/` 的顶层目录，解压时才不会散落在错误的层级。
+- **测试建议**：直接下载专用包 `android-rime-trime.zip`。将其解压后，得到 `rime/` 文件夹，然后通过文件管理器（如 Material Files）手动覆盖至 Trime 的用户数据目录。完成后在应用内重新部署。
 
 ## Fcitx5 for Android + RIME Plugin 路线
-Fcitx5 for Android 有非常严格的插件架构。
-- **现状**：目前 Fcitx5 for Android 配合 RIME 插件，其界面内**没有**提供明确的“通过 zip 导入 Rime 配置”的通用入口。
-- **打包策略**：不生成伪造支持的假包（脚本会提示需要手动复制）。
-- **测试建议**：用户需要找到 Fcitx5 的应用数据目录（如 `Android/data/org.fcitx.fcitx5.android/files/data/rime/`），将配置手动放进去，然后重启应用或重新部署。
+Fcitx5 for Android 有非常严格的插件和数据管理架构。
+- **现状**：Fcitx5 及其 RIME 插件**不提供**导入普通 Rime zip 的入口。但是，它提供了一个“用户数据导入/导出”的机制。
+- **打包策略**：通过 `package-fcitx5-userdata.sh`，生成符合 Fcitx5 用户数据规范的包 (`android-rime-fcitx5-userdata.zip`)。该压缩包内置 `metadata.json`（带有合法的 `packageName`），并且将 Rime 配置按其内部预期路径 `external/data/rime/` 放置。
+- **测试建议**：下载 `android-rime-fcitx5-userdata.zip` 后，在 Fcitx5 的“设置 -> 导入/导出用户数据”中选择该压缩包导入。导入后重新部署。
 
 ## Android 11+ 文件权限与手动复制工具难度排行
 由于 Scoped Storage，直接向 `Android/data/` 写入数据受到严格限制。如果前端没有导入按钮，用户必须手动复制文件时，需要借助不同工具。以下按操作难度由低到高排列：
@@ -44,6 +44,6 @@ Fcitx5 for Android 有非常严格的插件架构。
    - **说明**：在手机上运行终端并通过命令行复制，且可能需要申请各种权限或者 root。
 
 ## 下一步最现实的测试路线
-1. **云端打包多版本**：CI 将分别生成通用包 (`android-rime-generic.zip`) 和 Trime 专用包 (`android-rime-trime.zip`)。Fcitx5 用户被明确告知需手动操作。
-2. **放弃“一键导入”的执念**：在文档中明确告知用户：前端不一定支持 zip。
-3. **优先手动复制**：如果界面上点来点去找不到导入，直接使用 Material Files 或 MT 管理器等工具，把解压后的配置文件复制到对应 App 的 `Android/data/` 工作目录中，然后点击前端的“重新部署”。这是成功率最高、最不受前端 UI 限制的通用方法。
+1. **针对性打包产物**：CI 会针对各个前端生成专用的产物。Trime 走解压包手动复制；Fcitx5 走合规的用户数据导入包；如果未来有支持纯 Rime zip 导入的前端，使用 `generic` 包备用。
+2. **放弃无畏的 UI 探索**：如果前端明显不提供导入按钮（比如 Trime），不要浪费时间寻找，直接走文件管理器复制目录。
+3. **强制重新部署**：无论是覆盖目录还是导入数据包，最终都需要在应用内触发重新部署才能使配置生效。

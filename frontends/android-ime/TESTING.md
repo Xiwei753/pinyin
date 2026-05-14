@@ -7,31 +7,34 @@
 
 **方式一：GitHub Actions 获取（推荐）**
 - [ ] 在仓库的 Actions 页面找到最新的 validate-and-package 运行记录，或者手动触发 workflow_dispatch。
-- [ ] 下载对应的 artifact：Trime 用户下载 `android-rime-trime`，其他用户尝试 `android-rime-generic`。
+- [ ] 下载对应的 artifact：
+  - Fcitx5 用户下载 `android-rime-fcitx5-userdata`
+  - Trime 用户下载 `android-rime-trime`
+  - 其他用户备用 `android-rime-generic`
 - [ ] 解压下载好的 artifact，确认得到对应的 zip 文件。
 
 **方式二：本地打包**
-- [ ] 运行打包脚本：`bash frontends/android-ime/rime-package/package-generic-rime.sh` 或 `package-trime.sh`
+- [ ] 运行打包脚本：`package-fcitx5-userdata.sh`，`package-trime.sh`，或 `package-generic-rime.sh`。
 - [ ] 脚本执行成功，不应该报错。
-- [ ] 成功生成打包文件：`build/android-rime-generic.zip` 或 `build/android-rime-trime.zip`
+- [ ] 成功生成对应的 `build/android-rime-*.zip` 文件。
 
 ## 2. Zip 内容检查
-- [ ] 通用包 (generic)：确认压缩包内部文件结构正确，不应有多余的顶级目录。
-- [ ] Trime 专用包 (trime)：确认压缩包内部文件均位于 `rime/` 目录下。
-- [ ] 确认包含必要文件（不管是否在子目录）：
+- [ ] 通用包 (generic)：确认压缩包内无多余顶级目录。
+- [ ] Trime 手动包 (trime)：确认压缩包内部文件均位于 `rime/` 目录下。
+- [ ] Fcitx5 数据包 (fcitx5-userdata)：确认包含 `metadata.json` 及 `external/data/rime/` 目录结构。
+- [ ] 确认包含必要文件（不管是在根目录还是在对应子目录）：
   - `default.custom.yaml`
   - `xiwei_pinyin.schema.yaml`
   - `xiwei_t9.schema.yaml`
   - `xiwei_pinyin.dict.yaml`
   - `custom_phrase.txt`
   - `symbols.yaml`
-  - `README.md`
 
 ## 3. 手机导入测试
 - [ ] 成功将对应的 zip 包传至手机。
-- [ ] 在 Android Rime 前端中尝试找到并导入该压缩包。
-- [ ] **（备选）手动复制**：如果在 UI 中找不到导入入口，请将压缩包解压后，手动通过文件管理器将文件复制到输入法的配置目录。
-- [ ] 点击“重新部署”（Deploy）或重新加载配置。
+- [ ] **Fcitx5 Android**：在输入法设置中使用“导入用户数据”功能，选择 `android-rime-fcitx5-userdata.zip` 导入。
+- [ ] **Trime**：将 `android-rime-trime.zip` 解压，将其中的 `rime/` 文件夹复制覆盖到 Trime 用户配置目录。
+- [ ] 导入或覆盖完成后，点击“重新部署”（Deploy）或重新加载配置。
 - [ ] 部署过程顺利完成，没有报错退出。
 
 ## 4. 全拼测试
@@ -51,12 +54,11 @@
 
 ---
 
-## 如果界面里没有导入按钮怎么办
+## 导入原则重申
 
-1. **不要盲目寻找**：如果你在设置中无法找到导入功能（例如 Fcitx5 for Android 配合 RIME 插件目前就没有提供），请停止在界面中寻找。
-2. **解压文件**：把下载的 zip 包解压出来。
-3. **手动复制**：使用 Material Files 或 MT 管理器，将解压后的文件直接复制到前端应用的工作目录（通常位于 `Android/data/<包名>/files/` 中）。具体不同前端的路径请参考 `docs/android-import-strategy.md`。
-4. **重新部署**：手动覆盖文件后，切记回到应用中点击“重新部署”。
+1. **不要寻找通用的 zip 导入**：Trime 和 Fcitx5 Android 目前均不提供“一键导入普通 Rime zip”的功能。
+2. **使用特定方式**：Fcitx5 走特定的用户数据导入格式；Trime 走文件管理器手动解压覆盖（详见 `docs/android-phone-only-test.md`）。
+3. **重新部署**：只要发生了 Rime 配置变化，不管是覆盖文件还是导入数据包，都必须在输入法中重新部署 Rime。
 
 ## 常见失败原因
 
