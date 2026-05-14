@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#DDDDDD">
+
+    <!-- Candidate Bar -->
+    <LinearLayout
+        android:id="@+id/candidate_bar"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#EEEEEE"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/buffer_text"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:textColor="#333333"
+            android:textStyle="bold"
+            android:gravity="center_vertical" />
+
+        <Button
+            android:id="@+id/candidate_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:text=""
+            android:textSize="16sp" />
+
+    </LinearLayout>
+
+    <!-- Keyboard Area 3x4 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Row 1 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="3">
+            <Button android:id="@+id/key_1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="1" />
+            <Button android:id="@+id/key_2" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="2 ABC" />
+            <Button android:id="@+id/key_3" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="3 DEF" />
+        </LinearLayout>
+
+        <!-- Row 2 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="3">
+            <Button android:id="@+id/key_4" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="4 GHI" />
+            <Button android:id="@+id/key_5" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="5 JKL" />
+            <Button android:id="@+id/key_6" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="6 MNO" />
+        </LinearLayout>
+
+        <!-- Row 3 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="3">
+            <Button android:id="@+id/key_7" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="7 PQRS" />
+            <Button android:id="@+id/key_8" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="8 TUV" />
+            <Button android:id="@+id/key_9" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="9 WXYZ" />
+        </LinearLayout>
+
+        <!-- Row 4 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="3">
+            <Button android:id="@+id/key_star" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="符" />
+            <Button android:id="@+id/key_0" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="0" />
+            <Button android:id="@+id/key_del" android:layout_width="0dp" android:layout_weight="1" android:layout_height="60dp" android:text="删除" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
