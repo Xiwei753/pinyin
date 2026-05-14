@@ -1,16 +1,12 @@
 package io.github.xiwei753.pinyin.t9.core
 
+import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
+
 class T9Engine {
     var buffer = ""
         private set
 
-    private val dictionary = mapOf(
-        "64426" to listOf("你好", "妮好"),
-        "748732" to listOf("输入法"),
-        "746946" to listOf("拼音"),
-        "9466446" to listOf("中国"),
-        "866428" to listOf("同步")
-    )
+    private val builtinDictionary = BuiltinDictionary()
 
     fun inputDigit(digit: String) {
         if (digit.matches(Regex("^[2-9]$"))) {
@@ -28,11 +24,11 @@ class T9Engine {
         buffer = ""
     }
 
-    fun getCandidates(): List<String> {
-        return dictionary[buffer] ?: emptyList()
+    fun getCandidates(): List<Candidate> {
+        return builtinDictionary.getCandidates(buffer)
     }
 
-    fun selectCandidate(index: Int): String? {
+    fun selectCandidate(index: Int): Candidate? {
         val candidates = getCandidates()
         if (index >= 0 && index < candidates.size) {
             val selected = candidates[index]
