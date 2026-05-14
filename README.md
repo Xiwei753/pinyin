@@ -31,15 +31,17 @@
 如果您使用的是 openSUSE / Tumbleweed 等 Linux 发行版，可以按照以下步骤进行第一轮测试：
 
 ```bash
+git pull
 chmod +x frontends/linux-fcitx5/fcitx5/*.sh
 bash frontends/linux-fcitx5/fcitx5/install-fcitx5-rime.sh
 bash frontends/linux-fcitx5/fcitx5/backup-rime.sh
 bash frontends/linux-fcitx5/fcitx5/deploy-rime.sh
 python tools/validate/check-all.py
+fcitx5 -r
 ```
 
 部署并检查通过后，请按如下步骤使用：
-1. 重启 fcitx5 或重新部署 Rime。
+1. 重启 fcitx5 或重新部署 Rime (也可以直接使用上面的 `fcitx5 -r` 命令)。
 2. 在输入法方案里选择“希为拼音”。
 3. 先测试基础拼音输入（例如：`nihao`、`shurufa`、`pinyin`）。
 4. **注意**：九键当前是实验方案，先不要当成已完成日用功能。
