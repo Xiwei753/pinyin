@@ -44,8 +44,8 @@ speller:
     - erase/^xx$/
 
 translator:
-  dictionary: xiwei_pinyin
-  prism: xiwei_pinyin
+  dictionary: luna_pinyin
+  prism: luna_pinyin
   enable_completion: true
   enable_sentence: true
   enable_user_dict: true

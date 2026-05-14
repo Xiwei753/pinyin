@@ -10,3 +10,4 @@ patch:
     - schema: xiwei_pinyin
     - schema: xiwei_t9
     - schema: luna_pinyin_simp
+    - schema: luna_pinyin
