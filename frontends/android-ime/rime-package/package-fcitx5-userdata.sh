@@ -73,7 +73,57 @@ EOF
 cd "$STAGING_DIR"
 ZIP_OUTPUT="$BUILD_DIR/android-rime-fcitx5-userdata.zip"
 rm -f "$ZIP_OUTPUT"
-zip -r "$ZIP_OUTPUT" ./*
+
+python3 - <<EOF
+import os, zipfile
+
+zip_output = "${ZIP_OUTPUT}"
+staging_dir = "${STAGING_DIR}"
+
+def add_dir_entry(zf, dir_arcname, added_dirs):
+    if not dir_arcname or dir_arcname == '/':
+        return
+    if not dir_arcname.endswith('/'):
+        dir_arcname += '/'
+    if dir_arcname in added_dirs:
+        return
+
+    parent = os.path.dirname(dir_arcname.rstrip('/'))
+    if parent:
+        add_dir_entry(zf, parent + '/', added_dirs)
+
+    zf.writestr(zipfile.ZipInfo(dir_arcname), b'')
+    added_dirs.add(dir_arcname)
+
+with zipfile.ZipFile(zip_output, 'w', zipfile.ZIP_DEFLATED) as zf:
+    added_dirs = set()
+
+    for d in ['shared_prefs/', 'databases/', 'external/', 'recently_used/']:
+        add_dir_entry(zf, d, added_dirs)
+
+    zf.write(os.path.join(staging_dir, 'metadata.json'), 'metadata.json')
+
+    for root, dirs, files in os.walk(os.path.join(staging_dir, 'external')):
+        if 'build' in dirs:
+            dirs.remove('build')
+        if '.private_sync' in dirs:
+            dirs.remove('.private_sync')
+
+        rel_root = os.path.relpath(root, staging_dir).replace(os.sep, '/')
+        if rel_root == '.':
+            continue
+
+        add_dir_entry(zf, rel_root + '/', added_dirs)
+
+        for d in sorted(dirs):
+            dir_arcname = f"{rel_root}/{d}/"
+            add_dir_entry(zf, dir_arcname, added_dirs)
+
+        for f in sorted(files):
+            file_path = os.path.join(root, f)
+            arcname = f"{rel_root}/{f}"
+            zf.write(file_path, arcname)
+EOF
 
 echo "Successfully generated $ZIP_OUTPUT"
 echo "Zip contents:"
