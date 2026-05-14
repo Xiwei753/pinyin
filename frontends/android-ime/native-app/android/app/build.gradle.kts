@@ -37,4 +37,6 @@ dependencies {
     // Keep it minimal
     implementation("androidx.core:core-ktx:1.12.0")
     // No complex dependencies as requested
+
+    testImplementation("junit:junit:4.13.2")
 }

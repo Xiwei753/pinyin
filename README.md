@@ -7,18 +7,18 @@
 - 不是写完整 fcitx5 插件。
 - 是**先跑通 shared 层**：字库、设置、Rime 配置、私人同步规则。
 
-## 下一阶段：九键输入验证与原生前端
+## 路线更新：自研输入核心与跨端前端
 
 目前 Android 基础输入（Fcitx5 Android + RIME 插件）已经跑通链路，全拼输入和简体候选均能正常工作。
 **私人词库同步（`custom_phrase`）**：在 Fcitx5 Android 环境下暂未验证成功，由于导入机制和环境差异导致无法稳定生效。该功能已暂时标记为后续优化项（Known Issue），不阻塞当前主线进度。
 
-**关于九键输入的重要结论：**
+**关于九键输入与跨端核心的重要结论：**
 经过代码和实现验证，Fcitx5 Android 的键盘 UI（如 `TextKeyboard.kt` 等）是硬编码的 QWERTY 布局。这意味着，**仅靠切换 Rime 的 schema 配置，是无法将 Fcitx5 Android 的键盘界面变成真正的 3x4 九宫格的。**
-因此，“希为九宫格” (`xiwei_t9.schema.yaml`) 目前仅作为输入数字序列匹配中文的**实验性后端验证**，它不能被当作可用的日常九键输入法。
 
 **当前项目方向调整：**
-- Fcitx5 Android + RIME 将继续作为“全拼测试前端”和配置验证工具。
-- 真正可用的九宫格键盘必须进入 `frontends/android-ime/native-app/` 进行原生开发。我们将从 Android 的 `InputMethodService` 最小原型开始，构建独立的九键 UI 和逻辑。
+- **Fcitx5 没有被废弃**：Fcitx5 将继续用于 Linux 和 Android 端的全拼测试。
+- **Android 原生前端与 T9 核心**：真正可用的九宫格键盘必须进入 `frontends/android-ime/native-app/` 进行原生开发。我们已经开始构建 `T9Engine` 作为**自研输入内核**的最小地基，它与基于 `InputMethodService` 的原生前端协同工作。
+- **共享输入核心演进**：最终目标是 Android 前端和 Linux Fcitx5 前端共享同一个输入核心（Shared Core）。自研内核将从 T9Engine 起步，逐步完善。Linux 端目前继续使用 fcitx5-rime 进行过渡，待共享核心稳定后，未来将通过开发独立的 fcitx5 插件接入我们的自研核心。
 
 ## 项目架构
 
