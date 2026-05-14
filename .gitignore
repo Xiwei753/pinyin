@@ -9,3 +9,9 @@ build/
 __pycache__/
 .pytest_cache/
 .venv/
+
+# Android Local Build Caches
+frontends/android-ime/native-app/android/.gradle/
+frontends/android-ime/native-app/android/build/
+frontends/android-ime/native-app/android/app/build/
+frontends/android-ime/native-app/android/local.properties
