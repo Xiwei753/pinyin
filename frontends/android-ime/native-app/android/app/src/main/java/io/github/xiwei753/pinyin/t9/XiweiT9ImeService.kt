@@ -6,15 +6,19 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import io.github.xiwei753.pinyin.t9.core.T9Engine
+import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
 
 class XiweiT9ImeService : InputMethodService() {
 
     private lateinit var bufferText: TextView
     private lateinit var candidateContainer: LinearLayout
 
-    private val engine = T9Engine()
+    private lateinit var dictionary: BuiltinDictionary
+    private lateinit var engine: T9Engine
 
     override fun onCreateInputView(): View {
+        dictionary = BuiltinDictionary.fromAssets(this)
+        engine = T9Engine(dictionary)
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
 
         bufferText = view.findViewById(R.id.buffer_text)

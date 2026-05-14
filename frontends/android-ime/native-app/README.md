@@ -17,10 +17,11 @@
 
 这是最小的 Android 九键输入法原型。暂不接 Rime，暂不接同步，暂不处理复杂候选。
 
-- T9Engine 已经从 Service 拆出
+- T9Engine 已经从 Service 拆出，负责输入状态
 - Candidate 是核心候选数据结构
-- BuiltinDictionary 是临时内置词库
-- 后续大词库 / 用户词库 / 同步都应该替换或扩展 data 层
+- BuiltinDictionary 负责数据来源，不再硬编码，而是从 assets/t9_builtin_dict.tsv 读取
+- 新增 DictionaryProvider 接口，作为后续接入用户词库、同步词库、shared core 的入口
+- 当前仍是最小测试词库，不是完整日用词库
 - Android Service 只负责 UI 和系统上屏
 
 构建命令如下：

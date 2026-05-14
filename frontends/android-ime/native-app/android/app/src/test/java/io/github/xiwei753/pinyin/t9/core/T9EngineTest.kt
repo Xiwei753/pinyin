@@ -1,5 +1,6 @@
 package io.github.xiwei753.pinyin.t9.core
 
+import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -12,7 +13,12 @@ class T9EngineTest {
 
     @Before
     fun setUp() {
-        engine = T9Engine()
+        val testDictionary = BuiltinDictionary(listOf(
+            "64426\t你好\t100000",
+            "64426\t妮好\t1000",
+            "748732\t输入法\t90000"
+        ))
+        engine = T9Engine(testDictionary)
     }
 
     @Test
