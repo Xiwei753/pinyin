@@ -67,7 +67,14 @@ class BuiltinDictionary : DictionaryProvider {
     }
 
     override fun getCandidates(code: String): List<Candidate> {
-        return dictionary[code] ?: emptyList()
+        if (code.isEmpty()) return emptyList()
+        val results = mutableListOf<Candidate>()
+        for ((key, candidates) in dictionary) {
+            if (key.startsWith(code)) {
+                results.addAll(candidates)
+            }
+        }
+        return results
     }
 
     companion object {

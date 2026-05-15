@@ -19,10 +19,10 @@
 
 - T9Engine 已经从 Service 拆出，负责输入状态
 - Candidate 是核心候选数据结构
-- BuiltinDictionary 负责数据来源，不再硬编码。现在维护拼音源词库 `assets/t9_source_dict.tsv`，不再手写数字码。
+- BuiltinDictionary 负责数据来源，不再硬编码。现在维护拼音源词库 `assets/t9_source_dict.tsv`，不再手写数字码，并支持前缀匹配（输入前几位数字即可出候选）。
 - 新增 `T9CodeMapper`，九键数字码由它自动生成。这样可以避免人工错误。
 - 新增 DictionaryProvider 接口，作为后续接入用户词库、同步词库、shared core 的入口
-- 当前仍是最小测试词库，不是完整日用词库
+- 包含玩具级的内置测试词库（几十个常用词），可用于测试体验，但尚未达到日用级别
 - Android Service 只负责 UI 和系统上屏
 
 构建命令如下：

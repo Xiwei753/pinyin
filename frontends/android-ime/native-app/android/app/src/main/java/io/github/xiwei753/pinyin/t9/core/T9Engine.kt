@@ -22,12 +22,14 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         buffer = ""
     }
 
-    fun getCandidates(): List<Candidate> {
-        return dictionary.getCandidates(buffer)
+    fun getCandidates(limit: Int = 30): List<Candidate> {
+        if (buffer.isEmpty()) return emptyList()
+        val candidates = dictionary.getCandidates(buffer)
+        return candidates.sortedByDescending { it.score }.take(limit)
     }
 
     fun selectCandidate(index: Int): Candidate? {
-        val candidates = getCandidates()
+        val candidates = getCandidates(Int.MAX_VALUE)
         if (index >= 0 && index < candidates.size) {
             val selected = candidates[index]
             clear()
