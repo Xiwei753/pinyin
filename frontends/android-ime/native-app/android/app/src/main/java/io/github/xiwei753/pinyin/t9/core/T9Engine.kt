@@ -25,13 +25,53 @@ class T9Engine(private val dictionary: DictionaryProvider) {
     fun getCandidates(limit: Int = 30): List<Candidate> {
         if (buffer.isEmpty()) return emptyList()
 
-        val combinations = getSentenceCandidates(buffer, limit)
-        if (combinations.isNotEmpty()) {
-            return combinations
+        val candidates = if (buffer.length < 4) {
+            getShortInputCandidates(buffer, limit)
+        } else {
+            getSentenceCandidates(buffer, limit)
+        }
+
+        if (candidates.isNotEmpty()) {
+            return candidates
         }
 
         // Fallback to raw buffer
         return listOf(Candidate(buffer, buffer, -Int.MAX_VALUE))
+    }
+
+    private fun getShortInputCandidates(code: String, limit: Int): List<Candidate> {
+        val candidates = dictionary.getPrefixCandidates(code)
+            .filter { candidate ->
+                // Length constraints:
+                // len 1 -> allow only 1 char
+                // len 2 -> allow max 2 chars
+                // len 3 -> allow max 3 chars
+                candidate.text.length <= code.length
+            }
+            .map { candidate ->
+                // Score adjustment for short input
+                var adjustedScore = candidate.score
+                // Penalty for candidate length mismatch with input length
+                val extraLen = candidate.code.length - code.length
+                if (extraLen > 0) {
+                    adjustedScore -= extraLen * 50000
+                }
+
+                Candidate(candidate.text, candidate.code, adjustedScore)
+            }
+            .sortedByDescending { it.score }
+            .take(limit - 1)
+            .toMutableList()
+
+        // Always ensure the bare numeric fallback is at the very end
+        candidates.removeAll { it.text == code }
+        candidates.add(Candidate(code, code, -Int.MAX_VALUE)) // Bare numeric fallback
+
+        return candidates.sortedWith(Comparator { c1, c2 ->
+            if (c1.text == code) return@Comparator 1
+            if (c2.text == code) return@Comparator -1
+            c2.score.compareTo(c1.score)
+        })
     }
 
     private fun getSentenceCandidates(code: String, limit: Int): List<Candidate> {
@@ -62,28 +102,32 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                         var baseScore = prevCandidate.score + partCandidate.score
 
                         // Penalty for word count (avoiding excessive fragmentation)
-                        // Count spaces to determine number of extra words added
                         val prevSpaceCount = prevCandidate.text.count { it == ' ' }
                         val newSpaceCount = newText.count { it == ' ' }
                         if (newSpaceCount > prevSpaceCount) {
-                            baseScore -= 10000 // 10k penalty per additional word cut
+                            baseScore -= 100000 // Heavily penalize multiple words, we only want it if the score is very good
                         }
 
-                        // Bonus for word length: encourage complete multi-character words over single characters
-                        // partCandidate.text is the word added in this step.
-                        // We check the length of the *text* (Chinese characters).
+                        // Bonus for exact matches and longer continuous words
+                        if (partCandidate.code == part) {
+                            baseScore += 50000
+                        }
+
                         if (partCandidate.text.length >= 2) {
                             baseScore += 50000 * partCandidate.text.length
                         } else if (partCandidate.text.length == 1) {
-                            // Small penalty for single character words if they are part of a multi-word sequence
-                            // (If it's the only word, newSpaceCount == 0 and prevSpaceCount == 0)
                             if (newSpaceCount > 0) {
-                                baseScore -= 5000
+                                baseScore -= 10000
                             }
                         }
 
-                        // Bonus if this combination perfectly covers the input up to `i`
-                        // (We evaluate this globally later, but adding a small progressive bonus here helps maintain quality candidates in the DP limit)
+                        // Also penalize very long prefix matches that overshoot the input significantly
+                        if (isPrefix) {
+                            val overShoot = partCandidate.code.length - part.length
+                            if (overShoot > 0) {
+                                baseScore -= overShoot * 20000
+                            }
+                        }
 
                         currentCandidates.add(Candidate(newText, newCode, baseScore))
                     }
@@ -92,7 +136,6 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
             if (currentCandidates.isNotEmpty()) {
                 dp[i] = currentCandidates.distinctBy { it.text }
-                    // Additional bonus for reaching the end
                     .map {
                         if (i == code.length) {
                             Candidate(it.text, it.code, it.score + 50000)
@@ -110,15 +153,11 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
         val result = dp[code.length]?.toMutableList() ?: mutableListOf()
 
-        // Ensure we take up to limit-1 candidates to leave room for fallback
         val limitedResult = result.take(limit - 1).toMutableList()
 
-        // Always ensure the bare numeric fallback is at the very end
         limitedResult.removeAll { it.text == code }
-        limitedResult.add(Candidate(code, code, -Int.MAX_VALUE)) // Bare numeric fallback
+        limitedResult.add(Candidate(code, code, -Int.MAX_VALUE))
 
-        // Final sort to guarantee the raw numeric fallback is at the very end
-        // while preserving the score-based sorting for all other candidates
         return limitedResult.sortedWith(Comparator { c1, c2 ->
             if (c1.text == code) return@Comparator 1
             if (c2.text == code) return@Comparator -1
