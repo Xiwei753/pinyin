@@ -69,6 +69,19 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                             baseScore -= 10000 // 10k penalty per additional word cut
                         }
 
+                        // Bonus for word length: encourage complete multi-character words over single characters
+                        // partCandidate.text is the word added in this step.
+                        // We check the length of the *text* (Chinese characters).
+                        if (partCandidate.text.length >= 2) {
+                            baseScore += 50000 * partCandidate.text.length
+                        } else if (partCandidate.text.length == 1) {
+                            // Small penalty for single character words if they are part of a multi-word sequence
+                            // (If it's the only word, newSpaceCount == 0 and prevSpaceCount == 0)
+                            if (newSpaceCount > 0) {
+                                baseScore -= 5000
+                            }
+                        }
+
                         // Bonus if this combination perfectly covers the input up to `i`
                         // (We evaluate this globally later, but adding a small progressive bonus here helps maintain quality candidates in the DP limit)
 
@@ -104,18 +117,18 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         limitedResult.removeAll { it.text == code }
         limitedResult.add(Candidate(code, code, -Int.MAX_VALUE)) // Bare numeric fallback
 
-        return limitedResult
+        // Final sort to guarantee the raw numeric fallback is at the very end
+        // while preserving the score-based sorting for all other candidates
+        return limitedResult.sortedWith(Comparator { c1, c2 ->
+            if (c1.text == code) return@Comparator 1
+            if (c2.text == code) return@Comparator -1
+            c2.score.compareTo(c1.score)
+        })
     }
 
-    fun selectCandidate(index: Int): Candidate? {
-        val candidates = getCandidates(Int.MAX_VALUE)
-        if (index >= 0 && index < candidates.size) {
-            val selected = candidates[index]
-            clear()
-
-            // Clean up the spaces added during sentence composition
-            return Candidate(selected.text.replace(" ", ""), selected.code, selected.score)
-        }
-        return null
+    fun commitCandidate(candidate: Candidate): Candidate {
+        clear()
+        // Clean up the spaces added during sentence composition
+        return Candidate(candidate.text.replace(" ", ""), candidate.code, candidate.score)
     }
 }

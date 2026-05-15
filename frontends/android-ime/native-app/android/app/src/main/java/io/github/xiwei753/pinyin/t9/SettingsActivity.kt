@@ -65,5 +65,17 @@ class SettingsActivity : Activity() {
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+
+        // Dictionary Status
+        val dictStatusText = findViewById<android.widget.TextView>(R.id.text_dict_status)
+        val dictManager = io.github.xiwei753.pinyin.t9.data.DictionaryManager.getInstance(this)
+
+        if (dictManager.isFallback) {
+            dictStatusText.text = "⚠️ 加载失败，已回退到内置示例词库 (${dictManager.loadedWordCount} 词)"
+            dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
+        } else {
+            dictStatusText.text = "✅ rime-ice 已加载 (${dictManager.loadedWordCount} 词)"
+            dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
+        }
     }
 }
