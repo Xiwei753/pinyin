@@ -39,4 +39,5 @@ dependencies {
     // No complex dependencies as requested
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:5.3.1")
 }

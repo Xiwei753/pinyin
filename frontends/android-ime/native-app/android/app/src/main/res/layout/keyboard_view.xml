@@ -25,7 +25,7 @@
             android:textSize="16sp"
             android:textColor="#888888"
             android:gravity="center_vertical"
-            android:paddingEnd="12dp"
+            android:paddingEnd="8dp"
             android:visibility="visible" />
 
         <HorizontalScrollView
@@ -46,6 +46,7 @@
 
     <!-- Keyboard Area 3x4 -->
     <LinearLayout
+        android:id="@+id/keyboard_area"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"

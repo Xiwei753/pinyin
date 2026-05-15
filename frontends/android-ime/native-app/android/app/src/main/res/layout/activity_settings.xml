@@ -33,8 +33,13 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="候选数量 (暂未实现 UI 修改)"
+            android:text="候选数量"
             android:textSize="18sp" />
+        <Spinner
+            android:id="@+id/spinner_candidate_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:entries="@array/candidate_count_entries" />
     </LinearLayout>
 
     <LinearLayout
@@ -48,8 +53,13 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="主题 (系统/深色/浅色 - 暂未实现 UI 修改)"
+            android:text="主题"
             android:textSize="18sp" />
+        <Spinner
+            android:id="@+id/spinner_theme"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:entries="@array/theme_entries" />
     </LinearLayout>
 
     <LinearLayout
@@ -63,8 +73,13 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="键盘高度 (暂未实现 UI 修改)"
+            android:text="键盘高度"
             android:textSize="18sp" />
+        <Spinner
+            android:id="@+id/spinner_keyboard_height"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:entries="@array/keyboard_height_entries" />
     </LinearLayout>
 
     <View
@@ -75,7 +90,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="关于: Xiwei T9 1.0"
+        android:text="关于: Xiwei T9 1.0\n词库来源: rime-ice\n授权协议: GPLv3"
         android:textSize="16sp"
         android:layout_marginTop="24dp" />
 
