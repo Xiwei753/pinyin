@@ -27,8 +27,8 @@
 - Third-party dictionaries/resources keep their own licenses
 
 - 当前代码和默认构建按 GPL v3 开源。
-- 未来如果引入雾凇拼音、薄荷输入法等第三方 GPL 词库，需要在 THIRD_PARTY_LICENSES/ 里保留来源和许可证。
-- 本次任务不要引入任何第三方大词库。
+- 第三方词库来源说明和原始许可证保留在 `THIRD_PARTY_LICENSES/` 目录下。
+- **当前内置词库状态**：目前项目内置的基础测试词库来源于开源项目 **rime-ice (雾凇拼音)**，以 GPLv3 协议引入。为了控制应用体积和加载速度，当前在 Android 测试应用中集成的只是经过缩减和转换的测试规模子集，并非完整日用词库。未来如果需要升级到完整大词库，可使用 `tools/dictionary/convert_rime_dict.py` 转换完整的 `base.dict.yaml` 或 `8105.dict.yaml`，并可按需修改 `t9_source_dict.tsv` 或构建增量加载机制。
 
 ## 项目架构
 
