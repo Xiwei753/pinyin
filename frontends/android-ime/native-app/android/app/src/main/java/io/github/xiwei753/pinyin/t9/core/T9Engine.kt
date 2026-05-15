@@ -31,7 +31,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         }
 
         // Fallback to raw buffer
-        return listOf(Candidate(buffer, buffer, 0))
+        return listOf(Candidate(buffer, buffer, -Int.MAX_VALUE))
     }
 
     private fun getSentenceCandidates(code: String, limit: Int): List<Candidate> {
@@ -57,14 +57,36 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                     for (partCandidate in partCandidates) {
                         val newText = if (prevCandidate.text.isEmpty()) partCandidate.text else prevCandidate.text + " " + partCandidate.text
                         val newCode = prevCandidate.code + partCandidate.code
-                        val newScore = prevCandidate.score + partCandidate.score
-                        currentCandidates.add(Candidate(newText, newCode, newScore))
+
+                        // Calculate score with penalties and bonuses
+                        var baseScore = prevCandidate.score + partCandidate.score
+
+                        // Penalty for word count (avoiding excessive fragmentation)
+                        // Count spaces to determine number of extra words added
+                        val prevSpaceCount = prevCandidate.text.count { it == ' ' }
+                        val newSpaceCount = newText.count { it == ' ' }
+                        if (newSpaceCount > prevSpaceCount) {
+                            baseScore -= 10000 // 10k penalty per additional word cut
+                        }
+
+                        // Bonus if this combination perfectly covers the input up to `i`
+                        // (We evaluate this globally later, but adding a small progressive bonus here helps maintain quality candidates in the DP limit)
+
+                        currentCandidates.add(Candidate(newText, newCode, baseScore))
                     }
                 }
             }
 
             if (currentCandidates.isNotEmpty()) {
                 dp[i] = currentCandidates.distinctBy { it.text }
+                    // Additional bonus for reaching the end
+                    .map {
+                        if (i == code.length) {
+                            Candidate(it.text, it.code, it.score + 50000)
+                        } else {
+                            it
+                        }
+                    }
                     .sortedByDescending { it.score }
                     .take(limit)
                     .toMutableList()
@@ -73,7 +95,16 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             }
         }
 
-        return dp[code.length] ?: emptyList()
+        val result = dp[code.length]?.toMutableList() ?: mutableListOf()
+
+        // Ensure we take up to limit-1 candidates to leave room for fallback
+        val limitedResult = result.take(limit - 1).toMutableList()
+
+        // Always ensure the bare numeric fallback is at the very end
+        limitedResult.removeAll { it.text == code }
+        limitedResult.add(Candidate(code, code, -Int.MAX_VALUE)) // Bare numeric fallback
+
+        return limitedResult
     }
 
     fun selectCandidate(index: Int): Candidate? {

@@ -3,6 +3,9 @@ package io.github.xiwei753.pinyin.t9
 import android.app.Activity
 import android.os.Bundle
 import android.widget.Switch
+import android.widget.Spinner
+import android.widget.AdapterView
+import android.view.View
 
 class SettingsActivity : Activity() {
 
@@ -19,6 +22,48 @@ class SettingsActivity : Activity() {
 
         hapticSwitch.setOnCheckedChangeListener { _, isChecked ->
             settingsRepository.setHapticFeedbackEnabled(isChecked)
+        }
+
+        // Candidate count
+        val candidateCountSpinner = findViewById<Spinner>(R.id.spinner_candidate_count)
+        val candidateCountValues = resources.getStringArray(R.array.candidate_count_values)
+        val currentCount = settingsRepository.getCandidateCount().toString()
+        val countIndex = candidateCountValues.indexOf(currentCount)
+        if (countIndex >= 0) candidateCountSpinner.setSelection(countIndex)
+
+        candidateCountSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                settingsRepository.setCandidateCount(candidateCountValues[position].toInt())
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // Theme
+        val themeSpinner = findViewById<Spinner>(R.id.spinner_theme)
+        val themeValues = resources.getStringArray(R.array.theme_values)
+        val currentTheme = settingsRepository.getTheme()
+        val themeIndex = themeValues.indexOf(currentTheme)
+        if (themeIndex >= 0) themeSpinner.setSelection(themeIndex)
+
+        themeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                settingsRepository.setTheme(themeValues[position])
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // Keyboard height
+        val heightSpinner = findViewById<Spinner>(R.id.spinner_keyboard_height)
+        val heightValues = resources.getStringArray(R.array.keyboard_height_values)
+        val currentHeight = settingsRepository.getKeyboardHeight()
+        val heightIndex = heightValues.indexOf(currentHeight)
+        if (heightIndex >= 0) heightSpinner.setSelection(heightIndex)
+
+        heightSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                settingsRepository.setKeyboardHeight(heightValues[position])
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
 }

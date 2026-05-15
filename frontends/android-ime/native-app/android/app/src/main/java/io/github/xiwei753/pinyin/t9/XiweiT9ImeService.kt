@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.widget.TextView
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
+import io.github.xiwei753.pinyin.t9.data.DictionaryManager
 
 class XiweiT9ImeService : InputMethodService() {
 
@@ -22,7 +23,7 @@ class XiweiT9ImeService : InputMethodService() {
     override fun onCreateInputView(): View {
         settingsRepository = SettingsRepository(this)
         hapticFeedbackManager = HapticFeedbackManager(this, settingsRepository)
-        dictionary = BuiltinDictionary.fromAssets(this)
+        dictionary = DictionaryManager.getInstance(this)
         engine = T9Engine(dictionary)
 
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
@@ -32,7 +33,73 @@ class XiweiT9ImeService : InputMethodService() {
 
         setupKeys(view)
 
+        applyThemeAndHeight(view)
+
         return view
+    }
+
+    override fun onStartInputView(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
+        super.onStartInputView(info, restarting)
+        // Re-apply theme and height when view is shown again, in case settings changed
+        view?.let { applyThemeAndHeight(it) }
+    }
+
+    private var view: View? = null
+
+    private fun applyThemeAndHeight(rootView: View) {
+        this.view = rootView
+        val theme = settingsRepository.getTheme()
+        val isDark = when (theme) {
+            "dark" -> true
+            "light" -> false
+            else -> {
+                // system default
+                val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            }
+        }
+
+        // Apply theme colors
+        val bgColor = if (isDark) android.graphics.Color.parseColor("#222222") else android.graphics.Color.parseColor("#F0F0F0")
+        val candidateBarColor = if (isDark) android.graphics.Color.parseColor("#333333") else android.graphics.Color.parseColor("#FFFFFF")
+        val textColor = if (isDark) android.graphics.Color.parseColor("#EEEEEE") else android.graphics.Color.parseColor("#333333")
+
+        rootView.setBackgroundColor(bgColor)
+        rootView.findViewById<LinearLayout>(R.id.candidate_bar).setBackgroundColor(candidateBarColor)
+        bufferText.setTextColor(if (isDark) android.graphics.Color.parseColor("#AAAAAA") else android.graphics.Color.parseColor("#888888"))
+
+        val allKeys = listOf(
+            R.id.key_1, R.id.key_2, R.id.key_3,
+            R.id.key_4, R.id.key_5, R.id.key_6,
+            R.id.key_7, R.id.key_8, R.id.key_9,
+            R.id.key_star, R.id.key_0, R.id.key_del
+        )
+
+        val heightSetting = settingsRepository.getKeyboardHeight()
+        val density = resources.displayMetrics.density
+        val rowHeightPx = when (heightSetting) {
+            "low" -> (48 * density).toInt()
+            "high" -> (64 * density).toInt()
+            else -> (56 * density).toInt() // normal
+        }
+
+        for (id in allKeys) {
+            val keyView = rootView.findViewById<TextView>(id)
+            keyView.setTextColor(textColor)
+            // Adjust height
+            val parent = keyView.parent as? android.widget.FrameLayout
+            if (parent != null) {
+                val params = parent.layoutParams
+                params.height = rowHeightPx
+                parent.layoutParams = params
+            }
+        }
+
+        // Update candidates' text colors if any exist
+        for (i in 0 until candidateContainer.childCount) {
+            val child = candidateContainer.getChildAt(i) as? TextView
+            child?.setTextColor(textColor)
+        }
     }
 
     private fun setupKeys(view: View) {
@@ -112,13 +179,8 @@ class XiweiT9ImeService : InputMethodService() {
     private fun updateUi() {
         bufferText.text = engine.buffer
 
-        candidateContainer.removeAllViews()
-
         val limit = settingsRepository.getCandidateCount()
         val candidates = engine.getCandidates(limit)
-
-        // Use a primitive view pool for candidate TextViews
-        val inflater = LayoutInflater.from(this)
 
         for ((index, candidate) in candidates.withIndex()) {
             val btn: TextView = if (index < candidateContainer.childCount) {
@@ -141,6 +203,9 @@ class XiweiT9ImeService : InputMethodService() {
             btn.text = candidate.text
             btn.setOnClickListener { v ->
                 hapticFeedbackManager.performTap(v)
+                // Use the candidate's actual index instead of relying on the loop index directly
+                // when deleting/reusing views, although capturing index here is fine since
+                // it maps 1:1 to the current candidates list passed to onCandidateClicked.
                 onCandidateClicked(index)
             }
         }

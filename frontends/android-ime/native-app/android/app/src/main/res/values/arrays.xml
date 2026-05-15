@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="candidate_count_entries">
+        <item>5</item>
+        <item>10</item>
+        <item>15</item>
+        <item>30</item>
+    </string-array>
+    <string-array name="candidate_count_values">
+        <item>5</item>
+        <item>10</item>
+        <item>15</item>
+        <item>30</item>
+    </string-array>
+
+    <string-array name="theme_entries">
+        <item>跟随系统</item>
+        <item>浅色</item>
+        <item>深色</item>
+    </string-array>
+    <string-array name="theme_values">
+        <item>system</item>
+        <item>light</item>
+        <item>dark</item>
+    </string-array>
+
+    <string-array name="keyboard_height_entries">
+        <item>低 (Low)</item>
+        <item>标准 (Normal)</item>
+        <item>高 (High)</item>
+    </string-array>
+    <string-array name="keyboard_height_values">
+        <item>low</item>
+        <item>normal</item>
+        <item>high</item>
+    </string-array>
+</resources>

@@ -29,4 +29,12 @@ class SettingsRepository(context: Context) {
     fun setTheme(theme: String) {
         prefs.edit().putString("theme", theme).apply()
     }
+
+    fun getKeyboardHeight(): String {
+        return prefs.getString("keyboard_height", "normal") ?: "normal"
+    }
+
+    fun setKeyboardHeight(height: String) {
+        prefs.edit().putString("keyboard_height", height).apply()
+    }
 }
