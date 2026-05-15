@@ -14,9 +14,9 @@ class T9EngineTest {
     @Before
     fun setUp() {
         val testDictionary = BuiltinDictionary(listOf(
-            "64426\t你好\t100000",
-            "64426\t妮好\t1000",
-            "748732\t输入法\t90000"
+            "你好\tni hao\t100000",
+            "妮好\tni hao\t1000",
+            "输入法\tshu ru fa\t90000"
         ))
         engine = T9Engine(testDictionary)
     }
@@ -38,8 +38,8 @@ class T9EngineTest {
 
     @Test
     fun testInputAndCandidates_ShuRuFa() {
-        "748732".forEach { engine.inputDigit(it.toString()) }
-        assertEquals("748732", engine.buffer)
+        "7487832".forEach { engine.inputDigit(it.toString()) }
+        assertEquals("7487832", engine.buffer)
         val candidates = engine.getCandidates()
         assertEquals(1, candidates.size)
         assertEquals("输入法", candidates[0].text)

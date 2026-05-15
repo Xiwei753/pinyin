@@ -28,9 +28,11 @@
 - 待自研核心稳定后，再通过 fcitx5 插件的形式接入 shared core。
 
 ## 当前进展
+- 仓库主许可证已经切换为 GPL v3。当前没有引入第三方大词库。未来可以引入第三方 GPL 兼容词库，但必须保留来源、许可证、版本信息。
 - T9Engine 已经从 Service 拆出，负责输入状态
 - Candidate 是核心候选数据结构
-- BuiltinDictionary 负责数据来源，不再硬编码，而是从 assets/t9_builtin_dict.tsv 读取
+- BuiltinDictionary 负责数据来源，不再硬编码。现在维护拼音源词库 `assets/t9_source_dict.tsv`，不再手写数字码。
+- 新增 `T9CodeMapper`，九键数字码由它自动生成。这样可以避免 748732 / 7487832 这类人工错误。
 - 新增 DictionaryProvider 接口，作为后续接入用户词库、同步词库、shared core 的入口
 - 当前仍是最小测试词库，不是完整日用词库
 - Android Service 只负责 UI 和系统上屏

@@ -9,11 +9,11 @@ class BuiltinDictionaryTest {
     @Test
     fun testParseLines() {
         val lines = listOf(
-            "64426\t你好\t100000",
-            "64426\t妮好\t1000",
-            "748732\t输入法\t90000",
+            "你好\tni hao\t100000",
+            "妮好\tni hao\t1000",
+            "输入法\tshu ru fa\t90000",
             "invalid_line_no_tabs",
-            "123\ttext\tnot_a_number"
+            "text\tpinyin\tnot_a_number"
         )
         val dictionary = BuiltinDictionary(lines)
 
@@ -23,14 +23,14 @@ class BuiltinDictionaryTest {
         assertEquals("妮好", candidates64426[1].text)
         assertTrue(candidates64426[0].score > candidates64426[1].score)
 
-        val candidates748732 = dictionary.getCandidates("748732")
-        assertEquals(1, candidates748732.size)
-        assertEquals("输入法", candidates748732[0].text)
+        val candidates7487832 = dictionary.getCandidates("7487832")
+        assertEquals(1, candidates7487832.size)
+        assertEquals("输入法", candidates7487832[0].text)
 
-        val candidates123 = dictionary.getCandidates("123")
-        assertEquals(1, candidates123.size)
-        assertEquals("text", candidates123[0].text)
-        assertEquals(0, candidates123[0].score) // fallback score
+        val candidates746946 = dictionary.getCandidates("746946") // code for "pinyin"
+        assertEquals(1, candidates746946.size)
+        assertEquals("text", candidates746946[0].text)
+        assertEquals(0, candidates746946[0].score) // fallback score
     }
 
     @Test
@@ -40,8 +40,8 @@ class BuiltinDictionaryTest {
         assertEquals(1, candidates64426.size)
         assertEquals("你好", candidates64426[0].text)
 
-        val candidates748732 = dictionary.getCandidates("748732")
-        assertEquals(1, candidates748732.size)
-        assertEquals("输入法", candidates748732[0].text)
+        val candidates7487832 = dictionary.getCandidates("7487832")
+        assertEquals(1, candidates7487832.size)
+        assertEquals("输入法", candidates7487832[0].text)
     }
 }

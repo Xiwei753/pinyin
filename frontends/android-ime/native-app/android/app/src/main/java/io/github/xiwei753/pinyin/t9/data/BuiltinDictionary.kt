@@ -2,6 +2,7 @@ package io.github.xiwei753.pinyin.t9.data
 
 import android.content.Context
 import io.github.xiwei753.pinyin.t9.core.Candidate
+import io.github.xiwei753.pinyin.t9.core.T9CodeMapper
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.BufferedReader
@@ -35,14 +36,17 @@ class BuiltinDictionary : DictionaryProvider {
             for (line in lines) {
                 val parts = line.split("\t")
                 if (parts.size >= 3) {
-                    val code = parts[0]
-                    val text = parts[1]
+                    val text = parts[0]
+                    val pinyin = parts[1]
                     val score = parts[2].toIntOrNull() ?: 0
+                    val code = T9CodeMapper.toCode(pinyin)
 
-                    if (!map.containsKey(code)) {
-                        map[code] = mutableListOf()
+                    if (code.isNotEmpty()) {
+                        if (!map.containsKey(code)) {
+                            map[code] = mutableListOf()
+                        }
+                        map[code]?.add(Candidate(text, code, score))
                     }
-                    map[code]?.add(Candidate(text, code, score))
                 }
             }
         } catch (e: Exception) {
@@ -52,7 +56,7 @@ class BuiltinDictionary : DictionaryProvider {
         // If map is empty or we had an error, use fallback
         if (map.isEmpty()) {
             map["64426"] = mutableListOf(Candidate("你好", "64426", 100000))
-            map["748732"] = mutableListOf(Candidate("输入法", "748732", 90000))
+            map["7487832"] = mutableListOf(Candidate("输入法", "7487832", 90000))
         }
 
         val finalMap = mutableMapOf<String, List<Candidate>>()
@@ -69,7 +73,7 @@ class BuiltinDictionary : DictionaryProvider {
     companion object {
         fun fromAssets(context: Context): BuiltinDictionary {
             return try {
-                val inputStream = context.assets.open("t9_builtin_dict.tsv")
+                val inputStream = context.assets.open("t9_source_dict.tsv")
                 BuiltinDictionary(inputStream)
             } catch (e: Exception) {
                 BuiltinDictionary(emptyList()) // fallback
