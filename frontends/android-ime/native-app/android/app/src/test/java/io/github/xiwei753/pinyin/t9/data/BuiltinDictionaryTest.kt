@@ -90,6 +90,46 @@ class BuiltinDictionaryTest {
     }
 
     @Test
+    fun testSingleSyllableIndex() {
+        val lines = listOf(
+            "我\two\t100000",
+            "我们\two men\t90000",
+            "你\tni\t90000",
+            "他\tta\t80000",
+            "她\tta\t80000",
+            "的\tde\t100000",
+            "得\tde\t90000",
+            "地\tde\t80000",
+            "不\tbu\t100000",
+            "是\tshi\t100000",
+            "冷\tleng\t5000"
+        )
+        val dictionary = BuiltinDictionary(lines)
+
+        val candsWo = dictionary.getSingleSyllableCandidates("wo")
+        assertTrue("我 should be in single syllable index", candsWo.any { it.text == "我" })
+        assertTrue("我们 should NOT be in single syllable index", candsWo.none { it.text == "我们" })
+
+        val candsNi = dictionary.getSingleSyllableCandidates("ni")
+        assertTrue("你 should be in single syllable index", candsNi.any { it.text == "你" })
+
+        val candsTa = dictionary.getSingleSyllableCandidates("ta")
+        assertTrue("他 should be in single syllable index", candsTa.any { it.text == "他" })
+        assertTrue("她 should be in single syllable index", candsTa.any { it.text == "她" })
+
+        val candsDe = dictionary.getSingleSyllableCandidates("de")
+        assertTrue("的 should be in single syllable index", candsDe.any { it.text == "的" })
+        assertTrue("得 should be in single syllable index", candsDe.any { it.text == "得" })
+        assertTrue("地 should be in single syllable index", candsDe.any { it.text == "地" })
+
+        val candsShi = dictionary.getSingleSyllableCandidates("shi")
+        assertTrue("是 should be in single syllable index", candsShi.any { it.text == "是" })
+
+        val candsBu = dictionary.getSingleSyllableCandidates("bu")
+        assertTrue("不 should be in single syllable index", candsBu.any { it.text == "不" })
+    }
+
+    @Test
     fun testLargeDictionaryPrefixQueryPerformance() {
         // Generate a large dictionary dataset
         val lines = mutableListOf<String>()
