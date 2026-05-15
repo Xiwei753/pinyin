@@ -4,6 +4,7 @@ import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 
@@ -23,7 +24,11 @@ class T9EngineTest {
             "的\tde\t200000",
             "因为\tyin wei\t50000",
             "音\tyin\t60000",
-            "为\twei\t60000"
+            "为\twei\t60000",
+            "江泽民同志\tjiang ze min tong zhi\t50000",
+            "江泽民\tjiang ze min\t40000",
+            "监督\tjian du\t30000",
+            "轿车\tjiao che\t20000"
         ))
         engine = T9Engine(testDictionary)
     }
@@ -145,5 +150,47 @@ class T9EngineTest {
         engine.inputDigit("*")
         engine.inputDigit("#")
         assertEquals("", engine.buffer)
+    }
+
+    @Test
+    fun testShortInput_Length1() {
+        // input: 5
+        // Expect: only single characters. No "江泽民同志" etc.
+        "5".forEach { engine.inputDigit(it.toString()) }
+        val candidates = engine.getCandidates()
+        assertFalse(candidates.any { it.text == "江泽民同志" })
+        assertFalse(candidates.any { it.text == "江泽民" })
+        assertFalse(candidates.any { it.text == "监督" })
+        assertFalse(candidates.any { it.text == "轿车" })
+        // Since test dict has "今天"(2 chars), it shouldn't show up for len 1
+        assertFalse(candidates.any { it.text == "今天" })
+        assertTrue(candidates.last().text == "5")
+    }
+
+    @Test
+    fun testShortInput_Length2() {
+        // input: 54
+        // Expect: max 2 chars. No "江泽民同志" etc.
+        "54".forEach { engine.inputDigit(it.toString()) }
+        val candidates = engine.getCandidates()
+        assertFalse(candidates.any { it.text == "江泽民同志" })
+        assertFalse(candidates.any { it.text == "江泽民" })
+        // Could show 监督/轿车 but test dict has length 2. Let's see if jian(5426) or jiao(5426) show up
+        // yes they can be prefixes, but text.length <= 2 must hold.
+        // Also ensure no sentence composition
+        assertFalse(candidates.any { it.text.contains(" ") })
+        assertTrue(candidates.last().text == "54")
+    }
+
+    @Test
+    fun testShortInput_Length3() {
+        // input: 542
+        // Expect: max 3 chars. No "江泽民同志"
+        "542".forEach { engine.inputDigit(it.toString()) }
+        val candidates = engine.getCandidates()
+        assertFalse(candidates.any { it.text == "江泽民同志" })
+        // But 江泽民 is length 3, could show up depending on score.
+        assertFalse(candidates.any { it.text.contains(" ") })
+        assertTrue(candidates.last().text == "542")
     }
 }
