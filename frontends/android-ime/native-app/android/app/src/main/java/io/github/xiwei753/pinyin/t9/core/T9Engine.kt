@@ -36,17 +36,23 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         }
 
         // Fallback to raw buffer
-        return listOf(Candidate(buffer, buffer, -Int.MAX_VALUE))
+        return listOf(Candidate(buffer, buffer, -Int.MAX_VALUE, CandidateType.NORMAL))
     }
 
     private fun getShortInputCandidates(code: String, limit: Int): List<Candidate> {
         val candidates = dictionary.getPrefixCandidates(code)
             .filter { candidate ->
                 // Length constraints:
-                // len 1 -> allow only 1 char
-                // len 2 -> allow max 2 chars
-                // len 3 -> allow max 3 chars
-                candidate.text.length <= code.length
+                if (candidate.type == CandidateType.LONG_OR_LOW_FREQ) return@filter false
+                if (code.length == 1) {
+                    candidate.type == CandidateType.SINGLE_CHAR || (candidate.type == CandidateType.COMMON_SHORT && candidate.text.length == 1)
+                } else if (code.length == 2) {
+                    candidate.text.length <= 2
+                } else if (code.length == 3) {
+                    candidate.text.length <= 3 && candidate.type != CandidateType.LONG_OR_LOW_FREQ
+                } else {
+                    candidate.text.length <= code.length
+                }
             }
             .map { candidate ->
                 // Score adjustment for short input
@@ -57,7 +63,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                     adjustedScore -= extraLen * 50000
                 }
 
-                Candidate(candidate.text, candidate.code, adjustedScore)
+                Candidate(candidate.text, candidate.code, adjustedScore, candidate.type)
             }
             .sortedByDescending { it.score }
             .take(limit - 1)
@@ -65,7 +71,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
         // Always ensure the bare numeric fallback is at the very end
         candidates.removeAll { it.text == code }
-        candidates.add(Candidate(code, code, -Int.MAX_VALUE)) // Bare numeric fallback
+        candidates.add(Candidate(code, code, -Int.MAX_VALUE, CandidateType.NORMAL)) // Bare numeric fallback
 
         return candidates.sortedWith(Comparator { c1, c2 ->
             if (c1.text == code) return@Comparator 1
@@ -156,7 +162,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         val limitedResult = result.take(limit - 1).toMutableList()
 
         limitedResult.removeAll { it.text == code }
-        limitedResult.add(Candidate(code, code, -Int.MAX_VALUE))
+        limitedResult.add(Candidate(code, code, -Int.MAX_VALUE, CandidateType.NORMAL))
 
         return limitedResult.sortedWith(Comparator { c1, c2 ->
             if (c1.text == code) return@Comparator 1
