@@ -34,6 +34,25 @@ class BuiltinDictionaryTest {
     }
 
     @Test
+    fun testPrefixMatching() {
+        val lines = listOf(
+            "你好\tni hao\t100000",
+            "输入法\tshu ru fa\t90000",
+            "拼音\tpin yin\t80000"
+        )
+        val dictionary = BuiltinDictionary(lines)
+
+        // 64 is prefix of 64426 (ni hao)
+        val prefixCandidates = dictionary.getCandidates("64")
+        assertEquals(1, prefixCandidates.size)
+        assertEquals("你好", prefixCandidates[0].text)
+
+        // Empty prefix should return empty list
+        val emptyCandidates = dictionary.getCandidates("")
+        assertTrue(emptyCandidates.isEmpty())
+    }
+
+    @Test
     fun testFallback() {
         val dictionary = BuiltinDictionary(emptyList<String>())
         val candidates64426 = dictionary.getCandidates("64426")

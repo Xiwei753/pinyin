@@ -22,6 +22,33 @@ class T9EngineTest {
     }
 
     @Test
+    fun testEmptyInputReturnsNoCandidates() {
+        assertTrue(engine.getCandidates().isEmpty())
+    }
+
+    @Test
+    fun testPrefixMatching() {
+        engine.inputDigit("6")
+        engine.inputDigit("4")
+        val candidates = engine.getCandidates()
+        // "64" is prefix of "64426" (ni hao)
+        assertTrue(candidates.any { it.text == "你好" })
+        assertTrue(candidates.any { it.text == "妮好" })
+        assertEquals("你好", candidates[0].text) // Highest score first
+    }
+
+    @Test
+    fun testCandidateLimit() {
+        // We know we have 2 candidates for 64426, and 1 for 7487832.
+        // Let's add more to dictionary dynamically or rely on sorting logic.
+        val largeDictionary = BuiltinDictionary((1..50).map { "测试$it\tce shi\t${100 - it}" })
+        val limitEngine = T9Engine(largeDictionary)
+        "23744".forEach { limitEngine.inputDigit(it.toString()) } // ce shi
+        val candidates = limitEngine.getCandidates(10)
+        assertEquals(10, candidates.size)
+    }
+
+    @Test
     fun testInputAndCandidates_NiHao() {
         engine.inputDigit("6")
         engine.inputDigit("4")
