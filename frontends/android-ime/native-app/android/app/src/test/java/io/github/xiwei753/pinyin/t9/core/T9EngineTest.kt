@@ -51,6 +51,15 @@ class T9EngineTest {
         engine.inputDigit("6")
         engine.inputDigit("4")
         assertEquals("bu tai xing", engine.getPreedit())
+
+        engine.clear()
+
+        // Test jin tian wan shang
+        val digits = "546842692674264"
+        for (d in digits) {
+            engine.inputDigit(d.toString())
+        }
+        assertEquals("jin tian wan shang", engine.getPreedit())
     }
 
     @Test
@@ -64,6 +73,22 @@ class T9EngineTest {
         engine.inputDigit("8")
         engine.inputDigit("2")
         engine.inputDigit("4")
+        assertEquals("bu tai", engine.getPreedit())
+
+        engine.clear()
+
+        val sepDigits = "28182419464"
+        for (d in sepDigits) {
+            engine.inputDigit(d.toString())
+        }
+        assertEquals("bu tai xing", engine.getPreedit())
+
+        // Test backspacing separator updates preedit
+        engine.backspace() // removes '4'
+        engine.backspace() // removes '6'
+        engine.backspace() // removes '4'
+        engine.backspace() // removes '9'
+        engine.backspace() // removes '1'
         assertEquals("bu tai", engine.getPreedit())
     }
 
@@ -99,6 +124,7 @@ class T9EngineTest {
         dict.add(Candidate("不太行", "288249464", 1000, CandidateType.NORMAL), "bu tai xing")
         // This is a word that matches the raw digits but NOT the pinyin sequence bu tai xing
         dict.add(Candidate("不太新股", "288249464", 900, CandidateType.NORMAL), "bu tai xin gu")
+        dict.add(Candidate("不太英语", "288249464", 800, CandidateType.NORMAL), "bu tai ying yu")
 
         val engine = T9Engine(dict)
         engine.inputDigit("2")
@@ -113,7 +139,8 @@ class T9EngineTest {
 
         val cands = engine.getCandidates()
         assertEquals("不太行", cands[0].text)
-        // Should not have 不太新股
+        // Should not have 不太新股 or 不太英语
         assertTrue(cands.none { it.text == "不太新股" })
+        assertTrue(cands.none { it.text == "不太英语" })
     }
 }

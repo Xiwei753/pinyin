@@ -4,51 +4,69 @@ data class PinyinComposition(
     val pinyinList: List<String>,
     val pinyinString: String,
     val isComplete: Boolean,
-    val rawDigits: String
+    val rawDigits: String,
+    var score: Int = 0
 )
 
 class T9PinyinComposer {
+
+    companion object {
+        val COMMON_SYLLABLES = setOf(
+            "de", "shi", "yi", "bu", "le", "wo", "ta", "you", "zhe", "shang", "zhong", "guo",
+            "ren", "zai", "dao", "ge", "hui", "ji", "ke", "chu", "ye", "zi", "wan", "tian", "jin",
+            "xing", "tai", "ming", "dong", "xiao", "da", "di", "xue", "sheng", "nian", "yue", "ri",
+            "hao", "kan", "ting", "shuo", "hua", "men", "duo", "shao", "qian", "lai", "qu"
+        )
+    }
 
     fun getCompositions(buffer: String): List<PinyinComposition> {
         if (buffer.isEmpty()) return emptyList()
 
         val results = mutableListOf<PinyinComposition>()
-
-        // Split by explicit separators '1'
         val segments = buffer.split("1")
-
-        // Generate possible decodings for each segment
-        // If a segment is empty (e.g. starting with 1, ending with 1, or consecutive 1s), we ignore it or treat it as a break
 
         val segmentPathsList = segments.map { segment ->
             if (segment.isEmpty()) {
-                listOf(listOf<String>())
+                listOf(Pair(emptyList<String>(), true))
             } else {
                 getPathsForSegment(segment)
             }
         }
 
-        // Combine paths across segments
         val combinedPaths = combinePaths(segmentPathsList)
 
-        for (path in combinedPaths) {
+        for ((path, isComplete) in combinedPaths) {
             val pinyinString = path.joinToString(" ")
 
-            // Determine if complete: all non-empty segments' last syllable must be complete
-            // This is slightly complex, so let's simplify:
-            // A path is complete if its last syllable is an exact match for its digits.
-            // But wait, we only want to return the best ones.
-            results.add(PinyinComposition(path, pinyinString, true, buffer))
+            var score = 0
+            if (isComplete) score += 10000
+            score -= path.size * 100
+
+            for (syl in path) {
+                val codeLen = T9CodeMapper.toCode(syl).length
+                if (codeLen == 1) {
+                    score -= 50
+                }
+                if (COMMON_SYLLABLES.contains(syl)) {
+                    score += 10
+                }
+            }
+
+            results.add(PinyinComposition(path, pinyinString, isComplete, buffer, score))
         }
 
-        // Sort by some heuristic (e.g., fewer syllables = better, or longer syllables = better)
-        // For now, let's just return distinct
-        return results.distinctBy { it.pinyinString }
+        return results.distinctBy { it.pinyinString }.sortedWith(Comparator { c1, c2 ->
+            if (c1.score != c2.score) {
+                c2.score.compareTo(c1.score)
+            } else {
+                c1.pinyinString.compareTo(c2.pinyinString)
+            }
+        })
     }
 
-    private fun getPathsForSegment(segment: String): List<List<String>> {
-        val dp = Array<MutableList<List<String>>>(segment.length + 1) { mutableListOf() }
-        dp[0].add(emptyList())
+    private fun getPathsForSegment(segment: String): List<Pair<List<String>, Boolean>> {
+        val dp = Array<MutableList<Pair<List<String>, Boolean>>>(segment.length + 1) { mutableListOf() }
+        dp[0].add(Pair(emptyList(), true))
 
         for (i in 1..segment.length) {
             for (j in 0 until i) {
@@ -57,42 +75,44 @@ class T9PinyinComposer {
                 val part = segment.substring(j, i)
                 val isPrefix = (i == segment.length)
 
-                val syllables = if (isPrefix) {
-                    PinyinSyllableDecoder.getPrefixSyllables(part)
-                } else {
-                    PinyinSyllableDecoder.getExactSyllables(part)
-                }
+                val exactSyllables = PinyinSyllableDecoder.getExactSyllables(part)
+                val prefixSyllables = if (isPrefix) PinyinSyllableDecoder.getPrefixSyllables(part) else emptyList()
 
-                for (prevPath in dp[j]) {
-                    for (syllable in syllables) {
-                        val newPath = prevPath + syllable
-                        dp[i].add(newPath)
+                for ((prevPath, _) in dp[j]) {
+                    for (syllable in exactSyllables) {
+                        dp[i].add(Pair(prevPath + syllable, true))
+                    }
+
+                    if (isPrefix) {
+                        val exactSet = exactSyllables.toSet()
+                        for (syllable in prefixSyllables) {
+                            if (syllable !in exactSet) {
+                                dp[i].add(Pair(prevPath + syllable, false))
+                            }
+                        }
                     }
                 }
             }
-
-            // If we can't find any valid prefix, maybe it's just invalid, we can keep the raw digits or allow fallback?
-            // To be robust, if dp[i] is empty, maybe we fallback to adding the raw digits.
         }
 
         val result = dp[segment.length]
         if (result.isEmpty()) {
-            // Fallback for invalid segment
-            return listOf(listOf(segment))
+            return listOf(Pair(listOf(segment), false))
         }
         return result
     }
 
-    private fun combinePaths(segmentPathsList: List<List<List<String>>>): List<List<String>> {
-        var currentCombined = listOf(emptyList<String>())
+    private fun combinePaths(segmentPathsList: List<List<Pair<List<String>, Boolean>>>): List<Pair<List<String>, Boolean>> {
+        var currentCombined = listOf(Pair(emptyList<String>(), true))
 
         for (segmentPaths in segmentPathsList) {
-            val newCombined = mutableListOf<List<String>>()
+            val newCombined = mutableListOf<Pair<List<String>, Boolean>>()
             for (comb in currentCombined) {
                 for (path in segmentPaths) {
-                    val newComb = comb.toMutableList()
-                    newComb.addAll(path)
-                    newCombined.add(newComb)
+                    val newCombList = comb.first.toMutableList()
+                    newCombList.addAll(path.first)
+                    val newComplete = comb.second && path.second
+                    newCombined.add(Pair(newCombList, newComplete))
                 }
             }
             currentCombined = newCombined
