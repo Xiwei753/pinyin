@@ -46,6 +46,38 @@ class T9EngineTest {
     }
 
     @Test
+    fun testShortInputsConstraint() {
+        val dict = BuiltinDictionary(listOf(
+            "长词组一\tchang ci zu yi\t100000",
+            "长词组二\tchang ci zu er\t90000",
+            "词组\tci zu\t80000",
+            "词\tci\t70000",
+            "长\tchang\t60000",
+            "啊\ta\t50000"
+        ))
+        val testEngine = T9Engine(dict)
+
+        // Length 1 input (e.g. 2 for "chang", "ci")
+        // "长词组一" (len 4) and "长" (len 1) and "词组" (len 2) all start with 2
+        testEngine.inputDigit("2")
+        var candidates = testEngine.getCandidates()
+        // Should only return candidates with length 1 (e.g. "词", "长") + fallback
+        assertTrue(candidates.all { it.text.length == 1 || it.text == "2" })
+        assertTrue(candidates.any { it.text == "词" })
+        assertTrue(candidates.any { it.text == "长" })
+        assertTrue(candidates.none { it.text == "词组" })
+        assertTrue(candidates.none { it.text == "长词组一" })
+
+        // Length 2 input (e.g. 24 for "ci", "chang")
+        testEngine.inputDigit("4")
+        candidates = testEngine.getCandidates()
+        // Should only return candidates with length <= 2 (e.g. "词", "词组") + fallback
+        assertTrue(candidates.all { it.text.length <= 2 || it.text == "24" })
+        assertTrue(candidates.any { it.text == "词组" })
+        assertTrue(candidates.none { it.text == "长词组一" })
+    }
+
+    @Test
     fun testPrefixMatching() {
         engine.inputDigit("6")
         engine.inputDigit("4")

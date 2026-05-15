@@ -42,15 +42,28 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             val currentCandidates = mutableListOf<Candidate>()
 
             for (j in 0 until i) {
+                // Disable multi-word sentence composition for short inputs
+                if (code.length < 4 && j > 0) continue
+
                 if (dp[j] == null || dp[j]!!.isEmpty()) continue
 
                 val part = code.substring(j, i)
                 val isPrefix = (i == code.length)
 
-                val partCandidates = if (isPrefix) {
+                var partCandidates = if (isPrefix) {
                     dictionary.getPrefixCandidates(part)
                 } else {
                     dictionary.getExactCandidates(part)
+                }
+
+                // Filter candidates based on input length when matching prefix
+                if (isPrefix) {
+                    partCandidates = when (code.length) {
+                        1 -> partCandidates.filter { it.text.length == 1 }.take(6)
+                        2 -> partCandidates.filter { it.text.length <= 2 }
+                        3 -> partCandidates.filter { it.text.length <= 3 }
+                        else -> partCandidates
+                    }
                 }
 
                 for (prevCandidate in dp[j]!!) {
@@ -66,7 +79,16 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                         val prevSpaceCount = prevCandidate.text.count { it == ' ' }
                         val newSpaceCount = newText.count { it == ' ' }
                         if (newSpaceCount > prevSpaceCount) {
-                            baseScore -= 10000 // 10k penalty per additional word cut
+                            // Heavy penalty to strictly push multi-word combos below basic words
+                            baseScore -= 100000 // 100k penalty per additional word cut
+                        }
+
+                        // Penalty for words that are significantly longer than the input prefix
+                        if (isPrefix) {
+                            val extraChars = partCandidate.text.length - part.length
+                            if (extraChars > 0) {
+                                baseScore -= extraChars * 30000
+                            }
                         }
 
                         // Bonus for word length: encourage complete multi-character words over single characters
