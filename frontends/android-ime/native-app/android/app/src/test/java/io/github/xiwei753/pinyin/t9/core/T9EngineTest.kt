@@ -169,6 +169,39 @@ class T9EngineTest {
     }
 
     @Test
+    fun testShortAmbiguousPath() {
+        val dict = MockDict()
+        dict.add(Candidate("周", "9468", 100000, CandidateType.SINGLE_CHAR), "zhou")
+        dict.add(Candidate("字母", "9468", 90000, CandidateType.NORMAL), "zi mu")
+        // These are low quality dynamic phrases that could be constructed but should be penalized
+        dict.add(Candidate("一", "94", 80000, CandidateType.SINGLE_CHAR), "yi")
+        dict.add(Candidate("母", "68", 80000, CandidateType.SINGLE_CHAR), "mu")
+        dict.add(Candidate("木", "68", 80000, CandidateType.SINGLE_CHAR), "mu")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("9")
+        engine.inputDigit("4")
+        engine.inputDigit("6")
+        engine.inputDigit("8")
+
+        val cands = engine.getCandidates()
+        val preedit = engine.getPreedit()
+
+        assertTrue(cands.any { it.text == "周" } || cands.any { it.text == "字母" })
+        assertTrue(cands[0].text == "周" || cands[0].text == "字母")
+
+        if (cands[0].text == "周") {
+            assertEquals("zhou", preedit)
+        } else if (cands[0].text == "字母") {
+            assertEquals("zi mu", preedit)
+        }
+
+        val topCandsText = cands.take(5).map { it.text }
+        assertTrue("一母" !in topCandsText)
+        assertTrue("一木" !in topCandsText)
+    }
+
+    @Test
     fun testShortCandidates() {
         val dict = MockDict()
         dict.add(Candidate("不", "28", 1000, CandidateType.SINGLE_CHAR), "bu")

@@ -11,5 +11,6 @@ data class Candidate(
     val text: String,
     val code: String,
     val score: Int,
-    val type: CandidateType = CandidateType.NORMAL
+    val type: CandidateType = CandidateType.NORMAL,
+    val sourcePinyin: String = ""
 )
