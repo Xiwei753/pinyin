@@ -87,6 +87,10 @@ class XiweiT9ImeService : InputMethodService() {
         for (id in allKeys) {
             val keyView = rootView.findViewById<TextView>(id)
             keyView.setTextColor(textColor)
+            // Change text of key 1 to indicate separator
+            if (id == R.id.key_1) {
+                keyView.text = "1\n分词"
+            }
             // Adjust height
             val parent = keyView.parent as? android.widget.FrameLayout
             if (parent != null) {
@@ -122,6 +126,15 @@ class XiweiT9ImeService : InputMethodService() {
             }
         }
 
+        view.findViewById<TextView>(R.id.key_1).setOnClickListener { v ->
+            hapticFeedbackManager.performTap(v)
+            if (engine.buffer.isNotEmpty()) {
+                onDigitPressed("1")
+            } else {
+                // Future: symbol panel or nothing
+            }
+        }
+
         view.findViewById<TextView>(R.id.key_del).setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
             onDeletePressed()
@@ -130,11 +143,6 @@ class XiweiT9ImeService : InputMethodService() {
         view.findViewById<TextView>(R.id.key_0).setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
             onZeroPressed()
-        }
-
-        view.findViewById<TextView>(R.id.key_1).setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            // Do nothing for now
         }
 
         view.findViewById<TextView>(R.id.key_star).setOnClickListener { v ->
@@ -176,7 +184,7 @@ class XiweiT9ImeService : InputMethodService() {
     }
 
     private fun updateUi() {
-        bufferText.text = engine.buffer
+        bufferText.text = engine.getPreedit()
 
         val limit = settingsRepository.getCandidateCount()
         currentCandidates = engine.getCandidates(limit)
@@ -211,9 +219,6 @@ class XiweiT9ImeService : InputMethodService() {
             btn.text = candidate.text
             btn.setOnClickListener { v ->
                 hapticFeedbackManager.performTap(v)
-                // Use the candidate's actual index instead of relying on the loop index directly
-                // when deleting/reusing views, although capturing index here is fine since
-                // it maps 1:1 to the current candidates list passed to onCandidateClicked.
                 onCandidateClicked(index)
             }
         }

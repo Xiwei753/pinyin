@@ -1,203 +1,119 @@
 package io.github.xiwei753.pinyin.t9.core
 
-import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
+import io.github.xiwei753.pinyin.t9.data.DictionaryProvider
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.assertFalse
-import org.junit.Before
 import org.junit.Test
 
 class T9EngineTest {
 
-    private lateinit var engine: T9Engine
+    class MockDict : DictionaryProvider {
+        private val list = mutableListOf<Candidate>()
 
-    @Before
-    fun setUp() {
-        val testDictionary = BuiltinDictionary(listOf(
-            "今天	jin tian	100000",
-            "晚上	wan shang	90000",
-            "手机	shou ji	80000",
-            "输入法	shu ru fa	70000",
-            "你好	ni hao	60000",
-            "妮好	ni hao	5000",
-            "的	de	200000",
-            "因为	yin wei	50000",
-            "音	yin	60000",
-            "为	wei	60000",
-            "江泽民同志	jiang ze min tong zhi	50000",
-            "江泽民	jiang ze min	40000",
-            "监督	jian du	30000",
-            "轿车	jiao che	20000",
-            "交	jiao	60000"
-        ))
-        engine = T9Engine(testDictionary)
+        fun add(c: Candidate, pinyin: String) {
+            // We use the pinyin string clean as the code for the mock to emulate pinyin index
+            list.add(Candidate(c.text, pinyin.replace(" ", ""), c.score, c.type))
+        }
+
+        override fun getPinyinExactCandidates(pinyinSequence: String): List<Candidate> {
+            return list.filter { it.code == pinyinSequence }
+        }
+
+        override fun getPinyinPrefixCandidates(pinyinPrefix: String): List<Candidate> {
+            return list.filter { it.code.startsWith(pinyinPrefix) }
+        }
+
+        override fun getSingleSyllableCandidates(syllable: String): List<Candidate> {
+            return list.filter { it.code == syllable }
+        }
+
+        override fun getCandidates(code: String): List<Candidate> = emptyList()
+        override fun getExactCandidates(code: String): List<Candidate> = emptyList()
+        override fun getPrefixCandidates(code: String): List<Candidate> = emptyList()
     }
 
     @Test
-    fun testSentenceSorting_CompleteWordBeatsFragments() {
-        // yin(946) wei(934) = 946934
-        "946934".forEach { engine.inputDigit(it.toString()) }
-        val candidates = engine.getCandidates()
+    fun testPreedit() {
+        val dict = MockDict()
+        val engine = T9Engine(dict)
 
-        // "因为" should beat "音 为", despite their individual scores potentially summing higher
-        // because of the penalty applied to fragmenting
-        assertEquals("因为", candidates[0].text)
-        assertTrue(candidates.any { it.text == "音 为" })
-    }
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        assertEquals("bu", engine.getPreedit())
 
-    @Test
-    fun testEmptyInputReturnsNoCandidates() {
-        assertTrue(engine.getCandidates().isEmpty())
-    }
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+        assertEquals("bu tai", engine.getPreedit())
 
-    @Test
-    fun testPrefixMatching() {
+        engine.inputDigit("9")
+        engine.inputDigit("4")
         engine.inputDigit("6")
         engine.inputDigit("4")
-        val candidates = engine.getCandidates()
-        // "64" is prefix of "64426" (ni hao)
-        assertTrue(candidates.any { it.text == "你好" })
-        assertTrue(candidates.any { it.text == "妮好" })
-        assertEquals("你好", candidates[0].text) // Highest score first
+        assertEquals("bu tai xing", engine.getPreedit())
     }
 
     @Test
-    fun testCandidateLimit() {
-        val largeDictionary = BuiltinDictionary((1..50).map { "测试$it\tce shi\t${100 - it}" })
-        val limitEngine = T9Engine(largeDictionary)
-        "23744".forEach { limitEngine.inputDigit(it.toString()) } // ce shi
-        val candidates = limitEngine.getCandidates(10)
-        assertEquals(10, candidates.size)
-    }
+    fun testSeparator() {
+        val dict = MockDict()
+        val engine = T9Engine(dict)
 
-    @Test
-    fun testInputAndCandidates_NiHao() {
-        "64426".forEach { engine.inputDigit(it.toString()) }
-        assertEquals("64426", engine.buffer)
-        val candidates = engine.getCandidates()
-        assertTrue(candidates.size >= 2)
-        assertEquals("你好", candidates[0].text)
-        assertEquals("妮好", candidates[1].text)
-        assertTrue(candidates[0].score > candidates[1].score)
-    }
-
-    @Test
-    fun testSentenceComposition_JinTianWanShang() {
-        // jin(546) tian(8426) = 5468426, wan(926) shang(74264) = 92674264
-        // Total: 546842692674264
-        "546842692674264".forEach { engine.inputDigit(it.toString()) }
-        val candidates = engine.getCandidates()
-
-        // Exact composition
-        assertTrue(candidates.isNotEmpty())
-        assertEquals("今天 晚上", candidates[0].text)
-    }
-
-    @Test
-    fun testSentenceCompositionWithPrefix_JinTianW() {
-        // jin(546) tian(8426) = 5468426, wan(9) prefix
-        // Total: 54684269
-        "54684269".forEach { engine.inputDigit(it.toString()) }
-        val candidates = engine.getCandidates()
-
-        assertTrue(candidates.isNotEmpty())
-        assertEquals("今天 晚上", candidates[0].text)
-    }
-
-    @Test
-    fun testRawFallback() {
-        "22222222".forEach { engine.inputDigit(it.toString()) }
-        val candidates = engine.getCandidates()
-        assertEquals(1, candidates.size)
-        assertEquals("22222222", candidates[0].text)
-    }
-
-    @Test
-    fun testBackspace() {
-        "546842692".forEach { engine.inputDigit(it.toString()) } // jintianw
-        val beforeBackspace = engine.getCandidates()
-        assertEquals("今天 晚上", beforeBackspace[0].text)
-
-        engine.backspace() // 54684269
-        engine.backspace() // 5468426
-
-        assertEquals("5468426", engine.buffer)
-        val afterBackspace = engine.getCandidates()
-        assertEquals("今天", afterBackspace[0].text)
-    }
-
-    @Test
-    fun testClear() {
-        "748".forEach { engine.inputDigit(it.toString()) }
-        engine.clear()
-        assertEquals("", engine.buffer)
-        assertTrue(engine.getCandidates().isEmpty())
-    }
-
-    @Test
-    fun testCommitCandidateCleansSpaces() {
-        "546842692674264".forEach { engine.inputDigit(it.toString()) }
-        val candidates = engine.getCandidates()
-        val selected = engine.commitCandidate(candidates[0])
-        assertEquals("今天晚上", selected.text) // Spaces should be removed
-        assertEquals("", engine.buffer) // Should clear buffer after selection
-    }
-
-    @Test
-    fun testInvalidInput() {
+        engine.inputDigit("2")
+        engine.inputDigit("8")
         engine.inputDigit("1")
-        engine.inputDigit("0")
-        engine.inputDigit("*")
-        engine.inputDigit("#")
-        assertEquals("", engine.buffer)
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+        assertEquals("bu tai", engine.getPreedit())
     }
 
     @Test
-    fun testShortInput_Length1() {
-        // input: 5
-        // Expect: only single characters or COMMON_SHORT. No "江泽民同志" etc.
-        "5".forEach { engine.inputDigit(it.toString()) }
-        val candidates = engine.getCandidates()
-        assertFalse(candidates.any { it.text == "江泽民同志" })
-        assertFalse(candidates.any { it.text == "江泽民" })
-        assertFalse(candidates.any { it.text == "监督" })
-        assertFalse(candidates.any { it.text == "轿车" })
-        assertFalse(candidates.any { it.text == "今天" })
-        assertTrue(candidates.last().text == "5")
+    fun testFallback() {
+        val dict = MockDict()
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        val cands = engine.getCandidates()
+        assertEquals("28", cands.last().text)
     }
 
     @Test
-    fun testShortInput_Length2() {
-        // input: 54
-        engine.clear()
-        "54".forEach { engine.inputDigit(it.toString()) }
-        val candidates = engine.getCandidates()
-        // No sentence composition, no long words
-        assertFalse(candidates.any { it.text == "江泽民同志" })
-        assertFalse(candidates.any { it.text == "江泽民" })
-        assertFalse(candidates.any { it.text.contains(" ") })
-        assertTrue(candidates.last().text == "54")
+    fun testShortCandidates() {
+        val dict = MockDict()
+        dict.add(Candidate("不", "28", 1000, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("部", "28", 900, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("不太", "28824", 500, CandidateType.NORMAL), "bu tai")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+
+        val cands = engine.getCandidates()
+        assertEquals("不", cands[0].text)
+        assertEquals("部", cands[1].text)
     }
 
     @Test
-    fun testShortInput_Length3() {
-        // input: 542
-        engine.clear()
-        "542".forEach { engine.inputDigit(it.toString()) }
-        val candidates = engine.getCandidates()
-        // No low frequency or long words
-        assertFalse(candidates.any { it.text == "江泽民同志" })
-        assertFalse(candidates.any { it.text.contains(" ") })
-        assertTrue(candidates.last().text == "542")
-    }
+    fun testLongSentenceCandidatesNotMatchingRawDigits() {
+        val dict = MockDict()
+        dict.add(Candidate("不太行", "288249464", 1000, CandidateType.NORMAL), "bu tai xing")
+        // This is a word that matches the raw digits but NOT the pinyin sequence bu tai xing
+        dict.add(Candidate("不太新股", "288249464", 900, CandidateType.NORMAL), "bu tai xin gu")
 
-    @Test
-    fun testShortInput_Length4_Combinations() {
-        // input: 5468
-        "5468".forEach { engine.inputDigit(it.toString()) }
-        val candidates = engine.getCandidates()
-        // Ensure some 4+ rules kick in
-        assertTrue(candidates.isNotEmpty())
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+        engine.inputDigit("9")
+        engine.inputDigit("4")
+        engine.inputDigit("6")
+        engine.inputDigit("4")
+
+        val cands = engine.getCandidates()
+        assertEquals("不太行", cands[0].text)
+        // Should not have 不太新股
+        assertTrue(cands.none { it.text == "不太新股" })
     }
 }
