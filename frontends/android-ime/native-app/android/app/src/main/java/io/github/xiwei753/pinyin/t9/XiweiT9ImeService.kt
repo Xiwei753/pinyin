@@ -98,6 +98,9 @@ class XiweiT9ImeService : InputMethodService() {
             val btn = Button(this).apply {
                 text = candidate.text
                 textSize = 16f
+                minHeight = 0
+                minimumHeight = 0
+                setPadding(32, 16, 32, 16)
                 setOnClickListener {
                     onCandidateClicked(index)
                 }

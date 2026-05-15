@@ -20,6 +20,16 @@
 - **Android 原生前端与 T9 核心**：真正可用的九宫格键盘必须进入 `frontends/android-ime/native-app/` 进行原生开发。我们已经开始构建 `T9Engine` 作为**自研输入内核**的最小地基，它与基于 `InputMethodService` 的原生前端协同工作。T9Engine 已经从 Service 中拆出，负责输入状态。Candidate 作为核心候选数据结构。BuiltinDictionary 负责数据来源，目前已从硬编码改为从资源文件 `t9_builtin_dict.tsv` 读取。新增的 DictionaryProvider 是后续接入用户词库、同步词库、shared core 的入口。Android Service 仅负责 UI 和系统上屏。
 - **共享输入核心演进**：最终目标是 Android 前端和 Linux Fcitx5 前端共享同一个输入核心（Shared Core）。自研内核将从 T9Engine 起步，逐步完善。Linux 端目前继续使用 fcitx5-rime 进行过渡，待共享核心稳定后，未来将通过开发独立的 fcitx5 插件接入我们的自研核心。
 
+## License / 许可证
+
+- Current license: GNU General Public License v3.0
+- Earlier versions were MIT-licensed
+- Third-party dictionaries/resources keep their own licenses
+
+- 当前代码和默认构建按 GPL v3 开源。
+- 未来如果引入雾凇拼音、薄荷输入法等第三方 GPL 词库，需要在 THIRD_PARTY_LICENSES/ 里保留来源和许可证。
+- 本次任务不要引入任何第三方大词库。
+
 ## 项目架构
 
 项目将核心数据、平台前端、工具脚本进行了明确的分层：
