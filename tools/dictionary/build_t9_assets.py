@@ -4,46 +4,68 @@ import sys
 
 def main():
     root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    input_file = os.path.join(root_dir, 'third_party', 'rime-ice', 'base.dict.yaml')
+    input_file_base = os.path.join(root_dir, 'third_party', 'rime-ice', 'base.dict.yaml')
+    input_file_8105 = os.path.join(root_dir, 'third_party', 'rime-ice', '8105.dict.yaml')
     output_file = os.path.join(root_dir, 'frontends', 'android-ime', 'native-app', 'android', 'app', 'src', 'main', 'assets', 't9_source_dict.tsv')
     convert_script = os.path.join(root_dir, 'tools', 'dictionary', 'convert_rime_dict.py')
 
-    if not os.path.exists(input_file):
-        print(f"Error: Input file not found at {input_file}")
+    if not os.path.exists(input_file_base):
+        print(f"Error: Input file not found at {input_file_base}")
+        return 1
+
+    if not os.path.exists(input_file_8105):
+        print(f"Error: Input file not found at {input_file_8105}")
         return 1
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-    # Convert everything
-    temp_output_file = output_file + ".tmp"
-    cmd = [sys.executable, convert_script, input_file, temp_output_file]
-    print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd)
+    temp_output_base = output_file + ".base.tmp"
+    cmd_base = [sys.executable, convert_script, input_file_base, temp_output_base]
+    print(f"Running: {' '.join(cmd_base)}")
+    result_base = subprocess.run(cmd_base)
+    if result_base.returncode != 0:
+        return result_base.returncode
 
-    if result.returncode != 0:
-        print(f"Error: Conversion script failed with code {result.returncode}")
-        return result.returncode
+    temp_output_8105 = output_file + ".8105.tmp"
+    cmd_8105 = [sys.executable, convert_script, input_file_8105, temp_output_8105]
+    print(f"Running: {' '.join(cmd_8105)}")
+    result_8105 = subprocess.run(cmd_8105)
+    if result_8105.returncode != 0:
+        return result_8105.returncode
+
+    merged_dict = {}
+
+    def process_lines(filename, is_8105):
+        with open(filename, 'r', encoding='utf-8') as f:
+            for line in f:
+                parts = line.strip().split('\t')
+                if len(parts) >= 3:
+                    word = parts[0]
+                    pinyin = parts[1]
+                    try:
+                        weight = int(parts[2])
+                    except:
+                        weight = 0
+
+                    if is_8105 and len(word) != 1:
+                        continue
+
+                    if word == "安卓" and pinyin in ["tan zhuo", "tan zhao"]:
+                        continue
+
+                    key = (word, pinyin)
+                    if key in merged_dict:
+                        merged_dict[key] = max(merged_dict[key], weight)
+                    else:
+                        merged_dict[key] = weight
+
+    process_lines(temp_output_base, False)
+    process_lines(temp_output_8105, True)
 
     entries = []
-
-    with open(temp_output_file, 'r', encoding='utf-8') as f:
-        all_lines = f.readlines()
-
-    for line in all_lines:
-        parts = line.strip().split('\t')
-        if len(parts) >= 3:
-            word = parts[0]
-            pinyin = parts[1]
-            try:
-                weight = int(parts[2])
-            except:
-                weight = 0
-
-            # Filter bad typos explicitly
-            if word == "安卓" and pinyin in ["tan zhuo", "tan zhao"]:
-                continue
-
-            entries.append((word, pinyin, weight, line))
+    for (word, pinyin), weight in merged_dict.items():
+        line = f"{word}\t{pinyin}\t{weight}\n"
+        entries.append((word, pinyin, weight, line))
 
     # We must ensure required words exist
     required_words = {"你好", "输入法", "中国", "今天", "手机", "电脑", "安卓"}
@@ -73,7 +95,8 @@ def main():
          f.writelines(final_lines)
 
     print(f"Successfully generated {output_file} with {len(final_lines)} lines.")
-    os.remove(temp_output_file)
+    os.remove(temp_output_base)
+    os.remove(temp_output_8105)
 
     return 0
 

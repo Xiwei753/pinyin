@@ -103,6 +103,72 @@ class T9EngineTest {
     }
 
     @Test
+    fun testSingleCharactersMustBePresent() {
+        val dict = MockDict()
+        dict.add(Candidate("我", "96", 100000, CandidateType.SINGLE_CHAR), "wo")
+        dict.add(Candidate("你", "64", 90000, CandidateType.SINGLE_CHAR), "ni")
+        dict.add(Candidate("他", "82", 80000, CandidateType.SINGLE_CHAR), "ta")
+        dict.add(Candidate("她", "82", 80000, CandidateType.SINGLE_CHAR), "ta")
+        dict.add(Candidate("的", "33", 100000, CandidateType.SINGLE_CHAR), "de")
+        dict.add(Candidate("得", "33", 90000, CandidateType.SINGLE_CHAR), "de")
+        dict.add(Candidate("地", "33", 80000, CandidateType.SINGLE_CHAR), "de")
+        dict.add(Candidate("不", "28", 100000, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("是", "744", 100000, CandidateType.SINGLE_CHAR), "shi")
+        dict.add(Candidate("不太", "28824", 40000, CandidateType.NORMAL), "bu tai")
+
+        val engine = T9Engine(dict)
+
+        // 96 -> 我
+        engine.inputDigit("9")
+        engine.inputDigit("6")
+        assertTrue(engine.getCandidates().any { it.text == "我" })
+        engine.clear()
+
+        // 64 -> 你
+        engine.inputDigit("6")
+        engine.inputDigit("4")
+        assertTrue(engine.getCandidates().any { it.text == "你" })
+        engine.clear()
+
+        // 82 -> 他/她
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        assertTrue(engine.getCandidates().any { it.text == "他" })
+        assertTrue(engine.getCandidates().any { it.text == "她" })
+        engine.clear()
+
+        // 33 -> 的/得/地
+        engine.inputDigit("3")
+        engine.inputDigit("3")
+        assertTrue(engine.getCandidates().any { it.text == "的" })
+        assertTrue(engine.getCandidates().any { it.text == "得" })
+        assertTrue(engine.getCandidates().any { it.text == "地" })
+        engine.clear()
+
+        // 744 -> 是
+        engine.inputDigit("7")
+        engine.inputDigit("4")
+        engine.inputDigit("4")
+        assertTrue(engine.getCandidates().any { it.text == "是" })
+        engine.clear()
+
+        // 28 -> 不
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        assertTrue(engine.getCandidates().any { it.text == "不" })
+        engine.clear()
+
+        // 28824 -> 不太
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+        assertTrue(engine.getCandidates().any { it.text == "不太" })
+        engine.clear()
+    }
+
+    @Test
     fun testShortCandidates() {
         val dict = MockDict()
         dict.add(Candidate("不", "28", 1000, CandidateType.SINGLE_CHAR), "bu")

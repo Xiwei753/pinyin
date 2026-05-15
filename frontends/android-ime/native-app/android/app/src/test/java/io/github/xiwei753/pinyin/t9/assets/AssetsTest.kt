@@ -16,7 +16,7 @@ class AssetsTest {
         var lineCount = 0
         var foundAnZhuo = false
         val foundCommonWords = mutableSetOf<String>()
-        val commonWordsToFind = setOf("你好", "输入法", "中国", "今天", "手机", "电脑", "安卓")
+        val commonWordsToFind = setOf("你好", "输入法", "中国", "今天", "手机", "电脑", "安卓", "我", "你", "他", "她", "的", "得", "地", "不", "是")
 
         file.forEachLine { line ->
             lineCount++
