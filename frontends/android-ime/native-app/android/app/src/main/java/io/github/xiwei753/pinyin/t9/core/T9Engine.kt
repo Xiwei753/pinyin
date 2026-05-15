@@ -39,16 +39,27 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             return listOf(Candidate(buffer, buffer, -Int.MAX_VALUE, CandidateType.NORMAL))
         }
 
-        // Take the best composition to avoid looping DP and causing overhead
-        val comp = compositions[0]
+        val allCandidates = mutableListOf<Candidate>()
 
-        val candidates = if (comp.pinyinList.size == 1) {
-            getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit)
-        } else {
-            getSentenceCandidates(comp, limit)
+        // Take the top 3 compositions to explore multiple plausible paths
+        val topComps = compositions.take(3)
+
+        for ((index, comp) in topComps.withIndex()) {
+            val candidates = if (comp.pinyinList.size == 1) {
+                getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit)
+            } else {
+                getSentenceCandidates(comp, limit)
+            }
+
+            // Provide significant scoring bonuses to candidates from higher-ranked compositions
+            val adjustedCandidates = candidates.map { c ->
+                val bonus = if (index == 0) 100000 else (3 - index) * 10000
+                Candidate(c.text, c.code, c.score + bonus, c.type)
+            }
+            allCandidates.addAll(adjustedCandidates)
         }
 
-        val distinctSorted = candidates.distinctBy { it.text }
+        val distinctSorted = allCandidates.distinctBy { it.text }
             .sortedByDescending { it.score }
             .take(limit - 1)
             .toMutableList()
