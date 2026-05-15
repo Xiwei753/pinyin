@@ -19,6 +19,7 @@ class XiweiT9ImeService : InputMethodService() {
     private lateinit var engine: T9Engine
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var hapticFeedbackManager: HapticFeedbackManager
+    private var currentCandidates: List<io.github.xiwei753.pinyin.t9.core.Candidate> = emptyList()
 
     override fun onCreateInputView(): View {
         settingsRepository = SettingsRepository(this)
@@ -60,13 +61,13 @@ class XiweiT9ImeService : InputMethodService() {
         }
 
         // Apply theme colors
-        val bgColor = if (isDark) android.graphics.Color.parseColor("#222222") else android.graphics.Color.parseColor("#F0F0F0")
-        val candidateBarColor = if (isDark) android.graphics.Color.parseColor("#333333") else android.graphics.Color.parseColor("#FFFFFF")
-        val textColor = if (isDark) android.graphics.Color.parseColor("#EEEEEE") else android.graphics.Color.parseColor("#333333")
+        val bgColor = if (isDark) android.graphics.Color.parseColor("#121212") else android.graphics.Color.parseColor("#F0F0F0")
+        val candidateBarColor = if (isDark) android.graphics.Color.parseColor("#1E1E1E") else android.graphics.Color.parseColor("#FFFFFF")
+        val textColor = if (isDark) android.graphics.Color.parseColor("#E0E0E0") else android.graphics.Color.parseColor("#333333")
 
         rootView.setBackgroundColor(bgColor)
         rootView.findViewById<LinearLayout>(R.id.candidate_bar).setBackgroundColor(candidateBarColor)
-        bufferText.setTextColor(if (isDark) android.graphics.Color.parseColor("#AAAAAA") else android.graphics.Color.parseColor("#888888"))
+        bufferText.setTextColor(if (isDark) android.graphics.Color.parseColor("#888888") else android.graphics.Color.parseColor("#888888"))
 
         val allKeys = listOf(
             R.id.key_1, R.id.key_2, R.id.key_3,
@@ -162,12 +163,10 @@ class XiweiT9ImeService : InputMethodService() {
         if (engine.buffer.isEmpty()) {
             currentInputConnection?.commitText(" ", 1)
         } else {
-            val candidates = engine.getCandidates()
-            if (candidates.isNotEmpty()) {
-                val candidate = engine.selectCandidate(0)
-                if (candidate != null) {
-                    currentInputConnection?.commitText(candidate.text, 1)
-                }
+            if (currentCandidates.isNotEmpty()) {
+                val candidateToCommit = currentCandidates[0]
+                val committed = engine.commitCandidate(candidateToCommit)
+                currentInputConnection?.commitText(committed.text, 1)
             } else {
                 currentInputConnection?.commitText(engine.buffer, 1)
                 engine.clear()
@@ -180,22 +179,31 @@ class XiweiT9ImeService : InputMethodService() {
         bufferText.text = engine.buffer
 
         val limit = settingsRepository.getCandidateCount()
-        val candidates = engine.getCandidates(limit)
+        currentCandidates = engine.getCandidates(limit)
 
-        for ((index, candidate) in candidates.withIndex()) {
+        for ((index, candidate) in currentCandidates.withIndex()) {
             val btn: TextView = if (index < candidateContainer.childCount) {
                 candidateContainer.getChildAt(index) as TextView
             } else {
                 val newBtn = TextView(this).apply {
                     textSize = 18f
-                    setTextColor(android.graphics.Color.parseColor("#333333"))
+                    // Text color is updated in applyThemeAndHeight, but set a default here
+                    val currentTheme = settingsRepository.getTheme()
+                    val isDark = currentTheme == "dark" || (currentTheme == "system" && (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES))
+                    setTextColor(if (isDark) android.graphics.Color.parseColor("#E0E0E0") else android.graphics.Color.parseColor("#333333"))
                     gravity = android.view.Gravity.CENTER
                     setPadding(32, 16, 32, 16)
                     background = getDrawable(R.drawable.candidate_bg)
                     isClickable = true
                     isFocusable = true
                 }
-                candidateContainer.addView(newBtn)
+                val layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    setMargins(0, 0, 16, 0) // Right margin for spacing
+                }
+                candidateContainer.addView(newBtn, layoutParams)
                 newBtn
             }
 
@@ -211,15 +219,16 @@ class XiweiT9ImeService : InputMethodService() {
         }
 
         // Hide unused views
-        for (i in candidates.size until candidateContainer.childCount) {
+        for (i in currentCandidates.size until candidateContainer.childCount) {
             candidateContainer.getChildAt(i).visibility = View.GONE
         }
     }
 
     private fun onCandidateClicked(index: Int) {
-        val candidate = engine.selectCandidate(index)
-        if (candidate != null) {
-            currentInputConnection?.commitText(candidate.text, 1)
+        if (index >= 0 && index < currentCandidates.size) {
+            val candidateToCommit = currentCandidates[index]
+            val committed = engine.commitCandidate(candidateToCommit)
+            currentInputConnection?.commitText(committed.text, 1)
             updateUi()
         }
     }

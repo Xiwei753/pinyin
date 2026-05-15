@@ -85,13 +85,47 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#DDDDDD" />
+        android:background="#DDDDDD"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="关于: Xiwei T9 1.0\n词库来源: rime-ice\n授权协议: GPLv3"
+        android:text="词库状态"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/text_dict_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="加载中..."
         android:textSize="16sp"
-        android:layout_marginTop="24dp" />
+        android:textColor="#666666"
+        android:layout_marginBottom="24dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#DDDDDD"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="关于 Xiwei T9"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="版本: 1.0\n词库来源: rime-ice (雾凇拼音)\n授权协议: GNU General Public License v3.0"
+        android:textSize="16sp"
+        android:textColor="#666666"
+        android:lineSpacingExtra="4dp" />
 
 </LinearLayout>

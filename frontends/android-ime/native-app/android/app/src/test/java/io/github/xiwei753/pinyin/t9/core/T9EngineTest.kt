@@ -20,9 +20,24 @@ class T9EngineTest {
             "输入法\tshu ru fa\t70000",
             "你好\tni hao\t60000",
             "妮好\tni hao\t5000",
-            "的\tde\t200000"
+            "的\tde\t200000",
+            "因为\tyin wei\t50000",
+            "音\tyin\t60000",
+            "为\twei\t60000"
         ))
         engine = T9Engine(testDictionary)
+    }
+
+    @Test
+    fun testSentenceSorting_CompleteWordBeatsFragments() {
+        // yin(946) wei(934) = 946934
+        "946934".forEach { engine.inputDigit(it.toString()) }
+        val candidates = engine.getCandidates()
+
+        // "因为" should beat "音 为", despite their individual scores potentially summing higher
+        // because of the penalty applied to fragmenting
+        assertEquals("因为", candidates[0].text)
+        assertTrue(candidates.any { it.text == "音 为" })
     }
 
     @Test
@@ -115,10 +130,11 @@ class T9EngineTest {
     }
 
     @Test
-    fun testSelectCandidateCleansSpaces() {
+    fun testCommitCandidateCleansSpaces() {
         "546842692674264".forEach { engine.inputDigit(it.toString()) }
-        val selected = engine.selectCandidate(0)
-        assertEquals("今天晚上", selected?.text) // Spaces should be removed
+        val candidates = engine.getCandidates()
+        val selected = engine.commitCandidate(candidates[0])
+        assertEquals("今天晚上", selected.text) // Spaces should be removed
         assertEquals("", engine.buffer) // Should clear buffer after selection
     }
 

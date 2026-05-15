@@ -11,6 +11,11 @@ class BuiltinDictionary : DictionaryProvider {
     private val prefixDictionary: Map<String, List<Candidate>>
     private val exactDictionary: Map<String, List<Candidate>>
 
+    var isFallback: Boolean = false
+        private set
+    var loadedWordCount: Int = 0
+        private set
+
     constructor(lines: List<String>) {
         val result = parseLines(lines)
         prefixDictionary = result.first
@@ -39,6 +44,7 @@ class BuiltinDictionary : DictionaryProvider {
         val prefixMap = mutableMapOf<String, MutableList<Candidate>>()
         val exactMap = mutableMapOf<String, MutableList<Candidate>>()
         var hasValidEntries = false
+        var count = 0
 
         try {
             for (line in lines) {
@@ -51,6 +57,7 @@ class BuiltinDictionary : DictionaryProvider {
 
                     if (code.isNotEmpty()) {
                         hasValidEntries = true
+                        count++
                         val candidate = Candidate(text, code, score)
                         // Add to exact map
                         if (!exactMap.containsKey(code)) {
@@ -75,6 +82,8 @@ class BuiltinDictionary : DictionaryProvider {
 
         // If map is empty or we had an error, use fallback
         if (!hasValidEntries) {
+            isFallback = true
+            loadedWordCount = 2
             val fallbackCandidates = listOf(
                 Candidate("你好", "64426", 100000),
                 Candidate("输入法", "7487832", 90000)
@@ -109,6 +118,11 @@ class BuiltinDictionary : DictionaryProvider {
                 .sortedByDescending { it.score }
                 .take(100)
             finalExactMap[code] = distinctSorted
+        }
+
+        if (hasValidEntries) {
+            isFallback = false
+            loadedWordCount = count
         }
 
         return Pair(finalPrefixMap, finalExactMap)
