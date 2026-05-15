@@ -7,6 +7,8 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         private set
 
     private val pinyinComposer = T9PinyinComposer()
+    private var lastBuffer = ""
+    private var lastCandidates = listOf<Candidate>()
 
     fun inputDigit(digit: String) {
         if (digit.matches(Regex("^[1-9]$"))) {
@@ -26,6 +28,11 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
     fun getPreedit(): String {
         if (buffer.isEmpty()) return ""
+        getCandidates()
+        val bestCandidate = lastCandidates.firstOrNull()
+        if (bestCandidate != null && bestCandidate.text != buffer) {
+            return bestCandidate.sourcePinyin
+        }
         val compositions = pinyinComposer.getCompositions(buffer)
         if (compositions.isEmpty()) return buffer
         return compositions[0].pinyinString
@@ -33,10 +40,19 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
     fun getCandidates(limit: Int = 30): List<Candidate> {
         if (buffer.isEmpty()) return emptyList()
+        if (buffer != lastBuffer) {
+            computeCandidates(limit)
+        }
+        return lastCandidates
+    }
+
+    private fun computeCandidates(limit: Int) {
+        lastBuffer = buffer
 
         val compositions = pinyinComposer.getCompositions(buffer)
         if (compositions.isEmpty()) {
-            return listOf(Candidate(buffer, buffer, -Int.MAX_VALUE, CandidateType.NORMAL))
+            lastCandidates = listOf(Candidate(buffer, buffer, -Int.MAX_VALUE, CandidateType.NORMAL, buffer))
+            return
         }
 
         val allCandidates = mutableListOf<Candidate>()
@@ -46,15 +62,15 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
         for ((index, comp) in topComps.withIndex()) {
             val candidates = if (comp.pinyinList.size == 1) {
-                getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit)
+                getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit, comp.pinyinString)
             } else {
-                getSentenceCandidates(comp, limit)
+                getSentenceCandidates(comp, limit, comp.pinyinString)
             }
 
             // Provide significant scoring bonuses to candidates from higher-ranked compositions
             val adjustedCandidates = candidates.map { c ->
                 val bonus = if (index == 0) 100000 else (3 - index) * 10000
-                Candidate(c.text, c.code, c.score + bonus, c.type)
+                Candidate(c.text, c.code, c.score + bonus, c.type, c.sourcePinyin)
             }
             allCandidates.addAll(adjustedCandidates)
         }
@@ -66,16 +82,16 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
         // Always ensure the bare numeric fallback is at the very end
         distinctSorted.removeAll { it.text == buffer }
-        distinctSorted.add(Candidate(buffer, buffer, -Int.MAX_VALUE, CandidateType.NORMAL)) // Bare numeric fallback
+        distinctSorted.add(Candidate(buffer, buffer, -Int.MAX_VALUE, CandidateType.NORMAL, buffer)) // Bare numeric fallback
 
-        return distinctSorted.sortedWith(Comparator { c1, c2 ->
+        lastCandidates = distinctSorted.sortedWith(Comparator { c1, c2 ->
             if (c1.text == buffer) return@Comparator 1
             if (c2.text == buffer) return@Comparator -1
             c2.score.compareTo(c1.score)
         })
     }
 
-    private fun getSingleSyllableCandidates(pinyin: String, isComplete: Boolean, limit: Int): List<Candidate> {
+    private fun getSingleSyllableCandidates(pinyin: String, isComplete: Boolean, limit: Int, sourcePinyin: String): List<Candidate> {
         val candidates = if (isComplete) {
             dictionary.getSingleSyllableCandidates(pinyin)
         } else {
@@ -103,13 +119,13 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                 if (extraLen > 0) {
                     adjustedScore -= extraLen * 50000
                 }
-                Candidate(candidate.text, candidate.code, adjustedScore, candidate.type)
+                Candidate(candidate.text, candidate.code, adjustedScore, candidate.type, sourcePinyin)
             }
             .sortedByDescending { it.score }
             .take(limit)
     }
 
-    private fun getSentenceCandidates(comp: PinyinComposition, limit: Int): List<Candidate> {
+    private fun getSentenceCandidates(comp: PinyinComposition, limit: Int, sourcePinyin: String): List<Candidate> {
         val pinyins = comp.pinyinList
         val dp = Array<MutableList<Candidate>?>(pinyins.size + 1) { null }
         dp[0] = mutableListOf(Candidate("", "", 0))
@@ -164,7 +180,11 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                             }
                         }
 
-                        currentCandidates.add(Candidate(newText, newCode, baseScore))
+                        if (comp.rawDigits.length <= 4 && prevCandidate.text.isNotEmpty()) {
+                            baseScore -= 200000
+                        }
+
+                        currentCandidates.add(Candidate(newText, newCode, baseScore, CandidateType.NORMAL, sourcePinyin))
                     }
                 }
             }
@@ -173,7 +193,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                 dp[i] = currentCandidates.distinctBy { it.text }
                     .map {
                         if (i == pinyins.size) {
-                            Candidate(it.text, it.code, it.score + 50000)
+                            Candidate(it.text, it.code, it.score + 50000, CandidateType.NORMAL, sourcePinyin)
                         } else {
                             it
                         }
