@@ -4,9 +4,23 @@
 
     <application
         android:allowBackup="true"
-        android:label="Xiwei T9"
+        android:label="拼音输入法"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="true"
+            android:label="设置" />
 
         <service
             android:name=".XiweiT9ImeService"
