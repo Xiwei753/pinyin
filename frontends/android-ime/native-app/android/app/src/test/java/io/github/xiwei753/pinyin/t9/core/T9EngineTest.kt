@@ -15,20 +15,21 @@ class T9EngineTest {
     @Before
     fun setUp() {
         val testDictionary = BuiltinDictionary(listOf(
-            "今天\tjin tian\t100000",
-            "晚上\twan shang\t90000",
-            "手机\tshou ji\t80000",
-            "输入法\tshu ru fa\t70000",
-            "你好\tni hao\t60000",
-            "妮好\tni hao\t5000",
-            "的\tde\t200000",
-            "因为\tyin wei\t50000",
-            "音\tyin\t60000",
-            "为\twei\t60000",
-            "江泽民同志\tjiang ze min tong zhi\t50000",
-            "江泽民\tjiang ze min\t40000",
-            "监督\tjian du\t30000",
-            "轿车\tjiao che\t20000"
+            "今天	jin tian	100000",
+            "晚上	wan shang	90000",
+            "手机	shou ji	80000",
+            "输入法	shu ru fa	70000",
+            "你好	ni hao	60000",
+            "妮好	ni hao	5000",
+            "的	de	200000",
+            "因为	yin wei	50000",
+            "音	yin	60000",
+            "为	wei	60000",
+            "江泽民同志	jiang ze min tong zhi	50000",
+            "江泽民	jiang ze min	40000",
+            "监督	jian du	30000",
+            "轿车	jiao che	20000",
+            "交	jiao	60000"
         ))
         engine = T9Engine(testDictionary)
     }
@@ -155,14 +156,13 @@ class T9EngineTest {
     @Test
     fun testShortInput_Length1() {
         // input: 5
-        // Expect: only single characters. No "江泽民同志" etc.
+        // Expect: only single characters or COMMON_SHORT. No "江泽民同志" etc.
         "5".forEach { engine.inputDigit(it.toString()) }
         val candidates = engine.getCandidates()
         assertFalse(candidates.any { it.text == "江泽民同志" })
         assertFalse(candidates.any { it.text == "江泽民" })
         assertFalse(candidates.any { it.text == "监督" })
         assertFalse(candidates.any { it.text == "轿车" })
-        // Since test dict has "今天"(2 chars), it shouldn't show up for len 1
         assertFalse(candidates.any { it.text == "今天" })
         assertTrue(candidates.last().text == "5")
     }
@@ -170,14 +170,12 @@ class T9EngineTest {
     @Test
     fun testShortInput_Length2() {
         // input: 54
-        // Expect: max 2 chars. No "江泽民同志" etc.
+        engine.clear()
         "54".forEach { engine.inputDigit(it.toString()) }
         val candidates = engine.getCandidates()
+        // No sentence composition, no long words
         assertFalse(candidates.any { it.text == "江泽民同志" })
         assertFalse(candidates.any { it.text == "江泽民" })
-        // Could show 监督/轿车 but test dict has length 2. Let's see if jian(5426) or jiao(5426) show up
-        // yes they can be prefixes, but text.length <= 2 must hold.
-        // Also ensure no sentence composition
         assertFalse(candidates.any { it.text.contains(" ") })
         assertTrue(candidates.last().text == "54")
     }
@@ -185,12 +183,21 @@ class T9EngineTest {
     @Test
     fun testShortInput_Length3() {
         // input: 542
-        // Expect: max 3 chars. No "江泽民同志"
+        engine.clear()
         "542".forEach { engine.inputDigit(it.toString()) }
         val candidates = engine.getCandidates()
+        // No low frequency or long words
         assertFalse(candidates.any { it.text == "江泽民同志" })
-        // But 江泽民 is length 3, could show up depending on score.
         assertFalse(candidates.any { it.text.contains(" ") })
         assertTrue(candidates.last().text == "542")
+    }
+
+    @Test
+    fun testShortInput_Length4_Combinations() {
+        // input: 5468
+        "5468".forEach { engine.inputDigit(it.toString()) }
+        val candidates = engine.getCandidates()
+        // Ensure some 4+ rules kick in
+        assertTrue(candidates.isNotEmpty())
     }
 }

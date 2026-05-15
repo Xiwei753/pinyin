@@ -2,6 +2,7 @@ package io.github.xiwei753.pinyin.t9.data
 
 import android.content.Context
 import io.github.xiwei753.pinyin.t9.core.Candidate
+import io.github.xiwei753.pinyin.t9.core.CandidateType
 import io.github.xiwei753.pinyin.t9.core.T9CodeMapper
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -58,7 +59,21 @@ class BuiltinDictionary : DictionaryProvider {
                     if (code.isNotEmpty()) {
                         hasValidEntries = true
                         count++
-                        val candidate = Candidate(text, code, score)
+
+                        val type = when {
+                            text.length >= 4 -> CandidateType.LONG_OR_LOW_FREQ
+                            text.length == 3 && score < 30000 -> CandidateType.LONG_OR_LOW_FREQ
+                            text.length == 3 -> CandidateType.NORMAL
+                            text.length == 2 && score > 40000 -> CandidateType.COMMON_SHORT
+                            text.length == 2 -> CandidateType.NORMAL
+                            text.length == 1 && score > 60000 -> CandidateType.COMMON_SHORT
+                            text.length == 1 -> CandidateType.SINGLE_CHAR
+                            else -> CandidateType.NORMAL
+                        }
+
+                        val finalType = if (type != CandidateType.LONG_OR_LOW_FREQ && score < 5000) CandidateType.LONG_OR_LOW_FREQ else type
+
+                        val candidate = Candidate(text, code, score, finalType)
                         // Add to exact map
                         if (!exactMap.containsKey(code)) {
                             exactMap[code] = mutableListOf()
