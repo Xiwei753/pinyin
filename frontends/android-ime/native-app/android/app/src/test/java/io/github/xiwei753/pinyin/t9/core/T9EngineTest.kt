@@ -14,9 +14,13 @@ class T9EngineTest {
     @Before
     fun setUp() {
         val testDictionary = BuiltinDictionary(listOf(
-            "你好\tni hao\t100000",
-            "妮好\tni hao\t1000",
-            "输入法\tshu ru fa\t90000"
+            "今天\tjin tian\t100000",
+            "晚上\twan shang\t90000",
+            "手机\tshou ji\t80000",
+            "输入法\tshu ru fa\t70000",
+            "你好\tni hao\t60000",
+            "妮好\tni hao\t5000",
+            "的\tde\t200000"
         ))
         engine = T9Engine(testDictionary)
     }
@@ -39,8 +43,6 @@ class T9EngineTest {
 
     @Test
     fun testCandidateLimit() {
-        // We know we have 2 candidates for 64426, and 1 for 7487832.
-        // Let's add more to dictionary dynamically or rely on sorting logic.
         val largeDictionary = BuiltinDictionary((1..50).map { "测试$it\tce shi\t${100 - it}" })
         val limitEngine = T9Engine(largeDictionary)
         "23744".forEach { limitEngine.inputDigit(it.toString()) } // ce shi
@@ -50,11 +52,7 @@ class T9EngineTest {
 
     @Test
     fun testInputAndCandidates_NiHao() {
-        engine.inputDigit("6")
-        engine.inputDigit("4")
-        engine.inputDigit("4")
-        engine.inputDigit("2")
-        engine.inputDigit("6")
+        "64426".forEach { engine.inputDigit(it.toString()) }
         assertEquals("64426", engine.buffer)
         val candidates = engine.getCandidates()
         assertTrue(candidates.size >= 2)
@@ -64,19 +62,48 @@ class T9EngineTest {
     }
 
     @Test
-    fun testInputAndCandidates_ShuRuFa() {
-        "7487832".forEach { engine.inputDigit(it.toString()) }
-        assertEquals("7487832", engine.buffer)
+    fun testSentenceComposition_JinTianWanShang() {
+        // jin(546) tian(8426) = 5468426, wan(926) shang(74264) = 92674264
+        // Total: 546842692674264
+        "546842692674264".forEach { engine.inputDigit(it.toString()) }
+        val candidates = engine.getCandidates()
+
+        // Exact composition
+        assertTrue(candidates.isNotEmpty())
+        assertEquals("今天 晚上", candidates[0].text)
+    }
+
+    @Test
+    fun testSentenceCompositionWithPrefix_JinTianW() {
+        // jin(546) tian(8426) = 5468426, wan(9) prefix
+        // Total: 54684269
+        "54684269".forEach { engine.inputDigit(it.toString()) }
+        val candidates = engine.getCandidates()
+
+        assertTrue(candidates.isNotEmpty())
+        assertEquals("今天 晚上", candidates[0].text)
+    }
+
+    @Test
+    fun testRawFallback() {
+        "22222222".forEach { engine.inputDigit(it.toString()) }
         val candidates = engine.getCandidates()
         assertEquals(1, candidates.size)
-        assertEquals("输入法", candidates[0].text)
+        assertEquals("22222222", candidates[0].text)
     }
 
     @Test
     fun testBackspace() {
-        "748".forEach { engine.inputDigit(it.toString()) }
-        engine.backspace()
-        assertEquals("74", engine.buffer)
+        "546842692".forEach { engine.inputDigit(it.toString()) } // jintianw
+        val beforeBackspace = engine.getCandidates()
+        assertEquals("今天 晚上", beforeBackspace[0].text)
+
+        engine.backspace() // 54684269
+        engine.backspace() // 5468426
+
+        assertEquals("5468426", engine.buffer)
+        val afterBackspace = engine.getCandidates()
+        assertEquals("今天", afterBackspace[0].text)
     }
 
     @Test
@@ -88,10 +115,10 @@ class T9EngineTest {
     }
 
     @Test
-    fun testSelectCandidate() {
-        "64426".forEach { engine.inputDigit(it.toString()) }
+    fun testSelectCandidateCleansSpaces() {
+        "546842692674264".forEach { engine.inputDigit(it.toString()) }
         val selected = engine.selectCandidate(0)
-        assertEquals("你好", selected?.text)
+        assertEquals("今天晚上", selected?.text) // Spaces should be removed
         assertEquals("", engine.buffer) // Should clear buffer after selection
     }
 

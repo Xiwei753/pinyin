@@ -9,9 +9,12 @@ import java.io.BufferedReader
 
 class BuiltinDictionary : DictionaryProvider {
     private val prefixDictionary: Map<String, List<Candidate>>
+    private val exactDictionary: Map<String, List<Candidate>>
 
     constructor(lines: List<String>) {
-        prefixDictionary = parseLines(lines)
+        val result = parseLines(lines)
+        prefixDictionary = result.first
+        exactDictionary = result.second
     }
 
     constructor(inputStream: InputStream) {
@@ -27,11 +30,14 @@ class BuiltinDictionary : DictionaryProvider {
         } catch (e: Exception) {
             // Ignore error
         }
-        prefixDictionary = parseLines(lines)
+        val result = parseLines(lines)
+        prefixDictionary = result.first
+        exactDictionary = result.second
     }
 
-    private fun parseLines(lines: List<String>): Map<String, List<Candidate>> {
-        val map = mutableMapOf<String, MutableList<Candidate>>()
+    private fun parseLines(lines: List<String>): Pair<Map<String, List<Candidate>>, Map<String, List<Candidate>>> {
+        val prefixMap = mutableMapOf<String, MutableList<Candidate>>()
+        val exactMap = mutableMapOf<String, MutableList<Candidate>>()
         var hasValidEntries = false
 
         try {
@@ -46,13 +52,19 @@ class BuiltinDictionary : DictionaryProvider {
                     if (code.isNotEmpty()) {
                         hasValidEntries = true
                         val candidate = Candidate(text, code, score)
+                        // Add to exact map
+                        if (!exactMap.containsKey(code)) {
+                            exactMap[code] = mutableListOf()
+                        }
+                        exactMap[code]?.add(candidate)
+
                         // Add to all prefixes
                         for (i in 1..code.length) {
                             val prefix = code.substring(0, i)
-                            if (!map.containsKey(prefix)) {
-                                map[prefix] = mutableListOf()
+                            if (!prefixMap.containsKey(prefix)) {
+                                prefixMap[prefix] = mutableListOf()
                             }
-                            map[prefix]?.add(candidate)
+                            prefixMap[prefix]?.add(candidate)
                         }
                     }
                 }
@@ -68,29 +80,50 @@ class BuiltinDictionary : DictionaryProvider {
                 Candidate("输入法", "7487832", 90000)
             )
             for (candidate in fallbackCandidates) {
+                if (!exactMap.containsKey(candidate.code)) {
+                    exactMap[candidate.code] = mutableListOf()
+                }
+                exactMap[candidate.code]?.add(candidate)
+
                 for (i in 1..candidate.code.length) {
                     val prefix = candidate.code.substring(0, i)
-                    if (!map.containsKey(prefix)) {
-                        map[prefix] = mutableListOf()
+                    if (!prefixMap.containsKey(prefix)) {
+                        prefixMap[prefix] = mutableListOf()
                     }
-                    map[prefix]?.add(candidate)
+                    prefixMap[prefix]?.add(candidate)
                 }
             }
         }
 
-        val finalMap = mutableMapOf<String, List<Candidate>>()
-        for ((prefix, candidates) in map) {
-            // Deduplicate if multiple full codes share the same text and prefix
-            // Sort by score descending and take top 100 to save memory and ensure fast UI
+        val finalPrefixMap = mutableMapOf<String, List<Candidate>>()
+        for ((prefix, candidates) in prefixMap) {
             val distinctSorted = candidates.distinctBy { it.text }
                 .sortedByDescending { it.score }
                 .take(100)
-            finalMap[prefix] = distinctSorted
+            finalPrefixMap[prefix] = distinctSorted
         }
-        return finalMap
+
+        val finalExactMap = mutableMapOf<String, List<Candidate>>()
+        for ((code, candidates) in exactMap) {
+            val distinctSorted = candidates.distinctBy { it.text }
+                .sortedByDescending { it.score }
+                .take(100)
+            finalExactMap[code] = distinctSorted
+        }
+
+        return Pair(finalPrefixMap, finalExactMap)
     }
 
     override fun getCandidates(code: String): List<Candidate> {
+        return getPrefixCandidates(code)
+    }
+
+    override fun getExactCandidates(code: String): List<Candidate> {
+        if (code.isEmpty()) return emptyList()
+        return exactDictionary[code] ?: emptyList()
+    }
+
+    override fun getPrefixCandidates(code: String): List<Candidate> {
         if (code.isEmpty()) return emptyList()
         return prefixDictionary[code] ?: emptyList()
     }

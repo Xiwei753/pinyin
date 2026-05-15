@@ -31,3 +31,9 @@
 cd frontends/android-ime/native-app/android
 ./gradlew assembleDebug
 ```
+
+## New Features
+- **Independent App Settings**: Added an independent App launcher and settings entry point.
+- **Enhanced 0 Key Behavior**: The 0 key now confirms the first candidate or inputs a space appropriately.
+- **System Haptic Feedback**: Implemented standard Android haptic feedback for keystrokes.
+- **Multi-Word Candidates**: Added support for long sentence and multi-word combinations using dynamic programming.
