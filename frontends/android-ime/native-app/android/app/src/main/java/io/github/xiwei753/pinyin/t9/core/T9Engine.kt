@@ -32,7 +32,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         val bestCandidate = if (buffer == lastBuffer && lastCandidates.isNotEmpty()) {
             lastCandidates.first()
         } else {
-            generateCandidates(buffer, 1).firstOrNull()
+            generateCandidates(buffer, 2).firstOrNull()
         }
 
         if (bestCandidate != null && bestCandidate.text != buffer) {
