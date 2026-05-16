@@ -44,6 +44,16 @@ class SettingsRepositoryTest {
         repository.setHapticFeedbackEnabled(false)
         verify(mockEditor).putBoolean("haptic_feedback_enabled", false)
         verify(mockEditor).apply()
+
+        // Also test that reading immediately after returns false (using mocked read)
+        `when`(mockPrefs.getBoolean("haptic_feedback_enabled", true)).thenReturn(false)
+        assertFalse(repository.isHapticFeedbackEnabled())
+
+        repository.setHapticFeedbackEnabled(true)
+        verify(mockEditor).putBoolean("haptic_feedback_enabled", true)
+
+        `when`(mockPrefs.getBoolean("haptic_feedback_enabled", true)).thenReturn(true)
+        assertTrue(repository.isHapticFeedbackEnabled())
     }
 
     @Test
