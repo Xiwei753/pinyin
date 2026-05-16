@@ -11,8 +11,9 @@ class T9EngineTest {
         private val list = mutableListOf<Candidate>()
 
         fun add(c: Candidate, pinyin: String) {
+            // We use the pinyin string clean as the code for the mock to emulate pinyin index
             val origin = if (c.text.length == 1) CandidateOrigin.EXACT_SINGLE else CandidateOrigin.EXACT_PHRASE
-            list.add(Candidate(c.text, pinyin, c.score, c.type, "", origin))
+            list.add(Candidate(c.text, pinyin.replace(" ", ""), c.score, c.type, "", origin))
         }
 
         override fun getPinyinExactCandidates(pinyinSequence: String): List<Candidate> {

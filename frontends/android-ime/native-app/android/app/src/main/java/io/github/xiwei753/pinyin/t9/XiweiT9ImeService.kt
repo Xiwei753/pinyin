@@ -43,7 +43,41 @@ class XiweiT9ImeService : InputMethodService() {
         super.onStartInputView(info, restarting)
         // Re-apply theme and height when view is shown again, in case settings changed
         view?.let { applyThemeAndHeight(it) }
+        resetCompositionState()
     }
+
+    override fun onStartInput(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
+        super.onStartInput(info, restarting)
+        resetCompositionState()
+    }
+
+    override fun onFinishInputView(finishingInput: Boolean) {
+        super.onFinishInputView(finishingInput)
+        resetCompositionState()
+    }
+
+    override fun onFinishInput() {
+        super.onFinishInput()
+        resetCompositionState()
+    }
+
+    override fun onWindowHidden() {
+        super.onWindowHidden()
+        resetCompositionState()
+    }
+
+    private fun resetCompositionState() {
+        engine.clear()
+        currentCandidates = emptyList()
+        if (this::bufferText.isInitialized) {
+            bufferText.text = ""
+        }
+        if (this::candidateContainer.isInitialized) {
+            candidateContainer.removeAllViews()
+            candidateContainer.visibility = View.GONE
+        }
+    }
+
 
     private var view: View? = null
 

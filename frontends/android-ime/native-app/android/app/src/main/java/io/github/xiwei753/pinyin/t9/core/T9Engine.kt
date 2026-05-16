@@ -234,7 +234,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                 if (dp[j] == null || dp[j]!!.isEmpty()) continue
 
                 val partPinyins = pinyins.subList(j, i)
-                val partStr = partPinyins.joinToString("")
+                val partStr = partPinyins.joinToString(" ")
                 val isPrefix = (i == pinyins.size)
 
                 val partCandidates = if (isPrefix && !comp.isComplete) {
