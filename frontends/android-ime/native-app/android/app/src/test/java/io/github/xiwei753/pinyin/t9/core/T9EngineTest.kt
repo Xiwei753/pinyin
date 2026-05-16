@@ -189,28 +189,31 @@ class T9EngineTest {
         // 96 -> 我
         engine.inputDigit("9")
         engine.inputDigit("6")
-        assertTrue(engine.getCandidates().any { it.text == "我" })
+        assertTrue(engine.getVisibleCandidates().any { it.text == "我" })
+        assertEquals("wo", engine.getPreedit())
         engine.clear()
 
         // 64 -> 你
         engine.inputDigit("6")
         engine.inputDigit("4")
-        assertTrue(engine.getCandidates().any { it.text == "你" })
+        assertTrue(engine.getVisibleCandidates().any { it.text == "你" })
+        assertEquals("ni", engine.getPreedit())
         engine.clear()
 
         // 82 -> 他/她
         engine.inputDigit("8")
         engine.inputDigit("2")
-        assertTrue(engine.getCandidates().any { it.text == "他" })
-        assertTrue(engine.getCandidates().any { it.text == "她" })
+        assertTrue(engine.getVisibleCandidates().any { it.text == "他" })
+        assertTrue(engine.getVisibleCandidates().any { it.text == "她" })
         engine.clear()
 
         // 33 -> 的/得/地
         engine.inputDigit("3")
         engine.inputDigit("3")
-        assertTrue(engine.getCandidates().any { it.text == "的" })
-        assertTrue(engine.getCandidates().any { it.text == "得" })
-        assertTrue(engine.getCandidates().any { it.text == "地" })
+        assertTrue(engine.getVisibleCandidates().any { it.text == "的" })
+        assertTrue(engine.getVisibleCandidates().any { it.text == "得" })
+        assertTrue(engine.getVisibleCandidates().any { it.text == "地" })
+        assertEquals("de", engine.getPreedit())
         engine.clear()
 
         // 744 -> 是
@@ -311,6 +314,51 @@ class T9EngineTest {
             assertTrue(!committed.text.contains(" "))
             assertEquals("一母", committed.text)
         }
+    }
+
+    @Test
+    fun testVisibleCandidatesGate() {
+        val dict = MockDict()
+        dict.add(Candidate("不", "28", 1000, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("版权", "2267826", 10000, CandidateType.NORMAL), "ban quan")
+        dict.add(Candidate("ban", "226", 9000, CandidateType.NORMAL), "ban")
+
+        val engine = T9Engine(dict)
+
+        // Input length 1
+        engine.inputDigit("2")
+
+        // We should add a candidate "版" to test that prefix single-char doesn't get shown for 2
+        dict.add(Candidate("版", "226", 8000, CandidateType.SINGLE_CHAR), "ban")
+
+        val visibleCandsLength1 = engine.getVisibleCandidates()
+        // Should not have "版权" (multi-char for length 1)
+        assertTrue(visibleCandsLength1.none { it.text == "版权" })
+        // Should not have "ban" (pinyin)
+        assertTrue(visibleCandsLength1.none { it.text == "ban" })
+        // Should not have "2" (numeric fallback)
+        assertTrue(visibleCandsLength1.none { it.text == "2" })
+        // Should not have "版" because its code length > 1
+        assertTrue(visibleCandsLength1.none { it.text == "版" })
+
+        // Ensure preedit is not "ban"
+        assertTrue(engine.getPreedit() != "ban")
+
+        val internalCandsLength1 = engine.getCandidates()
+        // Internal candidates WILL have the numeric fallback
+        assertEquals("2", internalCandsLength1.last().text)
+
+        engine.clear()
+
+        // Input length 2
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+
+        val visibleCandsLength2 = engine.getVisibleCandidates()
+        // Should not have "28" (numeric fallback)
+        assertTrue(visibleCandsLength2.none { it.text == "28" })
+        // "不" should be visible
+        assertTrue(visibleCandsLength2.any { it.text == "不" })
     }
 
     @Test

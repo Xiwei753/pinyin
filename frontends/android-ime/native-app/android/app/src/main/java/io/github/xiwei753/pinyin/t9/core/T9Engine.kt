@@ -11,6 +11,9 @@ class T9Engine(private val dictionary: DictionaryProvider) {
     private var lastCandidates = listOf<Candidate>()
     private var lastLimit = -1
 
+    private var lastVisibleCandidates = listOf<Candidate>()
+    private var lastVisibleLimit = -1
+
     fun inputDigit(digit: String) {
         if (digit.matches(Regex("^[1-9]$"))) {
             buffer += digit
@@ -29,11 +32,8 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
     fun getPreedit(): String {
         if (buffer.isEmpty()) return ""
-        val bestCandidate = if (buffer == lastBuffer && lastCandidates.isNotEmpty()) {
-            lastCandidates.first()
-        } else {
-            generateCandidates(buffer, 2).firstOrNull()
-        }
+        val visible = getVisibleCandidates(2)
+        val bestCandidate = visible.firstOrNull()
 
         if (bestCandidate != null && bestCandidate.text != buffer) {
             return bestCandidate.sourcePinyin
@@ -41,6 +41,43 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         val compositions = pinyinComposer.getCompositions(buffer)
         if (compositions.isEmpty()) return buffer
         return compositions[0].pinyinString
+    }
+
+    fun getVisibleCandidates(limit: Int = 30): List<Candidate> {
+        if (buffer.isEmpty()) return emptyList()
+        if (buffer == lastBuffer && limit == lastVisibleLimit && lastVisibleCandidates.isNotEmpty()) {
+            return lastVisibleCandidates
+        }
+
+        // We request more internal candidates to ensure we have enough after filtering
+        val internalCandidates = getCandidates(limit + 10)
+
+        val visible = internalCandidates.filter { c ->
+            // Exclude the raw numeric fallback
+            if (c.text == buffer) return@filter false
+
+            // Exclude pinyin/english only candidates
+            if (c.text.matches(Regex("^[a-zA-Z\\s]+$"))) return@filter false
+
+            // Short input gate: length 1
+            if (buffer.length == 1) {
+                // Only allow single characters
+                if (c.text.length > 1) return@filter false
+                // Prevent prefix brain-completion: the pinyin code length should not exceed typed length
+                if (c.code.length > 1) return@filter false
+            }
+            // Short input gate: length 2
+            if (buffer.length == 2) {
+                if (c.text.length > 2) return@filter false
+            }
+
+            true
+        }.take(limit)
+
+        lastVisibleCandidates = visible
+        lastVisibleLimit = limit
+
+        return visible
     }
 
     fun getCandidates(limit: Int = 30): List<Candidate> {
