@@ -19,6 +19,8 @@ class SettingsActivity : Activity() {
 
         val hapticSwitch = findViewById<Switch>(R.id.switch_haptic)
         hapticSwitch.isChecked = settingsRepository.isHapticFeedbackEnabled()
+        // Prevent system from triggering its own haptic feedback on the switch which might cause crashes
+        hapticSwitch.isHapticFeedbackEnabled = false
 
         hapticSwitch.setOnCheckedChangeListener { _, isChecked ->
             settingsRepository.setHapticFeedbackEnabled(isChecked)
