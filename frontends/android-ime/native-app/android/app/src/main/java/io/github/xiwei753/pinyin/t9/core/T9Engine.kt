@@ -9,6 +9,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
     private val pinyinComposer = T9PinyinComposer()
     private var lastBuffer = ""
     private var lastCandidates = listOf<Candidate>()
+    private var lastLimit = -1
 
     fun inputDigit(digit: String) {
         if (digit.matches(Regex("^[1-9]$"))) {
@@ -28,8 +29,12 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
     fun getPreedit(): String {
         if (buffer.isEmpty()) return ""
-        getCandidates()
-        val bestCandidate = lastCandidates.firstOrNull()
+        val bestCandidate = if (buffer == lastBuffer && lastCandidates.isNotEmpty()) {
+            lastCandidates.first()
+        } else {
+            generateCandidates(buffer, 1).firstOrNull()
+        }
+
         if (bestCandidate != null && bestCandidate.text != buffer) {
             return bestCandidate.sourcePinyin
         }
@@ -40,19 +45,18 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
     fun getCandidates(limit: Int = 30): List<Candidate> {
         if (buffer.isEmpty()) return emptyList()
-        if (buffer != lastBuffer) {
-            computeCandidates(limit)
+        if (buffer != lastBuffer || limit != lastLimit) {
+            lastCandidates = generateCandidates(buffer, limit)
+            lastBuffer = buffer
+            lastLimit = limit
         }
         return lastCandidates
     }
 
-    private fun computeCandidates(limit: Int) {
-        lastBuffer = buffer
-
-        val compositions = pinyinComposer.getCompositions(buffer)
+    private fun generateCandidates(currentBuffer: String, limit: Int): List<Candidate> {
+        val compositions = pinyinComposer.getCompositions(currentBuffer)
         if (compositions.isEmpty()) {
-            lastCandidates = listOf(Candidate(buffer, buffer, -Int.MAX_VALUE, CandidateType.NORMAL, buffer))
-            return
+            return listOf(Candidate(currentBuffer, currentBuffer, -Int.MAX_VALUE, CandidateType.NORMAL, currentBuffer))
         }
 
         val allCandidates = mutableListOf<Candidate>()
@@ -85,12 +89,12 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             .toMutableList()
 
         // Always ensure the bare numeric fallback is at the very end
-        distinctSorted.removeAll { it.text == buffer }
-        distinctSorted.add(Candidate(buffer, buffer, -Int.MAX_VALUE, CandidateType.NORMAL, buffer)) // Bare numeric fallback
+        distinctSorted.removeAll { it.text == currentBuffer }
+        distinctSorted.add(Candidate(currentBuffer, currentBuffer, -Int.MAX_VALUE, CandidateType.NORMAL, currentBuffer)) // Bare numeric fallback
 
-        lastCandidates = distinctSorted.sortedWith(Comparator { c1, c2 ->
-            if (c1.text == buffer) return@Comparator 1
-            if (c2.text == buffer) return@Comparator -1
+        return distinctSorted.sortedWith(Comparator { c1, c2 ->
+            if (c1.text == currentBuffer) return@Comparator 1
+            if (c2.text == currentBuffer) return@Comparator -1
             c2.score.compareTo(c1.score)
         })
     }

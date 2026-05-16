@@ -33,6 +33,45 @@ class T9EngineTest {
     }
 
     @Test
+    fun testCandidateLimitCaching() {
+        val dict = MockDict()
+        for (i in 1..20) {
+            dict.add(Candidate("测$i", "28", 1000 - i, CandidateType.SINGLE_CHAR), "bu")
+        }
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+
+        // Test 1: getPreedit() shouldn't pollute cache with 30 candidates
+        val preedit = engine.getPreedit()
+        assertEquals("bu", preedit)
+        var cands = engine.getCandidates(5)
+        assertTrue(cands.size <= 5)
+
+        engine.clear()
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+
+        // Test 2: changing from larger to smaller limit
+        cands = engine.getCandidates(30)
+        assertTrue(cands.size > 5)
+        cands = engine.getCandidates(5)
+        assertTrue(cands.size <= 5)
+
+        engine.clear()
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+
+        // Test 3: changing from smaller to larger limit
+        cands = engine.getCandidates(5)
+        assertTrue(cands.size <= 5)
+        cands = engine.getCandidates(10)
+        assertTrue(cands.size > 5)
+        assertTrue(cands.size <= 10)
+    }
+
+    @Test
     fun testPreedit() {
         val dict = MockDict()
         val engine = T9Engine(dict)
