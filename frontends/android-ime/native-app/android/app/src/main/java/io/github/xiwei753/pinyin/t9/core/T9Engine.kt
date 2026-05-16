@@ -116,7 +116,16 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             }
         }
 
+        val hasValidExactSingleSyllable = exactSingleSyllableMaxScores.values.maxOrNull() ?: 0 > 0
+
         for (comp in topComps) {
+            if (hasValidExactSingleSyllable && !comp.isComplete && comp.pinyinList.size > 1) {
+                // If we have a valid exact full-span single syllable candidate,
+                // do not generate candidates for multi-syllable prefix compositions
+                // (e.g. 6364 -> men ge).
+                continue
+            }
+
             val candidates = if (comp.pinyinList.size == 1) {
                 getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit, comp.pinyinString, comp.segmentDigits)
             } else {

@@ -82,6 +82,10 @@ class T9BeamDecoder(private val graph: T9SyllableGraph, private val beamSize: In
         val bufferLen = graph.buffer.length
         if (bufferLen == 0) return emptyList()
 
+        val hasExactFullSpan = graph.edges.isNotEmpty() && graph.edges[0].any { edge ->
+            edge.start == 0 && edge.end == bufferLen && edge.isExact && edge.typedLength == edge.fullCodeLength
+        }
+
         val dp = Array(bufferLen + 1) { mutableListOf<DecoderPath>() }
         dp[0].add(DecoderPath(emptyList(), 0))
 
@@ -91,7 +95,7 @@ class T9BeamDecoder(private val graph: T9SyllableGraph, private val beamSize: In
             for (path in dp[i]) {
                 for (edge in graph.edges[i]) {
                     val nextEdges = path.edges + edge
-                    val pathScore = scorePath(nextEdges, edge.end == bufferLen)
+                    val pathScore = scorePath(nextEdges, edge.end == bufferLen, hasExactFullSpan)
                     dp[edge.end].add(DecoderPath(nextEdges, pathScore))
                 }
             }
@@ -106,7 +110,7 @@ class T9BeamDecoder(private val graph: T9SyllableGraph, private val beamSize: In
         return dp[bufferLen].sortedByDescending { it.score }.take(beamSize)
     }
 
-    private fun scorePath(edges: List<SyllableEdge>, isCompleteSequence: Boolean): Int {
+    private fun scorePath(edges: List<SyllableEdge>, isCompleteSequence: Boolean, hasExactFullSpan: Boolean): Int {
         var score = 0
         var isAllExact = true
 
@@ -134,6 +138,10 @@ class T9BeamDecoder(private val graph: T9SyllableGraph, private val beamSize: In
                 // Heavily penalize brain completion from a very short prefix (1-2 digits)
                 if (edge.typedLength <= 2) {
                     score -= 5000
+                }
+
+                if (hasExactFullSpan && edge.typedLength <= 1) {
+                    score -= 100000
                 }
             }
 

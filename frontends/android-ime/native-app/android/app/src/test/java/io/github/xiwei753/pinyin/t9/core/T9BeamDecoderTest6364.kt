@@ -12,14 +12,28 @@ class T9BeamDecoderTest6364 {
 
         var hasMeng = false
         var hasNeng = false
+        var mengScore = -Int.MAX_VALUE
+        var nengScore = -Int.MAX_VALUE
+        var mengeScore = -Int.MAX_VALUE
 
         for (path in paths) {
             val text = path.edges.filter { !it.isSeparator }.joinToString(" ") { it.syllable }
-            if (text == "meng") hasMeng = true
-            if (text == "neng") hasNeng = true
+            if (text == "meng") {
+                hasMeng = true
+                mengScore = path.score
+            }
+            if (text == "neng") {
+                hasNeng = true
+                nengScore = path.score
+            }
+            if (text == "men ge") {
+                mengeScore = path.score
+            }
         }
 
         assertTrue("Beam search must retain exact path 'meng'", hasMeng)
         assertTrue("Beam search must retain exact path 'neng'", hasNeng)
+        assertTrue("Exact path 'neng' must score higher than fragmented 'men ge'", nengScore > mengeScore)
+        assertTrue("Exact path 'meng' must score higher than fragmented 'men ge'", mengScore > mengeScore)
     }
 }
