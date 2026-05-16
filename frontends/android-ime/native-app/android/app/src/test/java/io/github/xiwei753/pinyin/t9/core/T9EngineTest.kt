@@ -177,6 +177,15 @@ class T9EngineTest {
         dict.add(Candidate("一", "94", 80000, CandidateType.SINGLE_CHAR), "yi")
         dict.add(Candidate("母", "68", 80000, CandidateType.SINGLE_CHAR), "mu")
         dict.add(Candidate("木", "68", 80000, CandidateType.SINGLE_CHAR), "mu")
+        dict.add(Candidate("目", "68", 80000, CandidateType.SINGLE_CHAR), "mu")
+        dict.add(Candidate("怒", "68", 80000, CandidateType.SINGLE_CHAR), "nu")
+        dict.add(Candidate("榜", "68", 80000, CandidateType.SINGLE_CHAR), "mu") // Just for test
+
+        // Add some more valid candidates to fill the top 5
+        dict.add(Candidate("猪", "9468", 70000, CandidateType.SINGLE_CHAR), "zhou")
+        dict.add(Candidate("轴", "9468", 60000, CandidateType.SINGLE_CHAR), "zhou")
+        dict.add(Candidate("昼", "9468", 50000, CandidateType.SINGLE_CHAR), "zhou")
+        dict.add(Candidate("肘", "9468", 40000, CandidateType.SINGLE_CHAR), "zhou")
 
         val engine = T9Engine(dict)
         engine.inputDigit("9")
@@ -198,7 +207,41 @@ class T9EngineTest {
 
         val topCandsText = cands.take(5).map { it.text }
         assertTrue("一母" !in topCandsText)
+        assertTrue("一 母" !in topCandsText)
         assertTrue("一木" !in topCandsText)
+        assertTrue("一 木" !in topCandsText)
+        assertTrue("一目" !in topCandsText)
+        assertTrue("一 目" !in topCandsText)
+        assertTrue("一怒" !in topCandsText)
+        assertTrue("一 怒" !in topCandsText)
+        assertTrue("一榜" !in topCandsText)
+        assertTrue("一 榜" !in topCandsText)
+    }
+
+    @Test
+    fun testCandidateDisplayAndCommitHasNoSpaces() {
+        val dict = MockDict()
+        // High scores so they become candidates
+        dict.add(Candidate("一", "94", 80000, CandidateType.SINGLE_CHAR), "yi")
+        dict.add(Candidate("母", "68", 80000, CandidateType.SINGLE_CHAR), "mu")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("9")
+        engine.inputDigit("4")
+        engine.inputDigit("6")
+        engine.inputDigit("8")
+
+        val cands = engine.getCandidates()
+        // Text shouldn't have space
+        assertTrue(cands.none { it.text.contains(" ") })
+
+        // Find if any candidate is "一母", and commit it
+        val cand = cands.find { it.text == "一母" }
+        if (cand != null) {
+            val committed = engine.commitCandidate(cand)
+            assertTrue(!committed.text.contains(" "))
+            assertEquals("一母", committed.text)
+        }
     }
 
     @Test
