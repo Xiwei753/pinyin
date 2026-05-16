@@ -15,6 +15,7 @@ class AssetsTest {
 
         var lineCount = 0
         var foundAnZhuo = false
+        var foundShaShiHou = false
         val foundCommonWords = mutableSetOf<String>()
         val commonWordsToFind = setOf("你好", "输入法", "中国", "今天", "手机", "电脑", "安卓", "我", "你", "他", "她", "的", "得", "地", "不", "是")
 
@@ -34,10 +35,15 @@ class AssetsTest {
                 assertEquals("an zhuo", pinyin)
                 foundAnZhuo = true
             }
+            if (word == "啥时候") {
+                assertEquals("sha shi hou", pinyin)
+                foundShaShiHou = true
+            }
         }
 
         assertTrue("Dictionary should have more than 20000 lines, but has $lineCount", lineCount > 20000)
         assertTrue("The word '安卓' was not found in the dictionary.", foundAnZhuo)
+        assertTrue("The phrase '啥时候' from android_common_phrases.tsv was not found.", foundShaShiHou)
 
         for (expectedWord in commonWordsToFind) {
              assertTrue("The word '$expectedWord' was not found in the dictionary.", foundCommonWords.contains(expectedWord))

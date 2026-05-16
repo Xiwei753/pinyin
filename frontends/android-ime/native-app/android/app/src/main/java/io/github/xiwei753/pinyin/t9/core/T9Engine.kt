@@ -85,6 +85,11 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                     bonus -= 500000
                 }
 
+                // Heavily penalize prefix brain completions if it's combining into a phrase
+                if (!comp.isComplete) {
+                    bonus -= 100000
+                }
+
                 Candidate(c.text, c.code, c.score + bonus, c.type, c.sourcePinyin)
             }
             allCandidates.addAll(adjustedCandidates)
@@ -94,10 +99,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             .distinctBy { it.text.replace(" ", "") }
             .take(limit - 1)
             .map { c ->
-
-
                 Candidate(c.text.replace(" ", ""), c.code, c.score, c.type, c.sourcePinyin)
-
             }
             .toMutableList()
 
