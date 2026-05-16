@@ -72,6 +72,35 @@ class T9EngineTest {
     }
 
     @Test
+    fun testPreeditSourceSyncWithoutCache() {
+        val dict = MockDict()
+        dict.add(Candidate("周", "9468", 100000, CandidateType.SINGLE_CHAR), "zhou")
+        dict.add(Candidate("字母", "9468", 90000, CandidateType.NORMAL), "zi mu")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("9")
+        engine.inputDigit("4")
+        engine.inputDigit("6")
+        engine.inputDigit("8")
+
+        // Call getPreedit() first to ensure it computes correctly without an existing limit cache
+        val preedit = engine.getPreedit()
+
+        // Then call getCandidates() with a small limit
+        val cands = engine.getCandidates(5)
+
+        // Preedit must correctly reflect the first real candidate
+        if (cands[0].text == "周") {
+            assertEquals("zhou", preedit)
+        } else if (cands[0].text == "字母") {
+            assertEquals("zi mu", preedit)
+        }
+
+        // Cache must not be polluted, limit should be respected
+        assertTrue(cands.size <= 5)
+    }
+
+    @Test
     fun testPreedit() {
         val dict = MockDict()
         val engine = T9Engine(dict)
