@@ -11,6 +11,7 @@ class T9EngineTest6364 {
         // Mock dict matches pinyin exactly because we override getSingleSyllableCandidates
         dict.add(Candidate("梦", "meng", 50000, CandidateType.SINGLE_CHAR), "meng")
         dict.add(Candidate("能", "neng", 100000, CandidateType.SINGLE_CHAR), "neng")
+        dict.add(Candidate("们个", "men ge", 200000, CandidateType.NORMAL), "men ge") // Even with very high score
 
         val engine = T9Engine(dict)
         engine.inputDigit("6")
@@ -26,6 +27,9 @@ class T9EngineTest6364 {
         assertEquals("neng", preedit)
         assertTrue(preedit != "meng")
         assertTrue(preedit != "menge")
+
+        val topCandidates = visible.take(5).map { it.text }
+        assertTrue("们个" !in topCandidates)
     }
 
     @Test
@@ -34,6 +38,7 @@ class T9EngineTest6364 {
         // Here we artificially make meng score higher to ensure it dynamically uses the score
         dict.add(Candidate("梦", "meng", 100000, CandidateType.SINGLE_CHAR), "meng")
         dict.add(Candidate("能", "neng", 50000, CandidateType.SINGLE_CHAR), "neng")
+        dict.add(Candidate("们个", "men ge", 200000, CandidateType.NORMAL), "men ge") // Even with very high score
 
         val engine = T9Engine(dict)
         engine.inputDigit("6")
@@ -47,5 +52,9 @@ class T9EngineTest6364 {
 
         val preedit = engine.getPreedit()
         assertEquals("meng", preedit)
+
+        // Ensure "men ge" doesn't leak into the top 5 candidates
+        val topCandidates = visible.take(5).map { it.text }
+        assertTrue("们个" !in topCandidates)
     }
 }

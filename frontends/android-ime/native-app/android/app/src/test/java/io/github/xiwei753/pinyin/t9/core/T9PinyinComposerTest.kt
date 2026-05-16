@@ -39,5 +39,16 @@ class T9PinyinComposerTest {
         // 74274468 的 top composition 不能是 qia ri gou
         val compQiaRiGou = composer.getCompositions("74274468")
         assertTrue(compQiaRiGou.isNotEmpty() && compQiaRiGou[0].pinyinString != "qia ri gou")
+
+        val comp6364 = composer.getCompositions("6364")
+        assertTrue(comp6364.any { it.pinyinString == "neng" })
+        assertTrue(comp6364.any { it.pinyinString == "meng" })
+        assertTrue(comp6364.isNotEmpty() && comp6364[0].pinyinString != "men ge")
+
+        val mengGeIndex = comp6364.indexOfFirst { it.pinyinString == "men ge" }
+        val nengIndex = comp6364.indexOfFirst { it.pinyinString == "neng" }
+
+        // Either men ge is completely pruned, or it ranks lower than neng
+        assertTrue("men ge must be severely penalized", mengGeIndex == -1 || mengGeIndex > nengIndex)
     }
 }
