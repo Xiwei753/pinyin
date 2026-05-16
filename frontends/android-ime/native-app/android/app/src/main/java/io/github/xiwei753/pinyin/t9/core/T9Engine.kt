@@ -28,6 +28,11 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
     fun clear() {
         buffer = ""
+        lastBuffer = ""
+        lastCandidates = emptyList()
+        lastLimit = -1
+        lastVisibleCandidates = emptyList()
+        lastVisibleLimit = -1
     }
 
     fun getPreedit(): String {

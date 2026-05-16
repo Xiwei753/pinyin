@@ -223,6 +223,12 @@ class XiweiT9ImeService : InputMethodService() {
         val limit = settingsRepository.getCandidateCount()
         currentCandidates = engine.getVisibleCandidates(limit)
 
+        if (currentCandidates.isEmpty()) {
+            candidateContainer.visibility = View.GONE
+        } else {
+            candidateContainer.visibility = View.VISIBLE
+        }
+
         for ((index, candidate) in currentCandidates.withIndex()) {
             val btn: TextView = if (index < candidateContainer.childCount) {
                 candidateContainer.getChildAt(index) as TextView
