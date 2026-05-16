@@ -68,7 +68,7 @@ def main():
         entries.append((word, pinyin, weight, line))
 
     # We must ensure required words exist
-    required_words = {"你好", "输入法", "中国", "今天", "手机", "电脑", "安卓"}
+    required_words = {"你好", "输入法", "中国", "今天", "手机", "电脑", "安卓", "啥时候"}
     required_entries = [e for e in entries if e[0] in required_words]
 
     # Remove required entries from main pool so we can add them back

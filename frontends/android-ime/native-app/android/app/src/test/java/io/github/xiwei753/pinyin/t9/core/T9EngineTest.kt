@@ -274,6 +274,7 @@ class T9EngineTest {
         }
 
         val topCandsText = cands.take(5).map { it.text }
+
         assertTrue("一母" !in topCandsText)
         assertTrue("一 母" !in topCandsText)
         assertTrue("一木" !in topCandsText)
@@ -352,5 +353,48 @@ class T9EngineTest {
         // Should not have 不太新股 or 不太英语
         assertTrue(cands.none { it.text == "不太新股" })
         assertTrue(cands.none { it.text == "不太英语" })
+    }
+
+
+    @Test
+    fun testShaShiHou() {
+        val dict = MockDict()
+        // Provide candidate to match "啥时候" -> sha shi hou
+        dict.add(Candidate("啥时候", "742744468", 100000, CandidateType.NORMAL), "sha shi hou")
+        // These are dynamic sentence generations in reality, let's pretend they have lower score
+        dict.add(Candidate("啥是狗", "742744468", 8000, CandidateType.NORMAL), "sha shi gou")
+        dict.add(Candidate("啥是构", "742744468", 7000, CandidateType.NORMAL), "sha shi gou")
+        dict.add(Candidate("啥是够", "742744468", 6000, CandidateType.NORMAL), "sha shi gou")
+
+        // Add some dummy ones so we fill the top 5
+        dict.add(Candidate("沙石后", "742744468", 90000, CandidateType.NORMAL), "sha shi hou")
+        dict.add(Candidate("杀师后", "742744468", 80000, CandidateType.NORMAL), "sha shi hou")
+        dict.add(Candidate("刹时后", "742744468", 70000, CandidateType.NORMAL), "sha shi hou")
+        dict.add(Candidate("傻事后", "742744468", 60000, CandidateType.NORMAL), "sha shi hou")
+
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("7")
+        engine.inputDigit("4")
+        engine.inputDigit("2")
+        engine.inputDigit("7")
+        engine.inputDigit("4")
+        engine.inputDigit("4")
+        engine.inputDigit("4")
+        engine.inputDigit("6")
+        engine.inputDigit("8")
+
+        val cands = engine.getCandidates()
+        val preedit = engine.getPreedit()
+
+        assertTrue(cands.isNotEmpty())
+        assertEquals("啥时候", cands[0].text)
+        assertEquals("sha shi hou", preedit)
+
+        val topCandsText = cands.take(5).map { it.text }
+
+        assertTrue("啥是狗" !in topCandsText)
+        assertTrue("啥是够" !in topCandsText)
+        assertTrue("啥是构" !in topCandsText)
     }
 }
