@@ -154,14 +154,14 @@ class BuiltinDictionary : DictionaryProvider {
             prefixMap["748783"] = mutableListOf(candidate2Prefix)
             prefixMap["7487832"] = mutableListOf(candidate2Prefix)
 
-            pinyinExact["ni hao"] = mutableListOf(candidate1)
+            pinyinExact["nihao"] = mutableListOf(candidate1)
             pinyinPrefix["ni"] = mutableListOf(candidate1Prefix)
-            pinyinPrefix["ni hao"] = mutableListOf(candidate1)
+            pinyinPrefix["nihao"] = mutableListOf(candidate1)
 
-            pinyinExact["shu ru fa"] = mutableListOf(candidate2)
+            pinyinExact["shurufa"] = mutableListOf(candidate2)
             pinyinPrefix["shu"] = mutableListOf(candidate2Prefix)
-            pinyinPrefix["shu ru"] = mutableListOf(candidate2Prefix)
-            pinyinPrefix["shu ru fa"] = mutableListOf(candidate2)
+            pinyinPrefix["shuru"] = mutableListOf(candidate2Prefix)
+            pinyinPrefix["shurufa"] = mutableListOf(candidate2)
         } else {
             isFallback = false
             loadedWordCount = count
