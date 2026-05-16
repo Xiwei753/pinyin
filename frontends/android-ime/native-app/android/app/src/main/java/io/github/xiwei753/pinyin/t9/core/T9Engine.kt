@@ -62,7 +62,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         val allCandidates = mutableListOf<Candidate>()
 
         // Take the top 3 compositions to explore multiple plausible paths
-        val topComps = compositions.take(3)
+        val topComps = compositions.take(6)
 
         for ((index, comp) in topComps.withIndex()) {
             val candidates = if (comp.pinyinList.size == 1) {
@@ -73,19 +73,35 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
             // Provide significant scoring bonuses to candidates from higher-ranked compositions
             val adjustedCandidates = candidates.map { c ->
-                val bonus = if (index == 0) 100000 else (3 - index) * 10000
+                var bonus = 0
+                // Use composition score to boost its candidate scores so the better path surfaces natural multi-word cand
+                bonus += comp.score * 50
+                // Small positional bonus, so we don't overshadow dict scores
+                bonus += (6 - index) * 1000
+                // Massive bonus for multi-word full matches from dict (no space)
+                if (!c.text.contains(" ") && c.text.length > 1) {
+                    bonus += 500000 * c.text.length
+                }
+                // Penalize ad-hoc combinations (with spaces)
+                if (c.text.contains(" ")) {
+                    bonus -= 500000
+                }
+
                 Candidate(c.text, c.code, c.score + bonus, c.type, c.sourcePinyin)
+
             }
             allCandidates.addAll(adjustedCandidates)
         }
 
-        val distinctSorted = allCandidates.distinctBy { it.text }
-            .sortedByDescending { it.score }
+        val distinctSorted = allCandidates.sortedByDescending { it.score }
+            .distinctBy { it.text.replace(" ", "") }
             .take(limit - 1)
             .map { c ->
+
+
                 Candidate(c.text.replace(" ", ""), c.code, c.score, c.type, c.sourcePinyin)
+
             }
-            .distinctBy { it.text } // Re-distinct after removing spaces
             .toMutableList()
 
         // Always ensure the bare numeric fallback is at the very end
