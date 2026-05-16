@@ -78,6 +78,10 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         val distinctSorted = allCandidates.distinctBy { it.text }
             .sortedByDescending { it.score }
             .take(limit - 1)
+            .map { c ->
+                Candidate(c.text.replace(" ", ""), c.code, c.score, c.type, c.sourcePinyin)
+            }
+            .distinctBy { it.text } // Re-distinct after removing spaces
             .toMutableList()
 
         // Always ensure the bare numeric fallback is at the very end
@@ -181,7 +185,13 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                         }
 
                         if (comp.rawDigits.length <= 4 && prevCandidate.text.isNotEmpty()) {
-                            baseScore -= 200000
+                            // Heavily penalize multiple word combinations for short inputs
+                            baseScore -= 500000
+                        }
+
+                        // For short inputs, heavily penalize or exclude LONG_OR_LOW_FREQ candidates that are part of dynamic combinations
+                        if (comp.rawDigits.length <= 4 && partCandidate.type == CandidateType.LONG_OR_LOW_FREQ) {
+                            baseScore -= 500000
                         }
 
                         currentCandidates.add(Candidate(newText, newCode, baseScore, CandidateType.NORMAL, sourcePinyin))
