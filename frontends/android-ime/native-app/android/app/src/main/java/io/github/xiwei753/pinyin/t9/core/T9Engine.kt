@@ -61,23 +61,21 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
         val allCandidates = mutableListOf<Candidate>()
 
-        // Take the top 3 compositions to explore multiple plausible paths
-        val topComps = compositions.take(6)
+        // Take the top 16 compositions to explore multiple plausible paths
+        val topComps = compositions.take(16)
 
-        for ((index, comp) in topComps.withIndex()) {
+        for (comp in topComps) {
             val candidates = if (comp.pinyinList.size == 1) {
-                getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit, comp.pinyinString)
+                getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit, comp.pinyinString, comp.segmentDigits)
             } else {
                 getSentenceCandidates(comp, limit, comp.pinyinString)
             }
 
-            // Provide significant scoring bonuses to candidates from higher-ranked compositions
             val adjustedCandidates = candidates.map { c ->
                 var bonus = 0
-                // Use composition score to boost its candidate scores so the better path surfaces natural multi-word cand
-                bonus += comp.score * 50
-                // Small positional bonus, so we don't overshadow dict scores
-                bonus += (6 - index) * 1000
+                // Give a smaller boost from composition score so valid candidates can rise
+                bonus += comp.score * 10
+
                 // Massive bonus for multi-word full matches from dict (no space)
                 if (!c.text.contains(" ") && c.text.length > 1) {
                     bonus += 500000 * c.text.length
@@ -88,7 +86,6 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                 }
 
                 Candidate(c.text, c.code, c.score + bonus, c.type, c.sourcePinyin)
-
             }
             allCandidates.addAll(adjustedCandidates)
         }
@@ -115,33 +112,37 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         })
     }
 
-    private fun getSingleSyllableCandidates(pinyin: String, isComplete: Boolean, limit: Int, sourcePinyin: String): List<Candidate> {
+    private fun getSingleSyllableCandidates(pinyin: String, isComplete: Boolean, limit: Int, sourcePinyin: String, segmentDigits: List<String>): List<Candidate> {
         val candidates = if (isComplete) {
             dictionary.getSingleSyllableCandidates(pinyin)
         } else {
             dictionary.getPinyinPrefixCandidates(pinyin)
         }
 
-        val code = T9CodeMapper.toCode(pinyin)
+        val typedCodeLength = if (segmentDigits.isNotEmpty()) segmentDigits[0].length else T9CodeMapper.toCode(pinyin).length
+        val codeLen = T9CodeMapper.toCode(pinyin).length
 
         return candidates
             .filter { candidate ->
                 if (!isComplete && candidate.type == CandidateType.LONG_OR_LOW_FREQ) return@filter false
-                if (code.length == 1) {
+                if (codeLen == 1) {
                     candidate.type == CandidateType.SINGLE_CHAR || (candidate.type == CandidateType.COMMON_SHORT && candidate.text.length == 1)
-                } else if (code.length == 2) {
+                } else if (codeLen == 2) {
                     candidate.text.length <= 2
-                } else if (code.length == 3) {
+                } else if (codeLen == 3) {
                     candidate.text.length <= 3 && candidate.type != CandidateType.LONG_OR_LOW_FREQ
                 } else {
-                    candidate.text.length <= code.length
+                    candidate.text.length <= codeLen
                 }
             }
             .map { candidate ->
                 var adjustedScore = candidate.score
-                val extraLen = candidate.code.length - code.length
+                val extraLen = candidate.code.length - typedCodeLength
                 if (extraLen > 0) {
                     adjustedScore -= extraLen * 50000
+                }
+                if (!isComplete && typedCodeLength <= 2) {
+                    adjustedScore -= 2000000 // Huge penalty for brain-completing a 1-2 digit prefix
                 }
                 Candidate(candidate.text, candidate.code, adjustedScore, candidate.type, sourcePinyin)
             }
@@ -170,6 +171,11 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                     dictionary.getPinyinExactCandidates(partStr)
                 }
 
+                val partCodeLength = if (comp.segmentDigits.isNotEmpty()) {
+                    comp.segmentDigits.subList(j, i).sumOf { it.length }
+                } else {
+                    partPinyins.joinToString("") { T9CodeMapper.toCode(it) }.length
+                }
                 val partCode = partPinyins.joinToString("") { T9CodeMapper.toCode(it) }
 
                 for (prevCandidate in dp[j]!!) {
@@ -198,9 +204,14 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                         }
 
                         if (isPrefix) {
-                            val overShoot = partCandidate.code.length - partCode.length
+                            val overShoot = partCandidate.code.length - partCodeLength
                             if (overShoot > 0) {
                                 baseScore -= overShoot * 20000
+                            }
+                            // If the final segment typing is very short (1-2 digits), heavily penalize prefix brain-completion
+                            val lastSegTypedLength = if (comp.segmentDigits.isNotEmpty()) comp.segmentDigits[i-1].length else 3
+                            if (!comp.isComplete && lastSegTypedLength <= 2) {
+                                baseScore -= 2000000
                             }
                         }
 

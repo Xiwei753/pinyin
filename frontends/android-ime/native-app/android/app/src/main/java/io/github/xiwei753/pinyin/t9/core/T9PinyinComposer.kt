@@ -5,7 +5,8 @@ data class PinyinComposition(
     val pinyinString: String,
     val isComplete: Boolean,
     val rawDigits: String,
-    var score: Int = 0
+    var score: Int = 0,
+    val segmentDigits: List<String> = emptyList()
 )
 
 class T9PinyinComposer {
@@ -27,7 +28,7 @@ class T9PinyinComposer {
 
         val segmentPathsList = segments.map { segment ->
             if (segment.isEmpty()) {
-                listOf(Pair(emptyList<String>(), true))
+                listOf(Pair(emptyList<Pair<String, String>>(), true))
             } else {
                 getPathsForSegment(segment)
             }
@@ -35,24 +36,38 @@ class T9PinyinComposer {
 
         val combinedPaths = combinePaths(segmentPathsList)
 
-        for ((path, isComplete) in combinedPaths) {
+        for ((pathWithDigits, isComplete) in combinedPaths) {
+            val path = pathWithDigits.map { it.first }
+            val segDigits = pathWithDigits.map { it.second }
             val pinyinString = path.joinToString(" ")
 
             var score = 0
             if (isComplete) score += 10000
             score -= path.size * 100
 
-            for (syl in path) {
+            for (i in path.indices) {
+                val syl = path[i]
+                val digitLen = segDigits[i].length
                 val codeLen = T9CodeMapper.toCode(syl).length
+
                 if (codeLen == 1) {
                     score -= 50
                 }
                 if (COMMON_SYLLABLES.contains(syl)) {
                     score += 10
                 }
+
+                // Greedy bonus: prefer longer syllables earlier in the path
+                score += codeLen * Math.max(1, (10 - i))
+
+                // Penalize brain-completed prefixes so short tails don't win over conservative ones
+                if (!isComplete && i == path.size - 1) {
+                    val overshoot = codeLen - digitLen
+                    score -= overshoot * 100
+                }
             }
 
-            results.add(PinyinComposition(path, pinyinString, isComplete, buffer, score))
+            results.add(PinyinComposition(path, pinyinString, isComplete, buffer, score, segDigits))
         }
 
         return results.distinctBy { it.pinyinString }.sortedWith(Comparator { c1, c2 ->
@@ -64,8 +79,8 @@ class T9PinyinComposer {
         })
     }
 
-    private fun getPathsForSegment(segment: String): List<Pair<List<String>, Boolean>> {
-        val dp = Array<MutableList<Pair<List<String>, Boolean>>>(segment.length + 1) { mutableListOf() }
+    private fun getPathsForSegment(segment: String): List<Pair<List<Pair<String, String>>, Boolean>> {
+        val dp = Array<MutableList<Pair<List<Pair<String, String>>, Boolean>>>(segment.length + 1) { mutableListOf() }
         dp[0].add(Pair(emptyList(), true))
 
         for (i in 1..segment.length) {
@@ -80,14 +95,14 @@ class T9PinyinComposer {
 
                 for ((prevPath, _) in dp[j]) {
                     for (syllable in exactSyllables) {
-                        dp[i].add(Pair(prevPath + syllable, true))
+                        dp[i].add(Pair(prevPath + Pair(syllable, part), true))
                     }
 
                     if (isPrefix) {
                         val exactSet = exactSyllables.toSet()
                         for (syllable in prefixSyllables) {
                             if (syllable !in exactSet) {
-                                dp[i].add(Pair(prevPath + syllable, false))
+                                dp[i].add(Pair(prevPath + Pair(syllable, part), false))
                             }
                         }
                     }
@@ -97,16 +112,16 @@ class T9PinyinComposer {
 
         val result = dp[segment.length]
         if (result.isEmpty()) {
-            return listOf(Pair(listOf(segment), false))
+            return listOf(Pair(listOf(Pair(segment, segment)), false))
         }
         return result
     }
 
-    private fun combinePaths(segmentPathsList: List<List<Pair<List<String>, Boolean>>>): List<Pair<List<String>, Boolean>> {
-        var currentCombined = listOf(Pair(emptyList<String>(), true))
+    private fun combinePaths(segmentPathsList: List<List<Pair<List<Pair<String, String>>, Boolean>>>): List<Pair<List<Pair<String, String>>, Boolean>> {
+        var currentCombined = listOf(Pair(emptyList<Pair<String, String>>(), true))
 
         for (segmentPaths in segmentPathsList) {
-            val newCombined = mutableListOf<Pair<List<String>, Boolean>>()
+            val newCombined = mutableListOf<Pair<List<Pair<String, String>>, Boolean>>()
             for (comb in currentCombined) {
                 for (path in segmentPaths) {
                     val newCombList = comb.first.toMutableList()

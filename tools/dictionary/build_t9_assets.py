@@ -67,8 +67,20 @@ def main():
         line = f"{word}\t{pinyin}\t{weight}\n"
         entries.append((word, pinyin, weight, line))
 
+    # Read supplementary phrases
+    supplementary_file = os.path.join(os.path.dirname(__file__), "android_common_phrases.tsv")
+    if os.path.exists(supplementary_file):
+        with open(supplementary_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.startswith('#'): continue
+                parts = line.strip().split('\t')
+                if len(parts) >= 3:
+                    text, pinyin, score = parts[0], parts[1], int(parts[2])
+                    raw_line = f"{text}\t{pinyin}\t{score}\n"
+                    entries.append((text, pinyin, score, raw_line))
+
     # We must ensure required words exist
-    required_words = {"你好", "输入法", "中国", "今天", "手机", "电脑", "安卓", "啥时候"}
+    required_words = {"你好", "输入法", "中国", "今天", "手机", "电脑", "安卓"}
     required_entries = [e for e in entries if e[0] in required_words]
 
     # Remove required entries from main pool so we can add them back
