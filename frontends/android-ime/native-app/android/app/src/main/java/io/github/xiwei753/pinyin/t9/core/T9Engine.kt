@@ -101,6 +101,21 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         // Take the top 16 compositions to explore multiple plausible paths
         val topComps = compositions.take(16)
 
+        // Pre-calculate path qualities for exact single syllable paths
+        // This ensures the highest frequency candidates heavily influence the path score,
+        // allowing "neng" to beat "meng" natively based on dictionary frequency.
+        val exactSingleSyllableMaxScores = mutableMapOf<String, Int>()
+        for (comp in topComps) {
+            if (comp.isComplete && comp.pinyinList.size == 1) {
+                val pinyin = comp.pinyinList[0]
+                if (!exactSingleSyllableMaxScores.containsKey(pinyin)) {
+                    val cands = dictionary.getSingleSyllableCandidates(pinyin)
+                    val maxScore = cands.maxOfOrNull { it.score } ?: 0
+                    exactSingleSyllableMaxScores[pinyin] = maxScore
+                }
+            }
+        }
+
         for (comp in topComps) {
             val candidates = if (comp.pinyinList.size == 1) {
                 getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit, comp.pinyinString, comp.segmentDigits)
@@ -112,6 +127,15 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                 var bonus = 0
                 // Give a smaller boost from composition score so valid candidates can rise
                 bonus += comp.score * 10
+
+                // If this candidate comes from an exact single syllable path,
+                // give a bonus proportional to the path's maximum candidate score
+                if (comp.isComplete && comp.pinyinList.size == 1) {
+                    val pathQuality = exactSingleSyllableMaxScores[comp.pinyinList[0]] ?: 0
+                    if (pathQuality > 0) {
+                        bonus += pathQuality
+                    }
+                }
 
                 // Massive bonus for multi-word full matches from dict (no space)
                 if (!c.text.contains(" ") && c.text.length > 1) {
