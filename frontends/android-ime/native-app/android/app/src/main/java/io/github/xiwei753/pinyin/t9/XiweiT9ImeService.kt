@@ -187,7 +187,7 @@ class XiweiT9ImeService : InputMethodService() {
         bufferText.text = engine.getPreedit()
 
         val limit = settingsRepository.getCandidateCount()
-        currentCandidates = engine.getCandidates(limit)
+        currentCandidates = engine.getVisibleCandidates(limit)
 
         for ((index, candidate) in currentCandidates.withIndex()) {
             val btn: TextView = if (index < candidateContainer.childCount) {
