@@ -2,6 +2,7 @@ package io.github.xiwei753.pinyin.t9.data
 
 import android.content.Context
 import io.github.xiwei753.pinyin.t9.core.Candidate
+import io.github.xiwei753.pinyin.t9.core.CandidateOrigin
 import io.github.xiwei753.pinyin.t9.core.CandidateType
 import io.github.xiwei753.pinyin.t9.core.T9CodeMapper
 import java.io.InputStream
@@ -96,13 +97,16 @@ class BuiltinDictionary : DictionaryProvider {
 
                         val finalType = if (type != CandidateType.LONG_OR_LOW_FREQ && score < 5000) CandidateType.LONG_OR_LOW_FREQ else type
 
-                        val candidate = Candidate(text, code, score, finalType)
+                        val origin = if (text.length == 1) CandidateOrigin.EXACT_SINGLE else CandidateOrigin.EXACT_PHRASE
+
+                        val candidate = Candidate(text, code, score, finalType, "", origin)
+                        val prefixCandidate = Candidate(text, code, score, finalType, "", CandidateOrigin.PREFIX_COMPLETION)
 
                         // Legacy maps
                         exactMap.getOrPut(code) { mutableListOf() }.add(candidate)
                         for (i in 1..code.length) {
                             val prefix = code.substring(0, i)
-                            prefixMap.getOrPut(prefix) { mutableListOf() }.add(candidate)
+                            prefixMap.getOrPut(prefix) { mutableListOf() }.add(prefixCandidate)
                         }
 
                         // Pinyin maps
@@ -117,7 +121,8 @@ class BuiltinDictionary : DictionaryProvider {
 
                         for (i in 1..syllables.size) {
                             val pre = syllables.take(i).joinToString("")
-                            pinyinPrefix.getOrPut(pre) { mutableListOf() }.add(candidate)
+                            val isExactPinyin = (i == syllables.size)
+                            pinyinPrefix.getOrPut(pre) { mutableListOf() }.add(if (isExactPinyin) candidate else prefixCandidate)
                         }
                     }
                 }
@@ -129,33 +134,34 @@ class BuiltinDictionary : DictionaryProvider {
         if (!hasValidEntries) {
             isFallback = true
             loadedWordCount = 2
-            val candidate1 = Candidate("你好", "64426", 100000)
-            val candidate2 = Candidate("输入法", "7487832", 90000)
-
+            val candidate1 = Candidate("你好", "64426", 100000, CandidateType.NORMAL, "", CandidateOrigin.EXACT_PHRASE)
+            val candidate1Prefix = Candidate("你好", "64426", 100000, CandidateType.NORMAL, "", CandidateOrigin.PREFIX_COMPLETION)
+            val candidate2 = Candidate("输入法", "7487832", 90000, CandidateType.NORMAL, "", CandidateOrigin.EXACT_PHRASE)
+            val candidate2Prefix = Candidate("输入法", "7487832", 90000, CandidateType.NORMAL, "", CandidateOrigin.PREFIX_COMPLETION)
 
             exactMap["64426"] = mutableListOf(candidate1)
-            prefixMap["6"] = mutableListOf(candidate1)
-            prefixMap["64"] = mutableListOf(candidate1)
-            prefixMap["644"] = mutableListOf(candidate1)
-            prefixMap["6442"] = mutableListOf(candidate1)
-            prefixMap["64426"] = mutableListOf(candidate1)
+            prefixMap["6"] = mutableListOf(candidate1Prefix)
+            prefixMap["64"] = mutableListOf(candidate1Prefix)
+            prefixMap["644"] = mutableListOf(candidate1Prefix)
+            prefixMap["6442"] = mutableListOf(candidate1Prefix)
+            prefixMap["64426"] = mutableListOf(candidate1Prefix) // Wait, if it's exact match, prefix Map might have prefix candidates, but for completion they are often exact matches if code matches. For consistency with parseLines, all in prefixMap are prefixCandidate.
 
             exactMap["7487832"] = mutableListOf(candidate2)
-            prefixMap["7"] = mutableListOf(candidate2)
-            prefixMap["74"] = mutableListOf(candidate2)
-            prefixMap["748"] = mutableListOf(candidate2)
-            prefixMap["7487"] = mutableListOf(candidate2)
-            prefixMap["74878"] = mutableListOf(candidate2)
-            prefixMap["748783"] = mutableListOf(candidate2)
-            prefixMap["7487832"] = mutableListOf(candidate2)
+            prefixMap["7"] = mutableListOf(candidate2Prefix)
+            prefixMap["74"] = mutableListOf(candidate2Prefix)
+            prefixMap["748"] = mutableListOf(candidate2Prefix)
+            prefixMap["7487"] = mutableListOf(candidate2Prefix)
+            prefixMap["74878"] = mutableListOf(candidate2Prefix)
+            prefixMap["748783"] = mutableListOf(candidate2Prefix)
+            prefixMap["7487832"] = mutableListOf(candidate2Prefix)
 
             pinyinExact["nihao"] = mutableListOf(candidate1)
-            pinyinPrefix["ni"] = mutableListOf(candidate1)
+            pinyinPrefix["ni"] = mutableListOf(candidate1Prefix)
             pinyinPrefix["nihao"] = mutableListOf(candidate1)
 
             pinyinExact["shurufa"] = mutableListOf(candidate2)
-            pinyinPrefix["shu"] = mutableListOf(candidate2)
-            pinyinPrefix["shuru"] = mutableListOf(candidate2)
+            pinyinPrefix["shu"] = mutableListOf(candidate2Prefix)
+            pinyinPrefix["shuru"] = mutableListOf(candidate2Prefix)
             pinyinPrefix["shurufa"] = mutableListOf(candidate2)
         } else {
             isFallback = false

@@ -12,7 +12,8 @@ class T9EngineTest {
 
         fun add(c: Candidate, pinyin: String) {
             // We use the pinyin string clean as the code for the mock to emulate pinyin index
-            list.add(Candidate(c.text, pinyin.replace(" ", ""), c.score, c.type))
+            val origin = if (c.text.length == 1) CandidateOrigin.EXACT_SINGLE else CandidateOrigin.EXACT_PHRASE
+            list.add(Candidate(c.text, pinyin.replace(" ", ""), c.score, c.type, "", origin))
         }
 
         override fun getPinyinExactCandidates(pinyinSequence: String): List<Candidate> {
@@ -304,16 +305,46 @@ class T9EngineTest {
         engine.inputDigit("8")
 
         val cands = engine.getCandidates()
-        // Text shouldn't have space
-        assertTrue(cands.none { it.text.contains(" ") })
+        // Text shouldn't have space, except in DYNAMIC_COMPOSITION where it's retained internally
+        // But visible candidates won't contain DYNAMIC_COMPOSITION.
+        val visible = engine.getVisibleCandidates()
+        assertTrue(visible.none { it.text == "一 母" })
+        assertTrue(visible.none { it.text == "一母" })
 
-        // Find if any candidate is "一母", and commit it
-        val cand = cands.find { it.text == "一母" }
+        // Find if any internal candidate is "一 母", and commit it
+        val cand = cands.find { it.text == "一 母" }
         if (cand != null) {
             val committed = engine.commitCandidate(cand)
-            assertTrue(!committed.text.contains(" "))
-            assertEquals("一母", committed.text)
+            // It should NOT replace spaces
+            assertEquals("一 母", committed.text)
         }
+    }
+
+    @Test
+    fun testCandidateOriginLogic() {
+        val dict = MockDict()
+        dict.add(Candidate("一", "94", 80000, CandidateType.SINGLE_CHAR), "yi")
+        dict.add(Candidate("母", "68", 80000, CandidateType.SINGLE_CHAR), "mu")
+        dict.add(Candidate("一母", "9468", 90000, CandidateType.NORMAL), "yi mu")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("9")
+        engine.inputDigit("4")
+        engine.inputDigit("6")
+        engine.inputDigit("8")
+
+        val visible = engine.getVisibleCandidates()
+        // Should only have EXACT_SINGLE or EXACT_PHRASE origins
+        assertTrue(visible.all { it.origin == CandidateOrigin.EXACT_SINGLE || it.origin == CandidateOrigin.EXACT_PHRASE })
+
+        // "一母" is exactly from dict, so it should be visible
+        assertTrue(visible.any { it.text == "一母" })
+
+        val internal = engine.getCandidates()
+        // Should contain dynamic compositions like "一 母"
+        val dynamic = internal.find { it.text == "一 母" }
+        assertTrue(dynamic != null)
+        assertEquals(CandidateOrigin.DYNAMIC_COMPOSITION, dynamic!!.origin)
     }
 
     @Test
