@@ -53,6 +53,9 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         val internalCandidates = getCandidates(limit + 10)
 
         val visible = internalCandidates.filter { c ->
+            // Origin filtering: allow EXACT_SINGLE and EXACT_PHRASE
+            if (c.origin != CandidateOrigin.EXACT_SINGLE && c.origin != CandidateOrigin.EXACT_PHRASE) return@filter false
+
             // Exclude the raw numeric fallback
             if (c.text == buffer) return@filter false
 
@@ -160,22 +163,19 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                     bonus -= 100000
                 }
 
-                Candidate(c.text, c.code, c.score + bonus, c.type, c.sourcePinyin)
+                Candidate(c.text, c.code, c.score + bonus, c.type, c.sourcePinyin, c.origin)
             }
             allCandidates.addAll(adjustedCandidates)
         }
 
         val distinctSorted = allCandidates.sortedByDescending { it.score }
-            .distinctBy { it.text.replace(" ", "") }
+            .distinctBy { it.text }
             .take(limit - 1)
-            .map { c ->
-                Candidate(c.text.replace(" ", ""), c.code, c.score, c.type, c.sourcePinyin)
-            }
             .toMutableList()
 
         // Always ensure the bare numeric fallback is at the very end
         distinctSorted.removeAll { it.text == currentBuffer }
-        distinctSorted.add(Candidate(currentBuffer, currentBuffer, -Int.MAX_VALUE, CandidateType.NORMAL, currentBuffer)) // Bare numeric fallback
+        distinctSorted.add(Candidate(currentBuffer, currentBuffer, -Int.MAX_VALUE, CandidateType.NORMAL, currentBuffer, CandidateOrigin.RAW_FALLBACK)) // Bare numeric fallback
 
         return distinctSorted.sortedWith(Comparator { c1, c2 ->
             if (c1.text == currentBuffer) return@Comparator 1
@@ -216,7 +216,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                 if (!isComplete && typedCodeLength <= 2) {
                     adjustedScore -= 2000000 // Huge penalty for brain-completing a 1-2 digit prefix
                 }
-                Candidate(candidate.text, candidate.code, adjustedScore, candidate.type, sourcePinyin)
+                Candidate(candidate.text, candidate.code, adjustedScore, candidate.type, sourcePinyin, candidate.origin)
             }
             .sortedByDescending { it.score }
             .take(limit)
@@ -297,7 +297,10 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                             baseScore -= 500000
                         }
 
-                        currentCandidates.add(Candidate(newText, newCode, baseScore, CandidateType.NORMAL, sourcePinyin))
+                        val isDynamic = prevCandidate.text.isNotEmpty()
+                        val origin = if (isDynamic) CandidateOrigin.DYNAMIC_COMPOSITION else partCandidate.origin
+
+                        currentCandidates.add(Candidate(newText, newCode, baseScore, CandidateType.NORMAL, sourcePinyin, origin))
                     }
                 }
             }
@@ -306,7 +309,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                 dp[i] = currentCandidates.distinctBy { it.text }
                     .map {
                         if (i == pinyins.size) {
-                            Candidate(it.text, it.code, it.score + 50000, CandidateType.NORMAL, sourcePinyin)
+                            Candidate(it.text, it.code, it.score + 50000, CandidateType.NORMAL, sourcePinyin, it.origin)
                         } else {
                             it
                         }
@@ -324,6 +327,6 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
     fun commitCandidate(candidate: Candidate): Candidate {
         clear()
-        return Candidate(candidate.text.replace(" ", ""), candidate.code, candidate.score)
+        return candidate
     }
 }
