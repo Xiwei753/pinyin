@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - 'frontends/android-ime/native-app/**'
+      - 'tools/dictionary/**'
+      - 'third_party/rime-ice/**'
       - '.github/workflows/android-native-t9.yml'
   pull_request:
     paths:
       - 'frontends/android-ime/native-app/**'
+      - 'tools/dictionary/**'
+      - 'third_party/rime-ice/**'
       - '.github/workflows/android-native-t9.yml'
   workflow_dispatch:
 
@@ -35,6 +39,10 @@ jobs:
       - name: Run Build Dictionary Assets Script
         run: |
           python3 tools/dictionary/build_t9_assets.py
+
+      - name: Verify Generated Dictionary Is Committed
+        run: |
+          git diff --exit-code frontends/android-ime/native-app/android/app/src/main/assets/t9_source_dict.tsv
 
       - name: Set up JDK
         uses: actions/setup-java@v4

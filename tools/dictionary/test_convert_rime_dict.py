@@ -1,6 +1,5 @@
-import os
-import pytest
-from tools.dictionary.convert_rime_dict import convert_dict
+from tools.dictionary.convert_rime_dict import convert_dict, load_pinyin_corrections
+
 
 def test_convert_dict_format(tmp_path):
     input_file = tmp_path / "test.dict.yaml"
@@ -22,7 +21,29 @@ version: "1"
     assert len(lines) == 3
     assert lines[0] == "你好\tni hao\t1000"
     assert lines[1] == "测试\tce shi\t50"  # default weight applied
-    assert lines[2] == "安卓\tan zhuo\t500" # pinyin fixed
+    assert lines[2] == "安卓\tan zhuo\t500"  # pinyin correction loaded from data file
+
+
+def test_convert_dict_uses_data_driven_pinyin_corrections(tmp_path):
+    correction_file = tmp_path / "corrections.tsv"
+    correction_file.write_text("# text\tinput_pinyin\tcorrected_pinyin\n甲\tjia\tyi\n", encoding="utf-8")
+
+    input_file = tmp_path / "test.dict.yaml"
+    output_file = tmp_path / "test.tsv"
+    input_file.write_text("""---
+...
+甲	jia	200
+乙	yi	100
+""", encoding="utf-8")
+
+    convert_dict(str(input_file), str(output_file), corrections_path=str(correction_file))
+
+    assert output_file.read_text(encoding="utf-8").strip().split('\n') == [
+        "甲\tyi\t200",
+        "乙\tyi\t100",
+    ]
+    assert load_pinyin_corrections(str(correction_file)) == {("甲", "jia"): "yi"}
+
 
 def test_convert_dict_limits(tmp_path):
     input_file = tmp_path / "test.dict.yaml"

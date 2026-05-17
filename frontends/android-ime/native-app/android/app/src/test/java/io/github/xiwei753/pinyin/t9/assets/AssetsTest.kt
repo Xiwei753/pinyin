@@ -1,17 +1,17 @@
 package io.github.xiwei753.pinyin.t9.assets
 
 import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
+import io.github.xiwei753.pinyin.t9.testutil.TestPaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.io.FileInputStream
 
 class AssetsTest {
     @Test
     fun testDictionaryContainsCorrectAnZhuo() {
-        val file = File("src/main/assets/t9_source_dict.tsv")
+        val file = TestPaths.assetDictionary()
         assertTrue("Dictionary file should exist", file.exists())
         assertTrue("Dictionary file should have content", file.length() > 0)
 
