@@ -63,10 +63,10 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             return lastVisibleCandidates
         }
 
-        // We request more internal candidates to ensure we have enough after filtering
-        val internalCandidates = getCandidates(limit + 10)
+        // Generate visible candidates specifically by turning off dynamic multi-word completions
+        val visibleCandidatesRaw = generateCandidates(buffer, limit + 10, allowDynamic = false)
 
-        val visible = internalCandidates.filter { c ->
+        val visible = visibleCandidatesRaw.filter { c ->
             // Origin filtering: allow EXACT_SINGLE and EXACT_PHRASE
             if (c.origin != CandidateOrigin.EXACT_SINGLE && c.origin != CandidateOrigin.EXACT_PHRASE) return@filter false
 
@@ -107,7 +107,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
         return lastCandidates
     }
 
-    private fun generateCandidates(currentBuffer: String, limit: Int): List<Candidate> {
+    private fun generateCandidates(currentBuffer: String, limit: Int, allowDynamic: Boolean = true): List<Candidate> {
         val compositions = pinyinComposer.getCompositions(currentBuffer)
         if (compositions.isEmpty()) {
             return listOf(Candidate(currentBuffer, currentBuffer, -Int.MAX_VALUE, CandidateType.NORMAL, currentBuffer))
@@ -146,7 +146,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             val candidates = if (comp.pinyinList.size == 1) {
                 getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit, comp.pinyinString, comp.segmentDigits)
             } else {
-                getSentenceCandidates(comp, limit, comp.pinyinString)
+                getSentenceCandidates(comp, limit, comp.pinyinString, allowDynamic)
             }
 
             val adjustedCandidates = candidates.map { c ->
@@ -232,7 +232,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             .take(limit)
     }
 
-    private fun getSentenceCandidates(comp: PinyinComposition, limit: Int, sourcePinyin: String): List<Candidate> {
+    private fun getSentenceCandidates(comp: PinyinComposition, limit: Int, sourcePinyin: String, allowDynamic: Boolean = true): List<Candidate> {
         val pinyins = comp.pinyinList
         val dp = Array<MutableList<Candidate>?>(pinyins.size + 1) { null }
         dp[0] = mutableListOf(Candidate("", "", 0))
@@ -258,6 +258,9 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
                 for (prevCandidate in dp[j]!!) {
                     for (partCandidate in partCandidates) {
+                        val isDynamic = prevCandidate.text.isNotEmpty()
+                        if (!allowDynamic && isDynamic) continue
+
                         val newText = if (prevCandidate.text.isEmpty()) partCandidate.text else prevCandidate.text + " " + partCandidate.text
                         val newCode = prevCandidate.code + partCandidate.code
 
@@ -298,7 +301,6 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                             baseScore -= 500000
                         }
 
-                        val isDynamic = prevCandidate.text.isNotEmpty()
                         val origin = if (isDynamic) CandidateOrigin.DYNAMIC_COMPOSITION else partCandidate.origin
 
                         currentCandidates.add(Candidate(newText, newCode, baseScore, CandidateType.NORMAL, sourcePinyin, origin))
