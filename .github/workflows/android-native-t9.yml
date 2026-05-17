@@ -18,6 +18,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Check Dictionary Files
+        run: |
+          if [ ! -f "third_party/rime-ice/cn_dicts/base.dict.yaml" ]; then
+            echo "Error: base.dict.yaml not found"
+            exit 1
+          fi
+          if [ ! -f "third_party/rime-ice/cn_dicts/8105.dict.yaml" ]; then
+            echo "Error: 8105.dict.yaml not found"
+            exit 1
+          fi
+
+      - name: Run Build Dictionary Assets Script
+        run: |
+          python3 tools/dictionary/build_t9_assets.py
 
       - name: Set up JDK
         uses: actions/setup-java@v4

@@ -11,11 +11,11 @@ def main():
 
     if not os.path.exists(input_file_base):
         print(f"Error: Input file not found at {input_file_base}")
-        return 1
+        sys.exit(1)
 
     if not os.path.exists(input_file_8105):
         print(f"Error: Input file not found at {input_file_8105}")
-        return 1
+        sys.exit(1)
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
@@ -80,7 +80,7 @@ def main():
                     entries.append((text, pinyin, score, raw_line))
 
     # We must ensure required words exist
-    required_words = {"你好", "输入法", "中国", "今天", "手机", "电脑", "安卓"}
+    required_words = {"你好", "输入法", "中国", "今天", "手机", "电脑", "安卓", "么", "美", "没", "每", "妹", "梦", "蒙", "萌", "猛", "孟", "能"}
     required_entries = [e for e in entries if e[0] in required_words]
 
     # Remove required entries from main pool so we can add them back
@@ -110,7 +110,11 @@ def main():
     os.remove(temp_output_base)
     os.remove(temp_output_8105)
 
+    if len(final_lines) < 30000:
+        print(f"Error: Generated dictionary has only {len(final_lines)} lines, which is smaller than the required 30000.")
+        sys.exit(1)
+
     return 0
 
 if __name__ == '__main__':
-    exit(main())
+    sys.exit(main())
