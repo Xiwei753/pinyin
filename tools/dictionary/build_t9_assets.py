@@ -52,10 +52,35 @@ def parse_rime_dict(path: str, source: str) -> Iterable[Entry]:
 
             yield Entry(text=text, pinyin=pinyin, weight=weight, source=source)
 
+def parse_tsv_phrases(path: str, source: str) -> Iterable[Entry]:
+    with open(path, "r", encoding="utf-8") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            parts = line.split("\t")
+            if len(parts) < 2:
+                continue
+
+            text = parts[0].strip()
+            pinyin = normalize_pinyin(parts[1].strip())
+            if not text or not pinyin or len(text) > 20 or not PINYIN_RE.match(pinyin):
+                continue
+
+            weight = 0
+            if len(parts) >= 3:
+                try:
+                    weight = int(parts[2])
+                except ValueError:
+                    weight = 0
+
+            yield Entry(text=text, pinyin=pinyin, weight=weight, source=source)
+
 def selection_score(entry: Entry) -> Tuple[int, int, int, str, str]:
     text_len = len(entry.text)
     syllable_count = len(entry.pinyin.split())
-    source_bonus = 300000 if entry.source == "base" else 0
+    source_bonus = 300000 if entry.source in ("base", "common") else 0
     phrase_bonus = 0
     if text_len >= 2:
         phrase_bonus += 180000
@@ -81,6 +106,12 @@ def merge_entries(entries: Iterable[Entry], corrections: Dict[Tuple[str, str], s
             merged[key] = entry
             continue
 
+        if entry.source == "common":
+            merged[key] = entry
+            continue
+        if previous.source == "common":
+            continue
+
         if entry.weight > previous.weight:
             merged[key] = Entry(entry.text, entry.pinyin, entry.weight, previous.source if previous.source == "base" else entry.source)
         elif entry.source == "base" and previous.source != "base":
@@ -91,6 +122,7 @@ def pick_entries(merged: Dict[Tuple[str, str], Entry]) -> List[Entry]:
     base_multi = [e for e in merged.values() if e.source == "base" and len(e.text) >= 2]
     base_single = [e for e in merged.values() if e.source == "base" and len(e.text) == 1]
     table_single = [e for e in merged.values() if e.source == "8105" and len(e.text) == 1]
+    common_multi = [e for e in merged.values() if e.source == "common" and len(e.text) >= 2]
     ext_multi = [e for e in merged.values() if e.source == "ext" and len(e.text) >= 2]
 
     def sort_bucket(bucket: List[Entry]) -> List[Entry]:
@@ -110,6 +142,12 @@ def pick_entries(merged: Dict[Tuple[str, str], Entry]) -> List[Entry]:
         if previous is None or entry.weight > previous.weight:
             selected[key] = entry
 
+    for entry in sort_bucket(common_multi):
+        key = (entry.text, entry.pinyin)
+        previous = selected.get(key)
+        if previous is None or entry.weight > previous.weight:
+            selected[key] = entry
+
     for entry in sort_bucket(ext_multi)[:MAX_OUTPUT_ENTRIES - len(selected)]:
         key = (entry.text, entry.pinyin)
         previous = selected.get(key)
@@ -122,29 +160,14 @@ def pick_entries(merged: Dict[Tuple[str, str], Entry]) -> List[Entry]:
             for entry in sorted(selected.values(), key=selection_score, reverse=True)[:MAX_OUTPUT_ENTRIES]
         )
 
-    # Force add missing common words for testing
-    common_words_to_find = [
-        ("你好", "ni hao", 100), ("输入法", "shu ru fa", 100), ("中国", "zhong guo", 100),
-        ("今天", "jin tian", 100), ("手机", "shou ji", 100), ("电脑", "dian nao", 100),
-        ("我", "wo", 100), ("你", "ni", 100), ("他", "ta", 100),
-        ("她", "ta", 100), ("的", "de", 100), ("得", "de", 100), ("地", "de", 100),
-        ("不", "bu", 100), ("是", "shi", 100), ("么", "me", 10), ("美", "mei", 10),
-        ("没", "mei", 10), ("每", "mei", 10), ("妹", "mei", 10), ("梦", "meng", 10),
-        ("蒙", "meng", 10), ("萌", "meng", 10), ("猛", "meng", 10), ("孟", "meng", 10),
-        ("能", "neng", 10)
-    ]
-    for text, pinyin, weight in common_words_to_find:
-        key = (text, pinyin)
-        if key not in selected:
-             selected[key] = Entry(text, pinyin, weight, "base")
-
-    return sorted(selected.values(), key=lambda e: (e.pinyin, e.text, -e.weight))
+    return sorted(selected.values(), key=lambda e: (e.pinyin, e.text, -e.weight, e.source))
 
 def main() -> int:
     root_dir = repo_root()
     input_file_base = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "base.dict.yaml")
     input_file_8105 = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "8105.dict.yaml")
     input_file_ext = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "ext.dict.yaml")
+    input_file_common = os.path.join(root_dir, "tools", "dictionary", "android_common_phrases.tsv")
     output_file = os.path.join(root_dir, "frontends", "android-ime", "native-app", "android", "app", "src", "main", "assets", "t9_source_dict.tsv")
 
     for path in (input_file_base, input_file_8105):
@@ -160,7 +183,9 @@ def main() -> int:
     entries.extend(parse_rime_dict(input_file_base, "base"))
     entries.extend(e for e in parse_rime_dict(input_file_8105, "8105") if len(e.text) == 1)
     if os.path.exists(input_file_ext):
-         entries.extend(parse_rime_dict(input_file_ext, "ext"))
+        entries.extend(parse_rime_dict(input_file_ext, "ext"))
+    if os.path.exists(input_file_common):
+        entries.extend(parse_tsv_phrases(input_file_common, "common"))
 
     merged = merge_entries(entries, corrections)
     final_entries = pick_entries(merged)

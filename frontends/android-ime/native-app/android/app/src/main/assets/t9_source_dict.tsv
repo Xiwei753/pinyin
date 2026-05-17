@@ -1004,6 +1004,7 @@
 安装	an zhuang	500949
 安装了太阳能路灯	an zhuang le tai yang neng lu deng	100
 安装行车记录仪	an zhuang xing che ji lu yi	100
+安卓	an zhuo	100000
 安卓反编译	an zhuo fan bian yi	58
 安卓开发工具	an zhuo kai fa gong ju	252
 安卓开发技术	an zhuo kai fa ji shu	24
@@ -5606,6 +5607,7 @@
 不太能接受	bu tai neng jie shou	115
 不太清楚的地方	bu tai qing chu de di fang	100
 不太喜欢吃	bu tai xi huan chi	180
+不太行	bu tai xing	100000
 补体结合部位	bu ti jie he bu wei	1
 补贴	bu tie	374395
 补贴与反补贴措施	bu tie yu fan bu tie cuo shi	100
@@ -33401,6 +33403,7 @@
 今天天气挺不错	jin tian tian qi ting bu cuo	100
 今天天气挺不错的	jin tian tian qi ting bu cuo de	100
 今天天气怎么样	jin tian tian qi zen me yang	100
+今天晚上	jin tian wan shang	100000
 今天晚上吃什么	jin tian wan shang chi shen me	100
 今天晚上开什么码	jin tian wan shang kai shen me ma	100
 今天我特别高兴	jin tian wo te bie gao xing	25
@@ -53231,6 +53234,7 @@
 沙参玉竹老鸭汤	sha shen yu zhu lao ya tang	18
 沙参止咳汤散	sha shen zhi ke tang san	4
 沙市道迎春里	sha shi dao ying chun li	1
+啥时候	sha shi hou	100000
 沙市甜独蒜头	sha shi tian du suan tou	6
 杀他个措手不及	sha ta ge cuo shou bu ji	100
 沙特阿拉伯	sha te a la bo	22440
@@ -58172,7 +58176,7 @@
 蜀人衣食常苦艰	shu ren yi shi chang ku jian	1
 蜀人游乐不知还	shu ren you le bu zhi huan	3
 输入	shu ru	500844
-输入法	shu ru fa	100
+输入法	shu ru fa	100000
 输入法论坛	shu ru fa lun tan	265
 输入法区域设置	shu ru fa qu yu she zhi	100
 输入法软件	shu ru fa ruan jian	800
@@ -80873,15 +80877,10 @@
 这是人干的事儿	zhe shi ren gan de shi er	100
 这是什么啊	zhe shi shen me a	1050
 这是什么鬼东西	zhe shi shen me gui dong xi	100
-这是什么情况	zhe shi shen me qing kuang	100
 这是什么情况啊	zhe shi shen me qing kuang a	100
 这是什么情况呀	zhe shi shen me qing kuang ya	100
-这是什么声音	zhe shi shen me sheng yin	100
-这是什么世道	zhe shi shen me shi dao	100
-这是什么问题	zhe shi shen me wen ti	100
 这是什么意思	zhe shi shen me yi si	7780
 这是什么意思啊	zhe shi shen me yi si a	100
-这是什么原因	zhe shi shen me yuan yin	100
 这是通知不是商量	zhe shi tong zhi bu shi shang liang	100
 这是为什么	zhe shi wei shen me	19035
 这是为什么呢	zhe shi wei shen me ne	100
