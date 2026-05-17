@@ -40,6 +40,28 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun testDebugLoggingDefault() {
+        `when`(mockPrefs.getBoolean("debug_logging_enabled", false)).thenReturn(false)
+        assertFalse(repository.isDebugLoggingEnabled())
+    }
+
+    @Test
+    fun testDebugLoggingSet() {
+        repository.setDebugLoggingEnabled(true)
+        verify(mockEditor).putBoolean("debug_logging_enabled", true)
+        verify(mockEditor).apply()
+
+        `when`(mockPrefs.getBoolean("debug_logging_enabled", false)).thenReturn(true)
+        assertTrue(repository.isDebugLoggingEnabled())
+
+        repository.setDebugLoggingEnabled(false)
+        verify(mockEditor).putBoolean("debug_logging_enabled", false)
+
+        `when`(mockPrefs.getBoolean("debug_logging_enabled", false)).thenReturn(false)
+        assertFalse(repository.isDebugLoggingEnabled())
+    }
+
+    @Test
     fun testHapticFeedbackSet() {
         repository.setHapticFeedbackEnabled(false)
         verify(mockEditor).putBoolean("haptic_feedback_enabled", false)

@@ -26,6 +26,13 @@ class SettingsActivity : Activity() {
             settingsRepository.setHapticFeedbackEnabled(isChecked)
         }
 
+        val debugLoggingSwitch = findViewById<Switch>(R.id.switch_debug_logging)
+        debugLoggingSwitch.isChecked = settingsRepository.isDebugLoggingEnabled()
+
+        debugLoggingSwitch.setOnCheckedChangeListener { _, isChecked ->
+            settingsRepository.setDebugLoggingEnabled(isChecked)
+        }
+
         // Candidate count
         val candidateCountSpinner = findViewById<Spinner>(R.id.spinner_candidate_count)
         val candidateCountValues = resources.getStringArray(R.array.candidate_count_values)
