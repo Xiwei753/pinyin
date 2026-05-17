@@ -4,8 +4,8 @@ import sys
 
 def main():
     root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    input_file_base = os.path.join(root_dir, 'third_party', 'rime-ice', 'base.dict.yaml')
-    input_file_8105 = os.path.join(root_dir, 'third_party', 'rime-ice', '8105.dict.yaml')
+    input_file_base = os.path.join(root_dir, 'third_party', 'rime-ice', 'cn_dicts', 'base.dict.yaml')
+    input_file_8105 = os.path.join(root_dir, 'third_party', 'rime-ice', 'cn_dicts', '8105.dict.yaml')
     output_file = os.path.join(root_dir, 'frontends', 'android-ime', 'native-app', 'android', 'app', 'src', 'main', 'assets', 't9_source_dict.tsv')
     convert_script = os.path.join(root_dir, 'tools', 'dictionary', 'convert_rime_dict.py')
 
