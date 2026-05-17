@@ -4,6 +4,8 @@ import sys
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Tuple
 
+from convert_rime_dict import apply_pinyin_correction, load_pinyin_corrections, normalize_pinyin
+
 MAX_OUTPUT_ENTRIES = 90000
 BASE_MULTI_QUOTA = 62000
 BASE_SINGLE_QUOTA = 12000
@@ -77,6 +79,12 @@ def selection_score(entry: Entry) -> Tuple[int, int, int, str, str]:
     return (score, entry.weight, text_len, entry.pinyin, entry.text)
 
 
+def merge_entries(entries: Iterable[Entry], corrections: Dict[Tuple[str, str], str]) -> Dict[Tuple[str, str], Entry]:
+    merged: Dict[Tuple[str, str], Entry] = {}
+    for entry in entries:
+        corrected_pinyin = apply_pinyin_correction(entry.text, entry.pinyin, corrections)
+        if corrected_pinyin != entry.pinyin:
+            entry = Entry(text=entry.text, pinyin=corrected_pinyin, weight=entry.weight, source=entry.source)
 def merge_entries(entries: Iterable[Entry]) -> Dict[Tuple[str, str], Entry]:
     merged: Dict[Tuple[str, str], Entry] = {}
     for entry in entries:
@@ -143,6 +151,26 @@ def main() -> int:
             return 1
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    corrections = load_pinyin_corrections()
+
+    entries: List[Entry] = []
+    entries.extend(parse_rime_dict(input_file_base, "base"))
+    entries.extend(e for e in parse_rime_dict(input_file_8105, "8105") if len(e.text) == 1)
+
+    merged = merge_entries(entries, corrections)
+    final_entries = pick_entries(merged)
+
+    with open(output_file, "w", encoding="utf-8", newline="\n") as f:
+        for entry in final_entries:
+            f.write(f"{entry.text}\t{entry.pinyin}\t{entry.weight}\n")
+
+    if len(final_entries) < MIN_OUTPUT_ENTRIES:
+        print(
+            f"Error: Generated dictionary has only {len(final_entries)} lines, "
+            f"which is smaller than the required {MIN_OUTPUT_ENTRIES}."
+        )
+        return 1
 
     entries: List[Entry] = []
     entries.extend(parse_rime_dict(input_file_base, "base"))

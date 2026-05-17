@@ -31,6 +31,11 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    - name: Build Android T9 Dictionary Assets
+      run: |
+        python3 tools/dictionary/build_t9_assets.py
+        git diff --exit-code frontends/android-ime/native-app/android/app/src/main/assets/t9_source_dict.tsv
+
     - name: Run Android Validations and Tests
       run: |
         python tools/validate/check-all.py

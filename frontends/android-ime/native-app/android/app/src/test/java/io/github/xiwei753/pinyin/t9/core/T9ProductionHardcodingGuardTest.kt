@@ -3,12 +3,17 @@ package io.github.xiwei753.pinyin.t9.core
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.xiwei753.pinyin.t9.testutil.TestPaths
 import java.io.File
 
 class T9ProductionHardcodingGuardTest {
     @Test
     fun productionCodeDoesNotSpecialCaseGoldenInputsOrWords() {
         val productionFiles = listOf(
+            "frontends/android-ime/native-app/android/app/src/main/java/io/github/xiwei753/pinyin/t9/core/T9Engine.kt",
+            "frontends/android-ime/native-app/android/app/src/main/java/io/github/xiwei753/pinyin/t9/data/BuiltinDictionary.kt",
+            "tools/dictionary/build_t9_assets.py"
+        ).map { TestPaths.productionFile(it) }
             File("src/main/java/io/github/xiwei753/pinyin/t9/core/T9Engine.kt"),
             File("src/main/java/io/github/xiwei753/pinyin/t9/data/BuiltinDictionary.kt"),
             File("../../../../../tools/dictionary/build_t9_assets.py")

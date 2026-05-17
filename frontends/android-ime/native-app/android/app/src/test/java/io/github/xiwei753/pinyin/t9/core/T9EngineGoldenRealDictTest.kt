@@ -5,6 +5,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.FileInputStream
+import io.github.xiwei753.pinyin.t9.testutil.TestPaths
+
+class T9EngineGoldenRealDictTest {
+    private fun realEngine(): T9Engine {
+        return T9Engine(BuiltinDictionary(FileInputStream(TestPaths.assetDictionary())))
 import java.io.File
 import java.io.FileInputStream
 
