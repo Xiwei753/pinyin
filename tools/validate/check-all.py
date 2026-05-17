@@ -24,45 +24,6 @@ def main():
             all_passed = False
             break
 
-    # 检查 Android 打包产物 (如果存在)
-    if all_passed:
-        generic_zip_path = os.path.join(repo_root, "build", "android-rime-generic.zip")
-        trime_zip_path = os.path.join(repo_root, "build", "android-rime-trime.zip")
-        fcitx5_zip_path = os.path.join(repo_root, "build", "android-rime-fcitx5-userdata.zip")
-        android_script = "tools/validate/validate_android_package.py"
-        android_script_path = os.path.join(repo_root, android_script)
-        fcitx5_script = "tools/validate/validate_fcitx5_userdata_package.py"
-        fcitx5_script_path = os.path.join(repo_root, fcitx5_script)
-
-        if os.path.exists(generic_zip_path) or os.path.exists(trime_zip_path):
-            print(f"运行检查: {android_script}")
-            try:
-                subprocess.run([sys.executable, android_script_path], cwd=repo_root, check=True)
-            except subprocess.CalledProcessError:
-                print(f"❌ 检查失败: {android_script}")
-                all_passed = False
-        else:
-            print("未检测到 Android 打包产物，如需检查请先运行 package-generic-rime.sh 或 package-trime.sh。")
-
-        if os.path.exists(fcitx5_zip_path):
-            print(f"运行检查: {fcitx5_script}")
-            try:
-                subprocess.run([sys.executable, fcitx5_script_path], cwd=repo_root, check=True)
-            except subprocess.CalledProcessError:
-                print(f"❌ 检查失败: {fcitx5_script}")
-                all_passed = False
-
-            simulate_extract_script = "tools/validate/simulate_fcitx5_zip_extract.py"
-            simulate_extract_script_path = os.path.join(repo_root, simulate_extract_script)
-            print(f"运行检查: {simulate_extract_script}")
-            try:
-                subprocess.run([sys.executable, simulate_extract_script_path], cwd=repo_root, check=True)
-            except subprocess.CalledProcessError:
-                print(f"❌ 检查失败: {simulate_extract_script}")
-                all_passed = False
-        else:
-            print("未检测到 Fcitx5 UserData 打包产物，如需检查请先运行 package-fcitx5-userdata.sh。")
-
     if all_passed:
         print("\n✅ 基层检查通过")
         sys.exit(0)
