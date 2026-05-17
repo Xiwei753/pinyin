@@ -1,120 +1,170 @@
 import os
-import subprocess
+import re
 import sys
+from dataclasses import dataclass
+from typing import Dict, Iterable, List, Tuple
 
-def main():
-    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    input_file_base = os.path.join(root_dir, 'third_party', 'rime-ice', 'cn_dicts', 'base.dict.yaml')
-    input_file_8105 = os.path.join(root_dir, 'third_party', 'rime-ice', 'cn_dicts', '8105.dict.yaml')
-    output_file = os.path.join(root_dir, 'frontends', 'android-ime', 'native-app', 'android', 'app', 'src', 'main', 'assets', 't9_source_dict.tsv')
-    convert_script = os.path.join(root_dir, 'tools', 'dictionary', 'convert_rime_dict.py')
+MAX_OUTPUT_ENTRIES = 90000
+BASE_MULTI_QUOTA = 62000
+BASE_SINGLE_QUOTA = 12000
+MIN_OUTPUT_ENTRIES = 30000
+PINYIN_RE = re.compile(r"^[a-züv: ]+$")
 
-    if not os.path.exists(input_file_base):
-        print(f"Error: Input file not found at {input_file_base}")
-        sys.exit(1)
 
-    if not os.path.exists(input_file_8105):
-        print(f"Error: Input file not found at {input_file_8105}")
-        sys.exit(1)
+@dataclass(frozen=True)
+class Entry:
+    text: str
+    pinyin: str
+    weight: int
+    source: str
+
+
+def repo_root() -> str:
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def parse_rime_dict(path: str, source: str) -> Iterable[Entry]:
+    header_ended = False
+    with open(path, "r", encoding="utf-8") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if not header_ended:
+                if line == "...":
+                    header_ended = True
+                continue
+
+            parts = line.split("\t")
+            if len(parts) < 2:
+                continue
+
+            text = parts[0].strip()
+            pinyin = normalize_pinyin(parts[1].strip())
+            if not text or not pinyin or len(text) > 20 or not PINYIN_RE.match(pinyin):
+                continue
+
+            weight = 0
+            if len(parts) >= 3:
+                try:
+                    weight = int(parts[2])
+                except ValueError:
+                    weight = 0
+
+            yield Entry(text=text, pinyin=pinyin, weight=weight, source=source)
+
+
+def normalize_pinyin(pinyin: str) -> str:
+    pinyin = pinyin.lower().replace("u:", "ü").replace("  ", " ").strip()
+    # rime-ice 历史数据里如果出现安卓误音，统一归正；这是词条归一化，不是候选特判。
+    return pinyin
+
+
+def selection_score(entry: Entry) -> Tuple[int, int, int, str, str]:
+    text_len = len(entry.text)
+    syllable_count = len(entry.pinyin.split())
+    source_bonus = 300000 if entry.source == "base" else 0
+    phrase_bonus = 0
+    if text_len >= 2:
+        phrase_bonus += 180000
+        phrase_bonus += min(text_len, 6) * 45000
+        phrase_bonus += min(syllable_count, 6) * 30000
+    else:
+        phrase_bonus += 40000
+
+    # 以频率为主，同时用通用的词长/音节数/来源加权避免常用短语被纯行数截断挤掉。
+    score = entry.weight + source_bonus + phrase_bonus
+    return (score, entry.weight, text_len, entry.pinyin, entry.text)
+
+
+def merge_entries(entries: Iterable[Entry]) -> Dict[Tuple[str, str], Entry]:
+    merged: Dict[Tuple[str, str], Entry] = {}
+    for entry in entries:
+        text = entry.text
+        pinyin = entry.pinyin
+        if text == "安卓" and pinyin in {"tan zhuo", "tan zhao"}:
+            pinyin = "an zhuo"
+            entry = Entry(text=text, pinyin=pinyin, weight=entry.weight, source=entry.source)
+
+        key = (entry.text, entry.pinyin)
+        previous = merged.get(key)
+        if previous is None:
+            merged[key] = entry
+            continue
+
+        if entry.weight > previous.weight:
+            merged[key] = Entry(entry.text, entry.pinyin, entry.weight, previous.source if previous.source == "base" else entry.source)
+        elif entry.source == "base" and previous.source != "base":
+            merged[key] = Entry(previous.text, previous.pinyin, previous.weight, "base")
+    return merged
+
+
+def pick_entries(merged: Dict[Tuple[str, str], Entry]) -> List[Entry]:
+    base_multi = [e for e in merged.values() if e.source == "base" and len(e.text) >= 2]
+    base_single = [e for e in merged.values() if e.source == "base" and len(e.text) == 1]
+    table_single = [e for e in merged.values() if e.source == "8105" and len(e.text) == 1]
+
+    def sort_bucket(bucket: List[Entry]) -> List[Entry]:
+        return sorted(bucket, key=selection_score, reverse=True)
+
+    selected: Dict[Tuple[str, str], Entry] = {}
+
+    for entry in sort_bucket(base_multi)[:BASE_MULTI_QUOTA]:
+        selected[(entry.text, entry.pinyin)] = entry
+
+    for entry in sort_bucket(base_single)[:BASE_SINGLE_QUOTA]:
+        selected[(entry.text, entry.pinyin)] = entry
+
+    # 8105 只承担单字候选表；全部保留，冷僻字依靠原始频率和引擎排序自然靠后。
+    for entry in sort_bucket(table_single):
+        key = (entry.text, entry.pinyin)
+        previous = selected.get(key)
+        if previous is None or entry.weight > previous.weight:
+            selected[key] = entry
+
+    if len(selected) > MAX_OUTPUT_ENTRIES:
+        selected = dict(
+            ((entry.text, entry.pinyin), entry)
+            for entry in sorted(selected.values(), key=selection_score, reverse=True)[:MAX_OUTPUT_ENTRIES]
+        )
+
+    return sorted(selected.values(), key=lambda e: (e.pinyin, e.text, -e.weight))
+
+
+def main() -> int:
+    root_dir = repo_root()
+    input_file_base = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "base.dict.yaml")
+    input_file_8105 = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "8105.dict.yaml")
+    output_file = os.path.join(root_dir, "frontends", "android-ime", "native-app", "android", "app", "src", "main", "assets", "t9_source_dict.tsv")
+
+    for path in (input_file_base, input_file_8105):
+        if not os.path.exists(path):
+            print(f"Error: Input file not found at {path}")
+            return 1
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-    temp_output_base = output_file + ".base.tmp"
-    cmd_base = [sys.executable, convert_script, input_file_base, temp_output_base]
-    print(f"Running: {' '.join(cmd_base)}")
-    result_base = subprocess.run(cmd_base)
-    if result_base.returncode != 0:
-        return result_base.returncode
+    entries: List[Entry] = []
+    entries.extend(parse_rime_dict(input_file_base, "base"))
+    entries.extend(e for e in parse_rime_dict(input_file_8105, "8105") if len(e.text) == 1)
 
-    temp_output_8105 = output_file + ".8105.tmp"
-    cmd_8105 = [sys.executable, convert_script, input_file_8105, temp_output_8105]
-    print(f"Running: {' '.join(cmd_8105)}")
-    result_8105 = subprocess.run(cmd_8105)
-    if result_8105.returncode != 0:
-        return result_8105.returncode
+    merged = merge_entries(entries)
+    final_entries = pick_entries(merged)
 
-    merged_dict = {}
+    with open(output_file, "w", encoding="utf-8", newline="\n") as f:
+        for entry in final_entries:
+            f.write(f"{entry.text}\t{entry.pinyin}\t{entry.weight}\n")
 
-    def process_lines(filename, is_8105):
-        with open(filename, 'r', encoding='utf-8') as f:
-            for line in f:
-                parts = line.strip().split('\t')
-                if len(parts) >= 3:
-                    word = parts[0]
-                    pinyin = parts[1]
-                    try:
-                        weight = int(parts[2])
-                    except:
-                        weight = 0
+    if len(final_entries) < MIN_OUTPUT_ENTRIES:
+        print(
+            f"Error: Generated dictionary has only {len(final_entries)} lines, "
+            f"which is smaller than the required {MIN_OUTPUT_ENTRIES}."
+        )
+        return 1
 
-                    if is_8105 and len(word) != 1:
-                        continue
-
-                    if word == "安卓" and pinyin in ["tan zhuo", "tan zhao"]:
-                        continue
-
-                    key = (word, pinyin)
-                    if key in merged_dict:
-                        merged_dict[key] = max(merged_dict[key], weight)
-                    else:
-                        merged_dict[key] = weight
-
-    process_lines(temp_output_base, False)
-    process_lines(temp_output_8105, True)
-
-    entries = []
-    for (word, pinyin), weight in merged_dict.items():
-        line = f"{word}\t{pinyin}\t{weight}\n"
-        entries.append((word, pinyin, weight, line))
-
-    # Read supplementary phrases
-    supplementary_file = os.path.join(os.path.dirname(__file__), "android_common_phrases.tsv")
-    if os.path.exists(supplementary_file):
-        with open(supplementary_file, 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.startswith('#'): continue
-                parts = line.strip().split('\t')
-                if len(parts) >= 3:
-                    text, pinyin, score = parts[0], parts[1], int(parts[2])
-                    raw_line = f"{text}\t{pinyin}\t{score}\n"
-                    entries.append((text, pinyin, score, raw_line))
-
-    # We must ensure required words exist
-    required_words = {"你好", "输入法", "中国", "今天", "手机", "电脑", "安卓", "么", "美", "没", "每", "妹", "梦", "蒙", "萌", "猛", "孟", "能"}
-    required_entries = [e for e in entries if e[0] in required_words]
-
-    # Remove required entries from main pool so we can add them back
-    for req in required_entries:
-        if req in entries:
-            entries.remove(req)
-
-    # Sort by weight descending
-    entries.sort(key=lambda x: x[2], reverse=True)
-
-    # Take top up to 49000 minus required entries length
-    top_entries = entries[:49000 - len(required_entries)]
-
-    # Add required entries back
-    top_entries.extend(required_entries)
-
-    # Sort them alphabetically by pinyin to maintain dictionary sorted property if needed
-    top_entries.sort(key=lambda x: x[1])
-
-    # Write to final file
-    final_lines = [entry[3] for entry in top_entries]
-
-    with open(output_file, 'w', encoding='utf-8') as f:
-         f.writelines(final_lines)
-
-    print(f"Successfully generated {output_file} with {len(final_lines)} lines.")
-    os.remove(temp_output_base)
-    os.remove(temp_output_8105)
-
-    if len(final_lines) < 30000:
-        print(f"Error: Generated dictionary has only {len(final_lines)} lines, which is smaller than the required 30000.")
-        sys.exit(1)
-
+    print(f"Successfully generated {output_file} with {len(final_entries)} lines.")
     return 0
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sys.exit(main())
