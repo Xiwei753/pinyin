@@ -11,6 +11,14 @@ import io.github.xiwei753.pinyin.t9.testutil.TestPaths
 class T9EngineGoldenRealDictTest {
     private fun realEngine(): T9Engine {
         return T9Engine(BuiltinDictionary(FileInputStream(TestPaths.assetDictionary())))
+import java.io.File
+import java.io.FileInputStream
+
+class T9EngineGoldenRealDictTest {
+    private fun realEngine(): T9Engine {
+        val file = File("src/main/assets/t9_source_dict.tsv")
+        assertTrue("real asset dictionary must exist", file.exists())
+        return T9Engine(BuiltinDictionary(FileInputStream(file)))
     }
 
     private fun typeDigits(engine: T9Engine, digits: String) {

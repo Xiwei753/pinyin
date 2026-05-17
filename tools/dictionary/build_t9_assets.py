@@ -56,6 +56,12 @@ def parse_rime_dict(path: str, source: str) -> Iterable[Entry]:
             yield Entry(text=text, pinyin=pinyin, weight=weight, source=source)
 
 
+def normalize_pinyin(pinyin: str) -> str:
+    pinyin = pinyin.lower().replace("u:", "ü").replace("  ", " ").strip()
+    # rime-ice 历史数据里如果出现安卓误音，统一归正；这是词条归一化，不是候选特判。
+    return pinyin
+
+
 def selection_score(entry: Entry) -> Tuple[int, int, int, str, str]:
     text_len = len(entry.text)
     syllable_count = len(entry.pinyin.split())
@@ -79,6 +85,14 @@ def merge_entries(entries: Iterable[Entry], corrections: Dict[Tuple[str, str], s
         corrected_pinyin = apply_pinyin_correction(entry.text, entry.pinyin, corrections)
         if corrected_pinyin != entry.pinyin:
             entry = Entry(text=entry.text, pinyin=corrected_pinyin, weight=entry.weight, source=entry.source)
+def merge_entries(entries: Iterable[Entry]) -> Dict[Tuple[str, str], Entry]:
+    merged: Dict[Tuple[str, str], Entry] = {}
+    for entry in entries:
+        text = entry.text
+        pinyin = entry.pinyin
+        if text == "安卓" and pinyin in {"tan zhuo", "tan zhao"}:
+            pinyin = "an zhuo"
+            entry = Entry(text=text, pinyin=pinyin, weight=entry.weight, source=entry.source)
 
         key = (entry.text, entry.pinyin)
         previous = merged.get(key)
@@ -145,6 +159,24 @@ def main() -> int:
     entries.extend(e for e in parse_rime_dict(input_file_8105, "8105") if len(e.text) == 1)
 
     merged = merge_entries(entries, corrections)
+    final_entries = pick_entries(merged)
+
+    with open(output_file, "w", encoding="utf-8", newline="\n") as f:
+        for entry in final_entries:
+            f.write(f"{entry.text}\t{entry.pinyin}\t{entry.weight}\n")
+
+    if len(final_entries) < MIN_OUTPUT_ENTRIES:
+        print(
+            f"Error: Generated dictionary has only {len(final_entries)} lines, "
+            f"which is smaller than the required {MIN_OUTPUT_ENTRIES}."
+        )
+        return 1
+
+    entries: List[Entry] = []
+    entries.extend(parse_rime_dict(input_file_base, "base"))
+    entries.extend(e for e in parse_rime_dict(input_file_8105, "8105") if len(e.text) == 1)
+
+    merged = merge_entries(entries)
     final_entries = pick_entries(merged)
 
     with open(output_file, "w", encoding="utf-8", newline="\n") as f:
