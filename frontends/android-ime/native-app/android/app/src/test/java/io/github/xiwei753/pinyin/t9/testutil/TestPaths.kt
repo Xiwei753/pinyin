@@ -4,12 +4,13 @@ import java.io.File
 
 object TestPaths {
     fun repoRoot(): File {
-        return generateSequence(File(System.getProperty("user.dir")).absoluteFile) { it.parentFile }
+        val rootStr = generateSequence(File(System.getProperty("user.dir")).absoluteFile) { it.parentFile }
             .firstOrNull { candidate ->
                 File(candidate, "tools/dictionary/build_t9_assets.py").isFile &&
                     File(candidate, "frontends/android-ime/native-app/android/app/src/main/assets/t9_source_dict.tsv").isFile
-            }
+            }?.absolutePath
             ?: throw IllegalStateException("Cannot find repository root from ${System.getProperty("user.dir")}")
+        return File(rootStr)
     }
 
     fun androidProjectRoot(): File {

@@ -25,21 +25,6 @@ class T9BeamDecoderTest {
         val decoder = T9BeamDecoder(graph)
         val paths = decoder.decode()
 
-        val qiaQianScore = paths.find { path ->
-            val text = path.edges.filter { !it.isSeparator }.joinToString(" ") { it.syllable }
-            text == "qia qian"
-        }?.score ?: -999999
-
-        val shaRiScore = paths.find { path ->
-            val text = path.edges.filter { !it.isSeparator }.joinToString(" ") { it.syllable }
-            text == "sha ri" // Just checking relative
-        }?.score ?: -999999
-
-        val shiScore = paths.find { path ->
-             val text = path.edges.filter { !it.isSeparator }.joinToString(" ") { it.syllable }
-             text == "shi" // An exact prefix overshoot
-        }?.score ?: -999999
-
         // Ensure the top path is NOT qia qian
         val topText = paths[0].edges.filter { !it.isSeparator }.joinToString(" ") { it.syllable }
         assertTrue("Top path should not be 'qia qian'", topText != "qia qian")

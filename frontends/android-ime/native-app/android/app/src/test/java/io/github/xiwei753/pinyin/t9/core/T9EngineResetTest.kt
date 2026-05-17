@@ -14,12 +14,12 @@ class T9EngineResetTest {
             list.add(Candidate(c.text, pinyin, c.score, c.type, pinyin, origin))
         }
 
-        override fun getSingleSyllableCandidates(pinyin: String): List<Candidate> {
-            return list.filter { it.sourcePinyin == pinyin && it.origin == CandidateOrigin.EXACT_SINGLE }
+        override fun getSingleSyllableCandidates(syllable: String): List<Candidate> {
+            return list.filter { it.sourcePinyin == syllable && it.origin == CandidateOrigin.EXACT_SINGLE }
         }
 
-        override fun getPinyinExactCandidates(pinyinSeq: String): List<Candidate> {
-            return list.filter { it.sourcePinyin == pinyinSeq && it.origin == CandidateOrigin.EXACT_PHRASE }
+        override fun getPinyinExactCandidates(pinyinSequence: String): List<Candidate> {
+            return list.filter { it.sourcePinyin == pinyinSequence && it.origin == CandidateOrigin.EXACT_PHRASE }
         }
 
         override fun getPinyinPrefixCandidates(pinyinPrefix: String): List<Candidate> {
@@ -48,7 +48,6 @@ class T9EngineResetTest {
         // Ensure state is dirty
         assertTrue(engine.buffer.isNotEmpty())
         assertTrue(engine.getPreedit().isNotEmpty())
-        //assertTrue(engine.getVisibleCandidates(10).isNotEmpty())
 
         // Reset state
         engine.clear()
