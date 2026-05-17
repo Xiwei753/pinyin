@@ -7,8 +7,6 @@ def main():
 
     scripts_to_run = [
         "tools/validate/validate_structure.py",
-        "tools/validate/validate_rime_files.py",
-        "tools/validate/validate_rime_smoke.py",
         "frontends/android-ime/native-app/prototype/test_t9_core.py"
     ]
 

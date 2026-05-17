@@ -4,14 +4,11 @@ import sys
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Tuple
 
-from convert_rime_dict import apply_pinyin_correction, load_pinyin_corrections, normalize_pinyin
-
 MAX_OUTPUT_ENTRIES = 90000
 BASE_MULTI_QUOTA = 62000
 BASE_SINGLE_QUOTA = 12000
 MIN_OUTPUT_ENTRIES = 30000
 PINYIN_RE = re.compile(r"^[a-züv: ]+$")
-
 
 @dataclass(frozen=True)
 class Entry:
@@ -20,10 +17,8 @@ class Entry:
     weight: int
     source: str
 
-
 def repo_root() -> str:
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 
 def parse_rime_dict(path: str, source: str) -> Iterable[Entry]:
     header_ended = False
@@ -55,12 +50,9 @@ def parse_rime_dict(path: str, source: str) -> Iterable[Entry]:
 
             yield Entry(text=text, pinyin=pinyin, weight=weight, source=source)
 
-
 def normalize_pinyin(pinyin: str) -> str:
     pinyin = pinyin.lower().replace("u:", "ü").replace("  ", " ").strip()
-    # rime-ice 历史数据里如果出现安卓误音，统一归正；这是词条归一化，不是候选特判。
     return pinyin
-
 
 def selection_score(entry: Entry) -> Tuple[int, int, int, str, str]:
     text_len = len(entry.text)
@@ -74,17 +66,9 @@ def selection_score(entry: Entry) -> Tuple[int, int, int, str, str]:
     else:
         phrase_bonus += 40000
 
-    # 以频率为主，同时用通用的词长/音节数/来源加权避免常用短语被纯行数截断挤掉。
     score = entry.weight + source_bonus + phrase_bonus
     return (score, entry.weight, text_len, entry.pinyin, entry.text)
 
-
-def merge_entries(entries: Iterable[Entry], corrections: Dict[Tuple[str, str], str]) -> Dict[Tuple[str, str], Entry]:
-    merged: Dict[Tuple[str, str], Entry] = {}
-    for entry in entries:
-        corrected_pinyin = apply_pinyin_correction(entry.text, entry.pinyin, corrections)
-        if corrected_pinyin != entry.pinyin:
-            entry = Entry(text=entry.text, pinyin=corrected_pinyin, weight=entry.weight, source=entry.source)
 def merge_entries(entries: Iterable[Entry]) -> Dict[Tuple[str, str], Entry]:
     merged: Dict[Tuple[str, str], Entry] = {}
     for entry in entries:
@@ -106,7 +90,6 @@ def merge_entries(entries: Iterable[Entry]) -> Dict[Tuple[str, str], Entry]:
             merged[key] = Entry(previous.text, previous.pinyin, previous.weight, "base")
     return merged
 
-
 def pick_entries(merged: Dict[Tuple[str, str], Entry]) -> List[Entry]:
     base_multi = [e for e in merged.values() if e.source == "base" and len(e.text) >= 2]
     base_single = [e for e in merged.values() if e.source == "base" and len(e.text) == 1]
@@ -123,7 +106,6 @@ def pick_entries(merged: Dict[Tuple[str, str], Entry]) -> List[Entry]:
     for entry in sort_bucket(base_single)[:BASE_SINGLE_QUOTA]:
         selected[(entry.text, entry.pinyin)] = entry
 
-    # 8105 只承担单字候选表；全部保留，冷僻字依靠原始频率和引擎排序自然靠后。
     for entry in sort_bucket(table_single):
         key = (entry.text, entry.pinyin)
         previous = selected.get(key)
@@ -138,7 +120,6 @@ def pick_entries(merged: Dict[Tuple[str, str], Entry]) -> List[Entry]:
 
     return sorted(selected.values(), key=lambda e: (e.pinyin, e.text, -e.weight))
 
-
 def main() -> int:
     root_dir = repo_root()
     input_file_base = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "base.dict.yaml")
@@ -151,26 +132,6 @@ def main() -> int:
             return 1
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-    corrections = load_pinyin_corrections()
-
-    entries: List[Entry] = []
-    entries.extend(parse_rime_dict(input_file_base, "base"))
-    entries.extend(e for e in parse_rime_dict(input_file_8105, "8105") if len(e.text) == 1)
-
-    merged = merge_entries(entries, corrections)
-    final_entries = pick_entries(merged)
-
-    with open(output_file, "w", encoding="utf-8", newline="\n") as f:
-        for entry in final_entries:
-            f.write(f"{entry.text}\t{entry.pinyin}\t{entry.weight}\n")
-
-    if len(final_entries) < MIN_OUTPUT_ENTRIES:
-        print(
-            f"Error: Generated dictionary has only {len(final_entries)} lines, "
-            f"which is smaller than the required {MIN_OUTPUT_ENTRIES}."
-        )
-        return 1
 
     entries: List[Entry] = []
     entries.extend(parse_rime_dict(input_file_base, "base"))
@@ -192,7 +153,6 @@ def main() -> int:
 
     print(f"Successfully generated {output_file} with {len(final_entries)} lines.")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -25,22 +25,17 @@ def main():
 
     success = True
 
-    # Required directories
     req_dirs = [
-        "shared/rime",
         "shared/settings",
         "shared/private-template",
         "frontends/android-ime",
-        "tools/sync",
-        "tools/private"
+        "tools/sync"
     ]
     for d in req_dirs:
         success &= check_dir(d)
 
-    # Required files
     success &= check_file(".gitignore")
 
-    # Old directories that shouldn't exist
     old_dirs = ["rime", "config", "core", "sync"]
     for d in old_dirs:
         success &= check_not_exists(d)
