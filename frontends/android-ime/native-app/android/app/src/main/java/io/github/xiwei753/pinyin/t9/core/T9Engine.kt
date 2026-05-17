@@ -203,18 +203,13 @@ class T9Engine(private val dictionary: DictionaryProvider) {
     }
 
     private fun getSingleSyllableCandidates(pinyin: String, isComplete: Boolean, limit: Int, sourcePinyin: String, segmentDigits: List<String>): List<Candidate> {
-        val candidates = if (isComplete) {
-            dictionary.getSingleSyllableCandidates(pinyin)
-        } else {
-            dictionary.getPinyinPrefixCandidates(pinyin)
-        }
+        val candidates = dictionary.getSingleSyllableCandidates(pinyin)
 
         val typedCodeLength = if (segmentDigits.isNotEmpty()) segmentDigits[0].length else T9CodeMapper.toCode(pinyin).length
         val codeLen = T9CodeMapper.toCode(pinyin).length
 
         return candidates
             .filter { candidate ->
-                if (!isComplete && candidate.type == CandidateType.LONG_OR_LOW_FREQ) return@filter false
                 if (codeLen == 1) {
                     candidate.type == CandidateType.SINGLE_CHAR || (candidate.type == CandidateType.COMMON_SHORT && candidate.text.length == 1)
                 } else if (codeLen == 2) {
@@ -230,9 +225,6 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                 val extraLen = candidate.code.length - typedCodeLength
                 if (extraLen > 0) {
                     adjustedScore -= extraLen * 50000
-                }
-                if (!isComplete && typedCodeLength <= 2) {
-                    adjustedScore -= 2000000 // Huge penalty for brain-completing a 1-2 digit prefix
                 }
                 Candidate(candidate.text, candidate.code, adjustedScore, candidate.type, sourcePinyin, candidate.origin)
             }
@@ -255,11 +247,7 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                 val partStr = partPinyins.joinToString(" ")
                 val isPrefix = (i == pinyins.size)
 
-                val partCandidates = if (isPrefix && !comp.isComplete) {
-                    dictionary.getPinyinPrefixCandidates(partStr)
-                } else {
-                    dictionary.getPinyinExactCandidates(partStr)
-                }
+                val partCandidates = dictionary.getPinyinExactCandidates(partStr)
 
                 val partCodeLength = if (comp.segmentDigits.isNotEmpty()) {
                     comp.segmentDigits.subList(j, i).sumOf { it.length }
@@ -297,11 +285,6 @@ class T9Engine(private val dictionary: DictionaryProvider) {
                             val overShoot = partCandidate.code.length - partCodeLength
                             if (overShoot > 0) {
                                 baseScore -= overShoot * 20000
-                            }
-                            // If the final segment typing is very short (1-2 digits), heavily penalize prefix brain-completion
-                            val lastSegTypedLength = if (comp.segmentDigits.isNotEmpty()) comp.segmentDigits[i-1].length else 3
-                            if (!comp.isComplete && lastSegTypedLength <= 2) {
-                                baseScore -= 2000000
                             }
                         }
 

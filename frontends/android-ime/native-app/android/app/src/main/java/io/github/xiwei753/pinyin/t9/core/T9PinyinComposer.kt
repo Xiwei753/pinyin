@@ -49,17 +49,6 @@ class T9SyllableGraph(val buffer: String) {
                     edges[i].add(SyllableEdge(i, j, syl, part, isExact = true, typedLength = part.length, fullCodeLength = codeLen, prefixOvershoot = 0))
                 }
 
-                if (isSegmentEnd) {
-                    val prefixSyllables = PinyinSyllableDecoder.getPrefixSyllables(part)
-                    val exactSet = exactSyllables.toSet()
-                    for (syl in prefixSyllables) {
-                        if (syl !in exactSet) {
-                            val codeLen = T9CodeMapper.toCode(syl).length
-                            val overshoot = codeLen - part.length
-                            edges[i].add(SyllableEdge(i, j, syl, part, isExact = false, typedLength = part.length, fullCodeLength = codeLen, prefixOvershoot = overshoot))
-                        }
-                    }
-                }
             }
 
             // Fallback: if no edges from this node and it's not a separator, add a raw edge to next char
@@ -130,19 +119,6 @@ class T9BeamDecoder(private val graph: T9SyllableGraph, private val beamSize: In
 
             if (edge.isExact) {
                 score += 500 // Bonus for exact match
-            } else {
-                // Prefix penalty
-                val overshoot = edge.prefixOvershoot
-                score -= overshoot * 100
-
-                // Heavily penalize brain completion from a very short prefix (1-2 digits)
-                if (edge.typedLength <= 2) {
-                    score -= 5000
-                }
-
-                if (hasExactFullSpan && edge.typedLength <= 1) {
-                    score -= 100000
-                }
             }
 
             if (edge.typedLength == 1 && edge.fullCodeLength == 1) {
