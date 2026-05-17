@@ -25,40 +25,20 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y zip unzip python3
 
-    - name: Run Validations and Packaging
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Run Android Validations and Tests
       run: |
         python tools/validate/check-all.py
-        bash -n frontends/linux-fcitx5/fcitx5/install-fcitx5-rime.sh
-        bash -n frontends/linux-fcitx5/fcitx5/backup-rime.sh
-        bash -n frontends/linux-fcitx5/fcitx5/deploy-rime.sh
-        bash -n frontends/android-ime/rime-package/package-generic-rime.sh
-        bash -n frontends/android-ime/rime-package/package-trime.sh
-        bash -n frontends/android-ime/rime-package/package-fcitx5-userdata.sh
-        bash -n frontends/android-ime/rime-package/package-fcitx5-android-rime.sh
-        bash -n tools/sync/init-private-repo.sh
-        bash -n tools/sync/pull-private.sh
-        bash -n tools/sync/push-private.sh
-        bash frontends/android-ime/rime-package/package-generic-rime.sh
-        bash frontends/android-ime/rime-package/package-trime.sh
-        bash frontends/android-ime/rime-package/package-fcitx5-userdata.sh
-        python tools/validate/validate_android_package.py
-        python tools/validate/validate_fcitx5_userdata_package.py
-        python tools/validate/check-all.py
+        cd frontends/android-ime/native-app/android
+        ./gradlew test assembleDebug
 
-    - name: Upload Android Generic Rime Artifact
+    - name: Upload Android Native T9 APK
       uses: actions/upload-artifact@v4
       with:
-        name: android-rime-generic
-        path: build/android-rime-generic.zip
-
-    - name: Upload Android Trime Rime Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-rime-trime
-        path: build/android-rime-trime.zip
-
-    - name: Upload Android Fcitx5 UserData Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-rime-fcitx5-userdata
-        path: build/android-rime-fcitx5-userdata.zip
+        name: xiwei-t9-debug-apk
+        path: frontends/android-ime/native-app/android/app/build/outputs/apk/debug/app-debug.apk

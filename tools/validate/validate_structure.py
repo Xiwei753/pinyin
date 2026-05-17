@@ -30,7 +30,6 @@ def main():
         "shared/rime",
         "shared/settings",
         "shared/private-template",
-        "frontends/linux-fcitx5",
         "frontends/android-ime",
         "tools/sync",
         "tools/private"

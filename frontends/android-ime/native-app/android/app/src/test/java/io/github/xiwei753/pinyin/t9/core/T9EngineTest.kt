@@ -347,6 +347,51 @@ class T9EngineTest {
     }
 
     @Test
+    fun test63MeNeNotMei() {
+        val dict = MockDict()
+        dict.add(Candidate("么", "me", 10000, CandidateType.SINGLE_CHAR), "me")
+        dict.add(Candidate("呢", "ne", 10000, CandidateType.SINGLE_CHAR), "ne")
+        dict.add(Candidate("没", "mei", 10000, CandidateType.SINGLE_CHAR), "mei")
+
+        // Add some dynamic items
+        dict.add(Candidate("哦", "o", 50000, CandidateType.SINGLE_CHAR), "o")
+        dict.add(Candidate("饿", "e", 50000, CandidateType.SINGLE_CHAR), "e")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("6")
+        engine.inputDigit("3")
+
+        val visible = engine.getVisibleCandidates()
+        assertTrue(visible.none { it.text == "没" })
+        assertTrue(visible.any { it.text == "么" })
+        assertTrue(visible.any { it.text == "呢" })
+        assertTrue(visible.none { it.origin == CandidateOrigin.DYNAMIC_COMPOSITION })
+        assertTrue(visible.none { it.text == "哦饿" || it.text == "哦 饿" })
+    }
+
+    @Test
+    fun test636MenNenNotOEng() {
+        val dict = MockDict()
+        dict.add(Candidate("门", "men", 10000, CandidateType.SINGLE_CHAR), "men")
+        dict.add(Candidate("嫩", "nen", 10000, CandidateType.SINGLE_CHAR), "nen")
+
+        // Add some dynamic items
+        dict.add(Candidate("哦", "o", 50000, CandidateType.SINGLE_CHAR), "o")
+        dict.add(Candidate("嗯", "eng", 50000, CandidateType.SINGLE_CHAR), "eng")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("6")
+        engine.inputDigit("3")
+        engine.inputDigit("6")
+
+        val visible = engine.getVisibleCandidates()
+        assertTrue(visible.any { it.text == "门" })
+        assertTrue(visible.any { it.text == "嫩" })
+        assertTrue(visible.none { it.origin == CandidateOrigin.DYNAMIC_COMPOSITION })
+        assertTrue(visible.none { it.text == "哦嗯" || it.text == "哦 嗯" })
+    }
+
+    @Test
     fun testVisibleCandidatesGate() {
         val dict = MockDict()
         dict.add(Candidate("不", "28", 1000, CandidateType.SINGLE_CHAR), "bu")
