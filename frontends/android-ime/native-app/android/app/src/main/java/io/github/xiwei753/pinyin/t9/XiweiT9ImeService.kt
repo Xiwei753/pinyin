@@ -24,11 +24,28 @@ class XiweiT9ImeService : InputMethodService() {
     // Made internal and mutable for unit testing injection
     internal var debugLogger: T9DebugLogger = AndroidDebugLogger()
 
+    override fun onCreate() {
+        super.onCreate()
+        ensureCoreInitialized()
+    }
+
+    private fun ensureCoreInitialized() {
+        if (!this::settingsRepository.isInitialized) {
+            settingsRepository = SettingsRepository(this)
+        }
+        if (!this::hapticFeedbackManager.isInitialized) {
+            hapticFeedbackManager = HapticFeedbackManager(this, settingsRepository)
+        }
+        if (!this::dictionary.isInitialized) {
+            dictionary = DictionaryManager.getInstance(this)
+        }
+        if (!this::engine.isInitialized) {
+            engine = T9Engine(dictionary)
+        }
+    }
+
     override fun onCreateInputView(): View {
-        settingsRepository = SettingsRepository(this)
-        hapticFeedbackManager = HapticFeedbackManager(this, settingsRepository)
-        dictionary = DictionaryManager.getInstance(this)
-        engine = T9Engine(dictionary)
+        ensureCoreInitialized()
 
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
 
@@ -70,8 +87,30 @@ class XiweiT9ImeService : InputMethodService() {
     }
 
     private fun resetCompositionState() {
-        engine.clear()
+        ensureCoreInitialized()
+
+        // Finish any composing text logic
+        if (engine.buffer.isNotEmpty()) {
+            // According to Android docs, when we reset state, we shouldn't commit partial buffer
+            // to the app unless they explicitly picked it, but we can call finishComposingText()
+            // to clear any pre-edit styling if we used InputConnection.setComposingText.
+            // Since we use our own custom view for pre-edit currently, just clearing our own buffer is fine.
+            // But if we ever rely on setComposingText, this clears it from the app's side safely.
+            currentInputConnection?.finishComposingText()
+        }
+
+        resetEngineState()
+        resetUiStateIfReady()
+    }
+
+    private fun resetEngineState() {
+        if (this::engine.isInitialized) {
+            engine.clear()
+        }
         currentCandidates = emptyList()
+    }
+
+    private fun resetUiStateIfReady() {
         if (this::bufferText.isInitialized) {
             bufferText.text = ""
         }
