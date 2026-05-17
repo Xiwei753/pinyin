@@ -21,6 +21,9 @@ class XiweiT9ImeService : InputMethodService() {
     private lateinit var hapticFeedbackManager: HapticFeedbackManager
     private var currentCandidates: List<io.github.xiwei753.pinyin.t9.core.Candidate> = emptyList()
 
+    // Made internal and mutable for unit testing injection
+    internal var debugLogger: T9DebugLogger = AndroidDebugLogger()
+
     override fun onCreateInputView(): View {
         settingsRepository = SettingsRepository(this)
         hapticFeedbackManager = HapticFeedbackManager(this, settingsRepository)
@@ -267,6 +270,38 @@ class XiweiT9ImeService : InputMethodService() {
         for (i in currentCandidates.size until candidateContainer.childCount) {
             candidateContainer.getChildAt(i).visibility = View.GONE
         }
+
+        logDebugInfo()
+    }
+
+    private fun logDebugInfo() {
+        if (!settingsRepository.isDebugLoggingEnabled()) return
+
+        val tag = "XiweiT9Debug"
+        debugLogger.log(tag, "================== T9 Debug Info ==================")
+        debugLogger.log(tag, "raw buffer: ${engine.buffer}")
+        debugLogger.log(tag, "getPreedit(): ${engine.getPreedit()}")
+        debugLogger.log(tag, "currentCandidates isEmpty: ${currentCandidates.isEmpty()}")
+        debugLogger.log(tag, "candidateContainer visibility: ${if (candidateContainer.visibility == View.VISIBLE) "VISIBLE" else "GONE"}")
+
+        val compositions = engine.getCompositions().take(10)
+        debugLogger.log(tag, "--- T9PinyinComposer top 10 compositions ---")
+        compositions.forEachIndexed { i, comp ->
+            debugLogger.log(tag, "  [$i] pinyinString: ${comp.pinyinString}, score: ${comp.score}, isComplete: ${comp.isComplete}, segmentDigits: ${comp.segmentDigits}")
+        }
+
+        val internalCandidates = engine.getInternalCandidates().take(10)
+        debugLogger.log(tag, "--- T9Engine internal candidates top 10 ---")
+        internalCandidates.forEachIndexed { i, cand ->
+            debugLogger.log(tag, "  [$i] text: ${cand.text}, sourcePinyin: ${cand.sourcePinyin}, origin: ${cand.origin}, type: ${cand.type}, score: ${cand.score}, code: ${cand.code}")
+        }
+
+        val visibleCandidates = currentCandidates.take(10)
+        debugLogger.log(tag, "--- T9Engine visible candidates top 10 ---")
+        visibleCandidates.forEachIndexed { i, cand ->
+            debugLogger.log(tag, "  [$i] text: ${cand.text}, sourcePinyin: ${cand.sourcePinyin}, origin: ${cand.origin}, type: ${cand.type}, score: ${cand.score}, code: ${cand.code}")
+        }
+        debugLogger.log(tag, "===================================================")
     }
 
     private fun onCandidateClicked(index: Int) {

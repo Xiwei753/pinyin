@@ -14,6 +14,14 @@ class SettingsRepository(context: Context) {
         prefs.edit().putBoolean("haptic_feedback_enabled", enabled).apply()
     }
 
+    fun isDebugLoggingEnabled(): Boolean {
+        return prefs.getBoolean("debug_logging_enabled", false)
+    }
+
+    fun setDebugLoggingEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("debug_logging_enabled", enabled).apply()
+    }
+
     fun getCandidateCount(): Int {
         return prefs.getInt("candidate_count", 30)
     }

@@ -13,6 +13,15 @@ class T9Engine(private val dictionary: DictionaryProvider) {
 
     private var lastVisibleCandidates = listOf<Candidate>()
     private var lastVisibleLimit = -1
+    private var lastInternalCandidates = listOf<Candidate>()
+
+    fun getCompositions(): List<PinyinComposition> {
+        return pinyinComposer.getCompositions(buffer)
+    }
+
+    fun getInternalCandidates(): List<Candidate> {
+        return lastInternalCandidates
+    }
 
     fun inputDigit(digit: String) {
         if (digit.matches(Regex("^[1-9]$"))) {
@@ -173,8 +182,12 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             allCandidates.addAll(adjustedCandidates)
         }
 
-        val distinctSorted = allCandidates.sortedByDescending { it.score }
+        val sortedAll = allCandidates.sortedByDescending { it.score }
             .distinctBy { it.text }
+
+        lastInternalCandidates = sortedAll.take(10)
+
+        val distinctSorted = sortedAll
             .take(limit - 1)
             .toMutableList()
 
