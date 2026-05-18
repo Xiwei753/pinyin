@@ -9,9 +9,9 @@
 ## 文件放置规则
 
 *   **Public 仓库放什么：**
-    *   `shared/rime/*.yaml` (基础配置)
-    *   `shared/private-template/*` (私人数据格式的示例模板)
-    *   核心 Python 代码和各类打包、验证脚本。
+    *   基础配置和代码。
+    *   私人数据格式的示例模板。
+    *   核心代码和各类打包、验证脚本。
 *   **Private 仓库放什么：**
     *   你真实的 `custom-phrases.txt` (包含你配置好的快捷输入短语)。
         *   **格式要求**：私人短语格式必须是 `候选词<TAB>编码<TAB>权重`，例如 `狗屁通<TAB>gpt<TAB>100000`。
@@ -22,15 +22,13 @@
 ## 同步机制
 
 1.  **初始化**：使用 `tools/sync/init-private-repo.sh` 将你的私人仓库克隆到 `.private_sync/` 目录下。该目录在 `.gitignore` 中，不会被提交到 public 仓库。
-2.  **拉取 (Pull)**：使用 `tools/sync/pull-private.sh` 从私人仓库拉取最新数据。脚本会自动调用 `tools/private/build-user-rime.py`，将你的数据（如 `custom-phrases.txt`）生成到 `shared/rime/custom_phrase.txt` 供 Rime 使用。
+2.  **拉取 (Pull)**：使用 `tools/sync/pull-private.sh` 从私人仓库拉取最新数据。
 3.  **推送 (Push)**：如果你在本地修改了 `.private_sync/` 中的文件，可以使用 `tools/sync/push-private.sh` 推送到你的私人仓库。脚本会在推送前提示确认。
 
 ## Android 端使用说明
 
-目前手机端处于基础测试阶段。
-*   打包脚本（如 `package-fcitx5-userdata.sh`）在运行时，如果检测到本地存在 `.private_sync/` 目录，会自动将你的私人词库/短语合并打包到 Fcitx5 的导入包中。
-*   **已知问题**：在 Fcitx5 Android + RIME 插件的当前环境中，`custom_phrase`（私人短语）功能由于导入机制和环境差异，目前无法稳定生效。该功能暂时被降级为后续优化项。后续我们可能会探索更稳定的 Rime 用户词库方案，而不单纯依赖 `custom_phrase` 来同步个人词汇。
-*   后续当 Android 原生前端开发完善后，将会在 App 设置中提供直接登录 GitHub 进行同步的入口，不再需要通过电脑打包。
+Android 原生 T9 输入法当前阶段暂不接入私人同步。
+后续当 Android 原生前端开发完善后，将会在 App 设置中提供同步入口，不再需要通过电脑打包。
 
 ## ⚠️ 重要安全警告
 

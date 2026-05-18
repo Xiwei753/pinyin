@@ -1,65 +1,62 @@
-# AGENTS.md
+# Project Rules
 
-本文档是给 Jules / Codex 等代码代理（AI 助手）的长期硬规则说明。任何 AI 代理在进行代码修改时，必须严格遵守以下规则。禁止违背这些长期约束进行不符合方向的代码重构。
+This repository is for a cross-platform Chinese input method. The current priority is the Android T9 Chinese IME.
 
-## 1. 核心架构与约束（绝对禁止妥协）
+The user is not a programmer and mainly tests APK behavior. Do not ask the user to make technical decisions when the codebase can answer the question. Read the code, make the change, run tests, and fix failures until the required commands pass.
 
-本项目最终目标是构建横跨 Linux 和 Android 的中文输入法。当前第一阶段的最高优先级是**Android 九键中文输入法**。
+## Stage: Android Native T9 Only
 
-**正确的处理管线：**
-九键数字 -> 拼音音节解码 -> 拼音 preedit -> 拼音查字词 -> 中文候选。
+- The ONLY current development target is Android native T9 IME (Kotlin/Java InputMethodService + T9Engine).
+- Do NOT propose, plan, or implement work on Linux, desktop, or any non-Android platform in the current stage.
+- Do NOT read old Fcitx5 Android / Rime / Trime documentation to formulate tasks.
+- Do NOT propose restoring Fcitx5 Android, Trime, or Rime configuration packages.
+- Those routes are permanently removed from the repository and will not return.
 
-**禁止项（绝对不要做）：**
-- **禁止回退架构**：禁止从“九键数字”回退到“数字 prefix 直接查中文词库”这种简陋做法。
-- **禁止掩盖问题**：遇到候选生成问题，必须从音节解码和拼音查询逻辑解决，**不要**只靠调权重来修候选问题，**不要**只通过修改 UI 来掩盖候选底层逻辑的缺陷。
-- **禁止功能发散**：
-  - 第一阶段**不做**同步功能。
-  - 第一阶段**不做**云词库接入。
-  - 第一阶段**不做**在线 AI。
-  - 第一阶段**不做** x86 Android 特殊适配。
-  - 不做真正整句语言模型，当前只做短语组合。
-- **禁止敷衍**：遇到编译失败（如 `gradlew` 构建失败）不要停下来问用户，必须自行修复直至通过。
-- **禁止乱改许可证**：禁止删除或篡改 GPLv3 许可证及 `rime-ice` 的来源说明。
+## Linux Future Direction (Do Not Implement Now)
 
-## 2. 词库职责划分
+- Linux is NOT developed in the current stage.
+- Future Linux direction: develop a fcitx5 plugin shell that wraps the project's shared core.
+- fcitx5 acts only as the system input method framework/frontend shell; it will NOT use fcitx5-rime as the core engine.
+- The shared core (T9Engine, dictionary, candidate logic) will power both Android and future Linux frontends.
+- Do NOT add Linux plugin code, CI, or packaging in the current stage.
 
-- 词库来源：统一使用 `rime-ice` 作为开源词库的来源。内部最终存储格式为：`词语<TAB>拼音<TAB>权重`。
-- **`base.dict.yaml`**：作为日常常用词语的主词库。
-- **`8105.dict.yaml`**：**只作为单字候选表**。
-  - **禁止**把 `8105.dict.yaml` 当作主词库来刷冷僻字。
-  - 单字候选必须存在，且常用字必须优先。冷僻字优先级可以放低，但不必彻底删除。
-- 提示：九键码必须由拼音自动生成，不要手写数字码。
+## rime-ice Role
 
-## 3. 必测回归用例
+- `third_party/rime-ice` is ONLY a dictionary data source, NOT an input engine.
+- The project does NOT use the Rime engine.
+- `base.dict.yaml` is the common word dictionary.
+- `8105.dict.yaml` is only a single-character candidate table.
+- `tools/dictionary/build_t9_assets.py` generates `assets/t9_source_dict.tsv` for the Android app.
 
-在任何涉及到核心逻辑修改之后，必须确保以下用例正确通过：
+## Core Android T9 Architecture Rules
 
-1. `96` -> preedit 显示 `wo`，候选包含“我”，且“我”必须靠前。
-2. `64` -> preedit 显示 `ni`，候选包含“你”。
-3. `82` -> preedit 显示 `ta`，候选包含“他/她”。
-4. `33` -> preedit 显示 `de`，候选包含“的/得/地”。
-5. `744` -> preedit 显示 `shi`，候选包含“是”。
-6. `28` -> preedit 显示 `bu`，候选包含“不”。
-7. `28824` -> preedit 显示 `bu tai`，候选包含“不太”。
-8. `288249464` -> preedit 显示 `bu tai xing`，**第一候选必须是“不太行”**。绝对不应该出现“不太新股”或“不太英语”。
-9. `546842692674264` -> preedit 显示 `jin tian wan shang`，候选包含“今天晚上”。
-10. 带分隔符：`28 1 824 1 9464` -> preedit 显示 `bu tai xing`，候选包含“不太行”。
+- Correct pipeline: T9 digits -> pinyin syllable decoding -> pinyin preedit -> Chinese word/character lookup.
+- Do not fall back to direct numeric-prefix lookup against Chinese dictionaries.
+- Key `1` is the pinyin syllable separator / segmentation key.
+- Key `0` commits the first candidate when candidates exist; when the buffer is empty, it inserts a space.
+- The composing/preedit area should show pinyin, not raw digits as the main visible text.
+- Candidate click must commit the current UI cached candidate, not recompute a fresh full candidate list.
+- `base.dict.yaml` is the common word dictionary.
+- `8105.dict.yaml` is only a single-character candidate table.
+- Do not use `8105.dict.yaml` as the main word dictionary.
+- Candidate list should prefer fewer good candidates over many garbage candidates.
 
-## 4. 构建与测试命令
+## General Rules
 
-任何代码变更提交前，必须运行以下命令进行构建和测试：
+- Do not add cloud sync.
+- Do not add AI features.
+- Do not add cloud dictionaries.
+- Do not implement x86 Android special support.
+- Do not only tune UI when the root cause is engine/dictionary logic.
+- Do not only write documentation.
+- Do not fake correctness by hardcoding the listed test cases.
+- Do not hide failures. Fix compile/test failures until the required commands pass.
 
-```bash
+## Required Android Verification Command
+
+```
 cd frontends/android-ime/native-app/android
 ./gradlew test assembleDebug
 ```
-如果失败，请直接分析报错日志自行修复，直到构建成功，再进行后续的 commit。
 
-## 5. UI 与产品表现底线
-
-- **不可接受的问题**：候选乱喷长词、常用字缺失、打开键盘卡顿、显示裸数字、0 键不上屏、设置改动无效。
-- **输入区展示**：buffer 区主显示拼音 preedit，绝不将裸数字作为主要显示内容（如 `64` 应显示 `ni`，而非 `64`）。
-- **特殊键规则**：
-  - `1` 键是拼音音节分隔符，不参与字母映射。有 buffer 时插入分隔符；空 buffer 时无操作，不要绑定符号面板。
-  - `0` 键在中文模式下视觉上体现为空格键。buffer 为空时输入空格；有候选时按 `0` 提交第一候选。
-  - 裸数字 fallback 永远放在候选列表最后，绝不能抢占主要中文候选位置。
+If the command fails, debug and fix it without asking the user.

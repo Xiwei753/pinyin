@@ -1,4 +1,8 @@
 # Linux specific settings
+# PLACEHOLDER — Linux is not currently developed.
+# Future: fcitx5 plugin shell wrapping the shared core (T9Engine, dictionary, candidate logic).
+# These settings will be consumed by the Linux fcitx5 plugin when that work begins.
+# Do NOT implement Linux code in the current stage.
 linux:
   candidate_count: 5
   follow_cursor: true

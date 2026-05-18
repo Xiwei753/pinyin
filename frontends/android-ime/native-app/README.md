@@ -1,39 +1,26 @@
 # Android 原生前端
 
-此目录用于存放未来将要开发的 Android 原生前端代码。
+Android 原生 T9 拼音输入法，基于 `InputMethodService` + 自研 `T9Engine`。
 
-考虑到通过 Rime schema 无法解决由于宿主输入法（如 Fcitx5 Android）硬编码带来的 UI 问题，项目接下来将探索构建一个真正原生的输入法前端。
-
-## 当前状态
-目前处于最小原型探索阶段。详细的开发计划与目标请参见 `T9_FRONTEND_PLAN.md`。
-
-这是一个独立的 Android 原生九键输入法原型，用于验证九键 UI、输入缓冲和候选上屏的流程，不包含 Rime 引擎、同步功能和复杂词库。
+不依赖 Rime、Trime 或 Fcitx5 for Android。这是独立的 Android 原生输入法实现。
 
 ## 子目录说明
-- `prototype/`: 存放早期的概念验证和原型测试脚本（例如用 Python 编写的逻辑原型或基础的设计草案），先确保逻辑和架构可行，再进入正式的 Kotlin 和 Android 工程开发。
-- `android/`: 最小 Android Gradle 工程源码目录。
+- `android/`：Android Gradle 工程源码目录。
 
 ## 本地构建
 
-这是最小的 Android 九键输入法原型。暂不接 Rime，暂不接同步，暂不处理复杂候选。
-
-- T9Engine 已经从 Service 拆出，负责输入状态
-- Candidate 是核心候选数据结构
-- BuiltinDictionary 负责数据来源，不再硬编码。现在维护拼音源词库 `assets/t9_source_dict.tsv`，不再手写数字码，并支持前缀匹配（输入前几位数字即可出候选）。
-- 新增 `T9CodeMapper`，九键数字码由它自动生成。这样可以避免人工错误。
-- 新增 DictionaryProvider 接口，作为后续接入用户词库、同步词库、shared core 的入口
-- 包含玩具级的内置测试词库（几十个常用词），可用于测试体验，但尚未达到日用级别
-- Android Service 只负责 UI 和系统上屏
-
-构建命令如下：
-
 ```sh
 cd frontends/android-ime/native-app/android
-./gradlew assembleDebug
+./gradlew test assembleDebug
 ```
 
-## New Features
-- **Independent App Settings**: Added an independent App launcher and settings entry point.
-- **Enhanced 0 Key Behavior**: The 0 key now confirms the first candidate or inputs a space appropriately.
-- **System Haptic Feedback**: Implemented standard Android haptic feedback for keystrokes.
-- **Multi-Word Candidates**: Added support for long sentence and multi-word combinations using dynamic programming.
+## 架构要点
+
+- **T9Engine**：自研输入内核，负责拼音音节解码、候选生成、词库查询。
+- **T9ImeController**：纯 Kotlin 控制器，负责按键行为逻辑（0/1/删除/候选点击）。
+- **XiweiT9ImeService**：Android `InputMethodService`，只负责 UI 渲染、系统上屏、触感反馈。
+- **SettingsRepository**：统一设置管理（触感、主题、键盘高度、候选数量、调试日志）。
+- **T9DebugLogStore**：内存+文件双层调试日志存储，支持导出分享。
+- **BuiltinDictionary**：词库数据来源，使用 rime-ice 作为词库数据（不是引擎）。
+- **T9CodeMapper**：自动拼音转九键数字码。
+- **DictionaryProvider**：词库接口，为后续用户词库和同步预留。
