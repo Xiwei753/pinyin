@@ -85,16 +85,16 @@ class SettingsActivity : Activity() {
         val dictManager = io.github.xiwei753.pinyin.t9.data.DictionaryManager.getInstance(this)
 
         if (dictManager.isFallback) {
-            dictStatusText.text = "⚠️ 加载失败，已回退到内置示例词库 (${dictManager.loadedWordCount} 词)"
+            dictStatusText.text = "词库加载失败，已回退到示例词库，${dictManager.loadedWordCount} 词"
             dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
         } else {
-            dictStatusText.text = "✅ rime-ice 已加载 (${dictManager.loadedWordCount} 词)"
+            dictStatusText.text = "内置词库已加载：rime-ice 来源，${dictManager.loadedWordCount} 词"
             dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
         }
     }
 
     private fun exportDebugLogs() {
-        val logContent = T9DebugLogStore.dump()
+        val logContent = T9DebugLogStore.dumpFromFile()
         if (logContent.isEmpty()) {
             Toast.makeText(this, "当前没有调试日志，请先打开调试日志开关并使用输入法", Toast.LENGTH_LONG).show()
             return

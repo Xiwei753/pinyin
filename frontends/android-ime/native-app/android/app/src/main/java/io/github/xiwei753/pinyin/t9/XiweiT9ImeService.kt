@@ -2,7 +2,6 @@ package io.github.xiwei753.pinyin.t9
 
 import android.inputmethodservice.InputMethodService
 import android.view.View
-
 import android.widget.LinearLayout
 import android.view.LayoutInflater
 import android.widget.TextView
@@ -15,13 +14,10 @@ open class XiweiT9ImeService : InputMethodService() {
     private lateinit var bufferText: TextView
     private lateinit var candidateContainer: LinearLayout
 
-    private lateinit var dictionary: BuiltinDictionary
-    private lateinit var engine: T9Engine
+    private lateinit var controller: T9ImeController
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var hapticFeedbackManager: HapticFeedbackManager
-    private var currentCandidates: List<io.github.xiwei753.pinyin.t9.core.Candidate> = emptyList()
 
-    // Made internal and mutable for unit testing injection
     internal var debugLogger: T9DebugLogger = AndroidDebugLogger()
 
     override fun onCreate() {
@@ -36,11 +32,11 @@ open class XiweiT9ImeService : InputMethodService() {
         if (!this::hapticFeedbackManager.isInitialized) {
             hapticFeedbackManager = HapticFeedbackManager(this, settingsRepository)
         }
-        if (!this::dictionary.isInitialized) {
-            dictionary = DictionaryManager.getInstance(this)
-        }
-        if (!this::engine.isInitialized) {
-            engine = T9Engine(dictionary)
+        if (!this::controller.isInitialized) {
+            val dictionary: BuiltinDictionary = DictionaryManager.getInstance(this)
+            val engine = T9Engine(dictionary)
+            controller = T9ImeController(engine)
+            T9DebugLogStore.initFileLogging(filesDir)
         }
     }
 
@@ -61,7 +57,6 @@ open class XiweiT9ImeService : InputMethodService() {
 
     override fun onStartInputView(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        // Re-apply theme and height when view is shown again, in case settings changed
         view?.let { applyThemeAndHeight(it) }
         resetCompositionState()
     }
@@ -89,25 +84,14 @@ open class XiweiT9ImeService : InputMethodService() {
     private fun resetCompositionState() {
         ensureCoreInitialized()
 
-        // Finish any composing text logic
-        if (engine.buffer.isNotEmpty()) {
-            // According to Android docs, when we reset state, we shouldn't commit partial buffer
-            // to the app unless they explicitly picked it, but we can call finishComposingText()
-            // to clear any pre-edit styling if we used InputConnection.setComposingText.
-            // Since we use our own custom view for pre-edit currently, just clearing our own buffer is fine.
-            // But if we ever rely on setComposingText, this clears it from the app's side safely.
+        if (controller.engine.buffer.isNotEmpty()) {
             currentInputConnection?.finishComposingText()
         }
 
-        resetEngineState()
-        resetUiStateIfReady()
-    }
-
-    private fun resetEngineState() {
-        if (this::engine.isInitialized) {
-            engine.clear()
+        if (this::controller.isInitialized) {
+            controller.reset()
         }
-        currentCandidates = emptyList()
+        resetUiStateIfReady()
     }
 
     private fun resetUiStateIfReady() {
@@ -120,7 +104,6 @@ open class XiweiT9ImeService : InputMethodService() {
         }
     }
 
-
     private var view: View? = null
 
     private fun applyThemeAndHeight(rootView: View) {
@@ -130,13 +113,11 @@ open class XiweiT9ImeService : InputMethodService() {
             "dark" -> true
             "light" -> false
             else -> {
-                // system default
                 val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
                 currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
             }
         }
 
-        // Apply theme colors
         val bgColor = if (isDark) android.graphics.Color.parseColor("#121212") else android.graphics.Color.parseColor("#F0F0F0")
         val candidateBarColor = if (isDark) android.graphics.Color.parseColor("#1E1E1E") else android.graphics.Color.parseColor("#FFFFFF")
         val textColor = if (isDark) android.graphics.Color.parseColor("#E0E0E0") else android.graphics.Color.parseColor("#333333")
@@ -157,17 +138,15 @@ open class XiweiT9ImeService : InputMethodService() {
         val rowHeightPx = when (heightSetting) {
             "low" -> (48 * density).toInt()
             "high" -> (64 * density).toInt()
-            else -> (56 * density).toInt() // normal
+            else -> (56 * density).toInt()
         }
 
         for (id in allKeys) {
             val keyView = rootView.findViewById<TextView>(id)
             keyView.setTextColor(textColor)
-            // Change text of key 1 to indicate separator
             if (id == R.id.key_1) {
                 keyView.text = "1\n分词"
             }
-            // Adjust height
             val parent = keyView.parent as? android.widget.FrameLayout
             if (parent != null) {
                 val params = parent.layoutParams
@@ -176,7 +155,6 @@ open class XiweiT9ImeService : InputMethodService() {
             }
         }
 
-        // Update candidates' text colors if any exist
         for (i in 0 until candidateContainer.childCount) {
             val child = candidateContainer.getChildAt(i) as? TextView
             child?.setTextColor(textColor)
@@ -204,9 +182,10 @@ open class XiweiT9ImeService : InputMethodService() {
 
         view.findViewById<TextView>(R.id.key_1).setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            if (engine.buffer.isNotEmpty()) {
-                logAction("KEY_1", "syllable separation: appending 1 to buffer '${engine.buffer}'")
-                onDigitPressed("1")
+            val result = controller.onSeparator()
+            handleResult(result)
+            if (result is T9ImeController.ActionResult.Refresh) {
+                logAction("KEY_1", "syllable separation: appended separator to buffer '${controller.engine.buffer}'")
             } else {
                 logAction("KEY_1", "buffer empty -> no-op")
             }
@@ -224,64 +203,91 @@ open class XiweiT9ImeService : InputMethodService() {
 
         view.findViewById<TextView>(R.id.key_star).setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            // Do nothing for now
         }
     }
 
     private fun onDigitPressed(digit: String) {
-        engine.inputDigit(digit)
-        updateUi()
+        controller.inputDigit(digit)
+        refreshUi()
     }
 
     private fun onDeletePressed() {
-        if (engine.buffer.isNotEmpty()) {
-            logAction("KEY_DEL", "buffer '${engine.buffer}' -> engine.backspace()")
-            engine.backspace()
-            updateUi()
-        } else {
-            logAction("KEY_DEL", "buffer empty -> send DEL key event to app")
-            currentInputConnection?.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DEL))
-            currentInputConnection?.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DEL))
+        val result = controller.onDelete()
+        when (result) {
+            is T9ImeController.ActionResult.Refresh -> {
+                logAction("KEY_DEL", "buffer '${controller.engine.buffer}' -> engine.backspace()")
+                refreshUi()
+            }
+            is T9ImeController.ActionResult.SendDelete -> {
+                logAction("KEY_DEL", "buffer empty -> send DEL key event to app")
+                currentInputConnection?.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DEL))
+                currentInputConnection?.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DEL))
+            }
+            else -> {}
         }
     }
 
     private fun onZeroPressed() {
-        if (engine.buffer.isEmpty()) {
-            logAction("KEY_0", "buffer empty -> commit space")
-            currentInputConnection?.commitText(" ", 1)
-        } else {
-            if (currentCandidates.isNotEmpty()) {
-                val candidateToCommit = currentCandidates[0]
-                logAction("KEY_0", "buffer non-empty, has ${currentCandidates.size} candidates -> commit first: ${candidateToCommit.text}")
-                val committed = engine.commitCandidate(candidateToCommit)
-                currentInputConnection?.commitText(committed.text, 1)
-            } else {
-                logAction("KEY_0", "buffer non-empty, no candidates -> clear engine")
-                engine.clear()
+        val result = controller.onZero()
+        when (result) {
+            is T9ImeController.ActionResult.CommitText -> {
+                logAction("KEY_0", "committing: ${result.text}")
+                currentInputConnection?.commitText(result.text, 1)
+                refreshUi()
             }
-            updateUi()
+            is T9ImeController.ActionResult.Refresh -> {
+                logAction("KEY_0", "no candidates, clearing engine")
+                refreshUi()
+            }
+            else -> {}
         }
     }
 
-    private fun updateUi() {
-        bufferText.text = engine.getPreedit()
+    private fun onCandidateClicked(index: Int) {
+        val result = controller.onCandidateClick(index)
+        when (result) {
+            is T9ImeController.ActionResult.CommitText -> {
+                logAction("CANDIDATE_CLICK", "committing: ${result.text}")
+                currentInputConnection?.commitText(result.text, 1)
+                refreshUi()
+            }
+            else -> {}
+        }
+    }
+
+    private fun handleResult(result: T9ImeController.ActionResult) {
+        when (result) {
+            is T9ImeController.ActionResult.Refresh -> refreshUi()
+            is T9ImeController.ActionResult.CommitText -> {
+                currentInputConnection?.commitText(result.text, 1)
+                refreshUi()
+            }
+            is T9ImeController.ActionResult.SendDelete -> {
+                currentInputConnection?.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DEL))
+                currentInputConnection?.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DEL))
+            }
+            is T9ImeController.ActionResult.NoAction -> {}
+        }
+    }
+
+    private fun refreshUi() {
+        bufferText.text = controller.preedit
 
         val limit = settingsRepository.getCandidateCount()
-        currentCandidates = engine.getVisibleCandidates(limit)
+        val candidates = controller.refreshCandidates(limit)
 
-        if (currentCandidates.isEmpty()) {
+        if (candidates.isEmpty()) {
             candidateContainer.visibility = View.GONE
         } else {
             candidateContainer.visibility = View.VISIBLE
         }
 
-        for ((index, candidate) in currentCandidates.withIndex()) {
+        for ((index, candidate) in candidates.withIndex()) {
             val btn: TextView = if (index < candidateContainer.childCount) {
                 candidateContainer.getChildAt(index) as TextView
             } else {
                 val newBtn = TextView(this).apply {
                     textSize = 18f
-                    // Text color is updated in applyThemeAndHeight, but set a default here
                     val currentTheme = settingsRepository.getTheme()
                     val isDark = currentTheme == "dark" || (currentTheme == "system" && (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES))
                     setTextColor(if (isDark) android.graphics.Color.parseColor("#E0E0E0") else android.graphics.Color.parseColor("#333333"))
@@ -295,7 +301,7 @@ open class XiweiT9ImeService : InputMethodService() {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.MATCH_PARENT
                 ).apply {
-                    setMargins(0, 0, 16, 0) // Right margin for spacing
+                    setMargins(0, 0, 16, 0)
                 }
                 candidateContainer.addView(newBtn, layoutParams)
                 newBtn
@@ -309,8 +315,7 @@ open class XiweiT9ImeService : InputMethodService() {
             }
         }
 
-        // Hide unused views
-        for (i in currentCandidates.size until candidateContainer.childCount) {
+        for (i in candidates.size until candidateContainer.childCount) {
             candidateContainer.getChildAt(i).visibility = View.GONE
         }
 
@@ -321,10 +326,11 @@ open class XiweiT9ImeService : InputMethodService() {
         if (!settingsRepository.isDebugLoggingEnabled()) return
 
         val tag = "XiweiT9Debug"
+        val engine = controller.engine
         debugLogger.log(tag, "================== T9 Debug Info ==================")
         debugLogger.log(tag, "raw buffer: ${engine.buffer}")
         debugLogger.log(tag, "getPreedit(): ${engine.getPreedit()}")
-        debugLogger.log(tag, "currentCandidates isEmpty: ${currentCandidates.isEmpty()}")
+        debugLogger.log(tag, "currentCandidates isEmpty: ${controller.currentCandidates.isEmpty()}")
         debugLogger.log(tag, "candidateContainer visibility: ${if (candidateContainer.visibility == View.VISIBLE) "VISIBLE" else "GONE"}")
 
         val compositions = engine.getCompositions().take(10)
@@ -339,22 +345,12 @@ open class XiweiT9ImeService : InputMethodService() {
             debugLogger.log(tag, "  [$i] text: ${cand.text}, sourcePinyin: ${cand.sourcePinyin}, origin: ${cand.origin}, type: ${cand.type}, score: ${cand.score}, code: ${cand.code}")
         }
 
-        val visibleCandidates = currentCandidates.take(10)
+        val visibleCandidates = controller.currentCandidates.take(10)
         debugLogger.log(tag, "--- T9Engine visible candidates top 10 ---")
         visibleCandidates.forEachIndexed { i, cand ->
             debugLogger.log(tag, "  [$i] text: ${cand.text}, sourcePinyin: ${cand.sourcePinyin}, origin: ${cand.origin}, type: ${cand.type}, score: ${cand.score}, code: ${cand.code}")
         }
         debugLogger.log(tag, "===================================================")
-    }
-
-    private fun onCandidateClicked(index: Int) {
-        if (index >= 0 && index < currentCandidates.size) {
-            val candidateToCommit = currentCandidates[index]
-            logAction("CANDIDATE_CLICK", "index=$index text=${candidateToCommit.text} pinyin=${candidateToCommit.sourcePinyin}")
-            val committed = engine.commitCandidate(candidateToCommit)
-            currentInputConnection?.commitText(committed.text, 1)
-            updateUi()
-        }
     }
 
     private fun logAction(action: String, detail: String) {

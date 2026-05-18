@@ -3,10 +3,7 @@ package io.github.xiwei753.pinyin.t9
 import org.junit.Test
 import org.junit.Assert.*
 import org.mockito.Mockito.*
-import android.content.Context
 import io.github.xiwei753.pinyin.t9.core.T9Engine
-import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
-import io.github.xiwei753.pinyin.t9.data.DictionaryManager
 import java.lang.reflect.Method
 import android.widget.TextView
 import android.widget.LinearLayout
@@ -23,15 +20,12 @@ class XiweiT9ImeServiceLifecycleTest {
         hapticField.isAccessible = true
         hapticField.set(service, mock(HapticFeedbackManager::class.java))
 
-        val dictField = XiweiT9ImeService::class.java.getDeclaredField("dictionary")
-        dictField.isAccessible = true
-        dictField.set(service, mock(BuiltinDictionary::class.java))
-
         val engine = mock(T9Engine::class.java)
         `when`(engine.buffer).thenReturn("")
-        val engineField = XiweiT9ImeService::class.java.getDeclaredField("engine")
-        engineField.isAccessible = true
-        engineField.set(service, engine)
+        val controller = T9ImeController(engine)
+        val ctrlField = XiweiT9ImeService::class.java.getDeclaredField("controller")
+        ctrlField.isAccessible = true
+        ctrlField.set(service, controller)
     }
 
     @Test
@@ -39,16 +33,11 @@ class XiweiT9ImeServiceLifecycleTest {
         val service = XiweiT9ImeService()
         setMockCore(service)
         try {
-            // Android base class InputMethodService methods try to access Window/Display
-            // in tests without robolectric. So it will throw RuntimeException from android.jar.
-            // But we specifically want to verify that our `UninitializedPropertyAccessException`
-            // is not thrown anymore.
             service.onStartInput(null, false)
             assertTrue(true)
         } catch (e: UninitializedPropertyAccessException) {
             fail("Should not throw UninitializedPropertyAccessException")
         } catch (e: Exception) {
-            // ContextWrapper not mocked exception is expected from base class in JVM tests
             assertTrue(true)
         }
     }
@@ -118,7 +107,6 @@ class XiweiT9ImeServiceLifecycleTest {
 
         getResetMethod().invoke(service)
 
-        // Verify UI states are cleared
         verify(bufferTextMock).text = ""
         verify(containerMock).removeAllViews()
         verify(containerMock).visibility = View.GONE
