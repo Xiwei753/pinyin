@@ -1,6 +1,6 @@
 package io.github.xiwei753.pinyin.t9.core
 
-import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
+import io.github.xiwei753.pinyin.t9.testutil.TestSQLiteDictionary
 import io.github.xiwei753.pinyin.t9.testutil.TestPaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,7 +11,7 @@ import java.io.FileInputStream
 class T9EngineGoldenTest {
 
     private fun loadRealEngine(): T9Engine {
-        val dict = BuiltinDictionary(FileInputStream(TestPaths.assetDictionary()))
+        val dict = TestSQLiteDictionary(TestPaths.assetDatabase().absolutePath)
         return T9Engine(dict)
     }
 

@@ -1,12 +1,11 @@
 package io.github.xiwei753.pinyin.t9.assets
 
-import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
+import io.github.xiwei753.pinyin.t9.testutil.TestSQLiteDictionary
 import io.github.xiwei753.pinyin.t9.testutil.TestPaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.FileInputStream
 
 class AssetsTest {
     @Test
@@ -55,8 +54,7 @@ class AssetsTest {
         }
 
         // Load the actual dictionary to test exact rules
-        val inputStream = FileInputStream(file)
-        val dictionary = BuiltinDictionary(inputStream)
+        val dictionary = TestSQLiteDictionary(TestPaths.assetDatabase().absolutePath)
 
         val meCandidates = dictionary.getSingleSyllableCandidates("me")
         assertTrue("getSingleSyllableCandidates(\"me\") MUST NOT return 'mei' candidates",

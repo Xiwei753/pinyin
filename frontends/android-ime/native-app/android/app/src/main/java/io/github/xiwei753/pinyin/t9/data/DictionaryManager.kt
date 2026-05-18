@@ -2,11 +2,10 @@ package io.github.xiwei753.pinyin.t9.data
 
 import android.content.Context
 import kotlin.concurrent.thread
-import io.github.xiwei753.pinyin.t9.core.Candidate
 
 object DictionaryManager {
     @Volatile
-    var instance: BuiltinDictionary? = null
+    var instance: SQLiteDictionary? = null
         private set
 
     @Volatile
@@ -19,42 +18,42 @@ object DictionaryManager {
         val appContext = context.applicationContext
         thread(start = true, name = "DictLoaderThread") {
             try {
-                instance = BuiltinDictionary.fromAssets(appContext)
+                instance = SQLiteDictionary(appContext)
             } finally {
                 isLoading = false
             }
         }
     }
 
-    // Proxy provider to avoid blocking or null checks everywhere
+    // Provider getter will block slightly if needed, but since it's now lightweight it shouldn't be long.
+    // However, keeping the async nature, we'll return a proxy that returns empty until loaded.
     fun getProvider(context: Context): DictionaryProvider {
         initAsync(context)
-        return AsyncDictionaryProxy
+        return object : DictionaryProvider {
+            override fun getPinyinExactCandidates(pinyinSequence: String) =
+                instance?.getPinyinExactCandidates(pinyinSequence) ?: emptyList()
+
+            override fun getPinyinPrefixCandidates(pinyinPrefix: String) =
+                instance?.getPinyinPrefixCandidates(pinyinPrefix) ?: emptyList()
+
+            override fun getSingleSyllableCandidates(syllable: String) =
+                instance?.getSingleSyllableCandidates(syllable) ?: emptyList()
+
+            override fun getCandidates(code: String) =
+                instance?.getCandidates(code) ?: emptyList()
+
+            override fun getExactCandidates(code: String) =
+                instance?.getExactCandidates(code) ?: emptyList()
+
+            override fun getPrefixCandidates(code: String) =
+                instance?.getPrefixCandidates(code) ?: emptyList()
+        }
     }
 
     // For testing purposes
     fun reset() {
+        instance?.close()
         instance = null
         isLoading = false
     }
-}
-
-object AsyncDictionaryProxy : DictionaryProvider {
-    override fun getPinyinExactCandidates(pinyinSequence: String) =
-        DictionaryManager.instance?.getPinyinExactCandidates(pinyinSequence) ?: emptyList()
-
-    override fun getPinyinPrefixCandidates(pinyinPrefix: String) =
-        DictionaryManager.instance?.getPinyinPrefixCandidates(pinyinPrefix) ?: emptyList()
-
-    override fun getSingleSyllableCandidates(syllable: String) =
-        DictionaryManager.instance?.getSingleSyllableCandidates(syllable) ?: emptyList()
-
-    override fun getCandidates(code: String) =
-        DictionaryManager.instance?.getCandidates(code) ?: emptyList()
-
-    override fun getExactCandidates(code: String) =
-        DictionaryManager.instance?.getExactCandidates(code) ?: emptyList()
-
-    override fun getPrefixCandidates(code: String) =
-        DictionaryManager.instance?.getPrefixCandidates(code) ?: emptyList()
 }

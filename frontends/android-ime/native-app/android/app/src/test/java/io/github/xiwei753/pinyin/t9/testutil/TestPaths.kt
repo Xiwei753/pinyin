@@ -23,6 +23,12 @@ object TestPaths {
         return file
     }
 
+    fun assetDatabase(): File {
+        val file = File(androidProjectRoot(), "app/src/main/assets/t9_dict.db")
+        require(file.isFile) { "Cannot find real asset database at ${file.absolutePath}" }
+        return file
+    }
+
     fun productionFile(relativePath: String): File {
         val file = File(repoRoot(), relativePath)
         require(file.isFile) { "Cannot find production file at ${file.absolutePath}" }

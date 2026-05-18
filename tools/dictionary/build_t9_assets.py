@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import sqlite3
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Tuple
 
@@ -162,6 +163,48 @@ def pick_entries(merged: Dict[Tuple[str, str], Entry]) -> List[Entry]:
 
     return sorted(selected.values(), key=lambda e: (e.pinyin, e.text, -e.weight, e.source))
 
+def get_t9_code(pinyin: str) -> str:
+    mapping = {
+        'a': '2', 'b': '2', 'c': '2',
+        'd': '3', 'e': '3', 'f': '3',
+        'g': '4', 'h': '4', 'i': '4',
+        'j': '5', 'k': '5', 'l': '5',
+        'm': '6', 'n': '6', 'o': '6',
+        'p': '7', 'q': '7', 'r': '7', 's': '7',
+        't': '8', 'u': '8', 'v': '8',
+        'w': '9', 'x': '9', 'y': '9', 'z': '9'
+    }
+    return "".join(mapping.get(c, "") for c in pinyin)
+
+def get_candidate_type(text: str, score: int) -> str:
+    # Based on BuiltinDictionary.kt logic
+    length = len(text)
+    if length >= 4:
+        c_type = "LONG_OR_LOW_FREQ"
+    elif length == 3 and score < 30000:
+        c_type = "LONG_OR_LOW_FREQ"
+    elif length == 3:
+        c_type = "NORMAL"
+    elif length == 2 and score > 40000:
+        c_type = "COMMON_SHORT"
+    elif length == 2:
+        c_type = "NORMAL"
+    elif length == 1 and score > 60000:
+        c_type = "COMMON_SHORT"
+    elif length == 1:
+        c_type = "SINGLE_CHAR"
+    else:
+        c_type = "NORMAL"
+
+    if c_type != "LONG_OR_LOW_FREQ" and score < 5000:
+        return "LONG_OR_LOW_FREQ"
+    return c_type
+
+def get_candidate_origin(text: str) -> str:
+    if len(text) == 1:
+        return "EXACT_SINGLE"
+    return "EXACT_PHRASE"
+
 def main() -> int:
     root_dir = repo_root()
     input_file_base = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "base.dict.yaml")
@@ -169,6 +212,7 @@ def main() -> int:
     input_file_ext = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "ext.dict.yaml")
     input_file_common = os.path.join(root_dir, "tools", "dictionary", "android_common_phrases.tsv")
     output_file = os.path.join(root_dir, "frontends", "android-ime", "native-app", "android", "app", "src", "main", "assets", "t9_source_dict.tsv")
+    output_db_file = os.path.join(root_dir, "frontends", "android-ime", "native-app", "android", "app", "src", "main", "assets", "t9_dict.db")
 
     for path in (input_file_base, input_file_8105):
         if not os.path.exists(path):
@@ -194,6 +238,59 @@ def main() -> int:
         for entry in final_entries:
             f.write(f"{entry.text}\t{entry.pinyin}\t{entry.weight}\n")
 
+    if os.path.exists(output_db_file):
+        os.remove(output_db_file)
+
+    conn = sqlite3.connect(output_db_file)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            text TEXT NOT NULL,
+            pinyin TEXT NOT NULL,
+            syllable TEXT,
+            code TEXT NOT NULL,
+            score INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            origin TEXT NOT NULL,
+            source TEXT
+        )
+    """)
+
+    db_entries = []
+    for entry in final_entries:
+        code = get_t9_code(entry.pinyin)
+        c_type = get_candidate_type(entry.text, entry.weight)
+        c_origin = get_candidate_origin(entry.text)
+        syllables = entry.pinyin.split()
+        single_syllable = syllables[0] if len(syllables) == 1 else None
+
+        db_entries.append((
+            entry.text,
+            entry.pinyin,
+            single_syllable,
+            code,
+            entry.weight,
+            c_type,
+            c_origin,
+            entry.source
+        ))
+
+    cursor.executemany("""
+        INSERT INTO entries (text, pinyin, syllable, code, score, type, origin, source)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, db_entries)
+
+    cursor.execute("CREATE INDEX idx_pinyin ON entries (pinyin)")
+    cursor.execute("CREATE INDEX idx_syllable ON entries (syllable)")
+    cursor.execute("CREATE INDEX idx_code ON entries (code)")
+    cursor.execute("CREATE INDEX idx_text ON entries (text)")
+    cursor.execute("CREATE INDEX idx_code_score ON entries (code, score)")
+
+    conn.commit()
+    conn.close()
+
     if len(final_entries) < MIN_OUTPUT_ENTRIES:
         print(
             f"Error: Generated dictionary has only {len(final_entries)} lines, "
@@ -201,7 +298,7 @@ def main() -> int:
         )
         return 1
 
-    print(f"Successfully generated {output_file} with {len(final_entries)} lines.")
+    print(f"Successfully generated {output_file} and {output_db_file} with {len(final_entries)} entries.")
     return 0
 
 if __name__ == "__main__":
