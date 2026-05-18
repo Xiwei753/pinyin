@@ -9,6 +9,7 @@ import io.github.xiwei753.pinyin.t9.core.T9Engine
 import io.github.xiwei753.pinyin.t9.data.DictionaryManager
 import io.github.xiwei753.pinyin.t9.data.DictionaryState
 import io.github.xiwei753.pinyin.t9.data.DictionaryStateListener
+import io.github.xiwei753.pinyin.t9.data.UserDictionary
 
 open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
 
@@ -18,6 +19,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
     private lateinit var controller: T9ImeController
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var hapticFeedbackManager: HapticFeedbackManager
+    private var userDictionary: UserDictionary? = null
 
     internal var debugLogger: T9DebugLogger = AndroidDebugLogger()
 
@@ -25,6 +27,12 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
 
     override fun onCreate() {
         super.onCreate()
+        try {
+            userDictionary = UserDictionary.getInstance(applicationContext)
+        } catch (e: Exception) {
+            android.util.Log.e("XiweiT9ImeService", "Failed to init user dictionary", e)
+            userDictionary = null
+        }
         ensureCoreInitialized()
     }
 
@@ -40,7 +48,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
             when (state) {
                 is DictionaryState.Ready -> {
                     if (this::controller.isInitialized) {
-                        val engine = T9Engine(state.dictionary)
+                        val engine = T9Engine(state.dictionary, userDictionary)
                         controller.attachEngine(engine)
                         if (this::bufferText.isInitialized) {
                             refreshUi()
@@ -55,7 +63,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
                         Thread {
                             val dict = DictionaryManager.getProviderBlocking(this)
                             android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                val engine = T9Engine(dict)
+                                val engine = T9Engine(dict, userDictionary)
                                 controller.attachEngine(engine)
                                 if (this::bufferText.isInitialized) {
                                     refreshUi()
@@ -85,7 +93,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
 
             val readyDict = DictionaryManager.getReadyProviderOrNull()
             if (readyDict != null) {
-                controller.attachEngine(T9Engine(readyDict))
+                controller.attachEngine(T9Engine(readyDict, userDictionary))
             }
         }
     }

@@ -124,7 +124,7 @@ open class UserDictionary private constructor(
         return boost
     }
 
-    fun clearUserDictionary() {
+    open fun clearUserDictionary() {
         db?.execSQL("DELETE FROM user_entries")
         Log.d("UserDictionary", "Cleared user dictionary")
     }
