@@ -2,7 +2,10 @@ package io.github.xiwei753.pinyin.t9.core
 
 import io.github.xiwei753.pinyin.t9.data.DictionaryProvider
 
-class T9Engine(private val dictionary: DictionaryProvider) {
+class T9Engine(
+    private val dictionary: DictionaryProvider,
+    private var userDictionary: io.github.xiwei753.pinyin.t9.data.UserDictionary? = null
+) {
     var buffer = ""
         private set
 
@@ -53,8 +56,9 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             return bestCandidate.sourcePinyin
         }
         val compositions = pinyinComposer.getCompositions(buffer)
-        if (compositions.isEmpty()) return buffer
-        return compositions[0].pinyinString
+        val first = compositions.firstOrNull()
+        if (first == null || first.pinyinString.isEmpty()) return ""
+        return first.pinyinString
     }
 
     fun getVisibleCandidates(limit: Int = 30): List<Candidate> {
@@ -63,38 +67,106 @@ class T9Engine(private val dictionary: DictionaryProvider) {
             return lastVisibleCandidates
         }
 
-        // Generate visible candidates specifically by turning off dynamic multi-word completions
-        val visibleCandidatesRaw = generateCandidates(buffer, limit + 10, allowDynamic = false)
+        val compositions = pinyinComposer.getCompositions(buffer)
+        val primaryPinyin = compositions.firstOrNull { it.isComplete }?.pinyinString ?: ""
 
-        val visible = visibleCandidatesRaw.filter { c ->
-            // Origin filtering: allow EXACT_SINGLE and EXACT_PHRASE
+        val userCandidates = if (primaryPinyin.isNotEmpty() && userDictionary != null) {
+            userDictionary!!.getUserCandidates(primaryPinyin).map { c ->
+                val boost = userDictionary!!.getUserBoost(c.sourcePinyin, c.text)
+                c.copy(score = c.score + boost)
+            }
+        } else {
+            emptyList()
+        }
+
+        val exactCandidatesRaw = generateCandidates(buffer, limit + 10, allowDynamic = false)
+
+        val exactCandidates = exactCandidatesRaw.filter { c ->
             if (c.origin != CandidateOrigin.EXACT_SINGLE && c.origin != CandidateOrigin.EXACT_PHRASE) return@filter false
-
-            // Exclude the raw numeric fallback
             if (c.text == buffer) return@filter false
-
-            // Exclude pinyin/english only candidates
             if (c.text.matches(Regex("^[a-zA-Z\\s]+$"))) return@filter false
 
-            // Short input gate: length 1
             if (buffer.length == 1) {
-                // Only allow single characters
                 if (c.text.length > 1) return@filter false
-                // Prevent prefix brain-completion: the pinyin code length should not exceed typed length
                 if (c.code.length > 1) return@filter false
             }
-            // Short input gate: length 2
             if (buffer.length == 2) {
                 if (c.text.length > 2) return@filter false
             }
 
             true
-        }.take(limit)
+        }
 
-        lastVisibleCandidates = visible
+        val hasExactPhrase = exactCandidates.any { it.origin == CandidateOrigin.EXACT_PHRASE && it.text.length >= 2 }
+
+        val safeDynamicCandidates = if (!hasExactPhrase && buffer.length >= 5) {
+            generateSafeDynamicCandidates(compositions, limit).map { c ->
+                c.copy(origin = CandidateOrigin.SAFE_DYNAMIC_COMPOSITION)
+            }
+        } else {
+            emptyList()
+        }
+
+        val combined = mutableListOf<Candidate>()
+        combined.addAll(exactCandidates.filter { it.origin == CandidateOrigin.EXACT_PHRASE })
+        combined.addAll(userCandidates.filter { uc -> combined.none { it.text == uc.text } })
+        combined.addAll(exactCandidates.filter { it.origin == CandidateOrigin.EXACT_SINGLE })
+        combined.addAll(safeDynamicCandidates.take(3))
+
+        val finalCandidates = combined.distinctBy { it.text }.take(limit)
+
+        lastVisibleCandidates = finalCandidates
         lastVisibleLimit = limit
 
-        return visible
+        return finalCandidates
+    }
+
+    private fun generateSafeDynamicCandidates(
+        compositions: List<PinyinComposition>,
+        limit: Int
+    ): List<Candidate> {
+        val completeComp = compositions.firstOrNull { it.isComplete } ?: return emptyList()
+        if (completeComp.pinyinList.size < 2) return emptyList()
+
+        val pinyins = completeComp.pinyinList
+        val results = mutableListOf<Candidate>()
+
+        for (i in 1 until pinyins.size) {
+            val firstPart = pinyins.subList(0, i).joinToString(" ")
+            val secondPart = pinyins.subList(i, pinyins.size).joinToString(" ")
+
+            val firstCandidates = dictionary.getPinyinExactCandidates(firstPart)
+                .filter { it.type != CandidateType.LONG_OR_LOW_FREQ && it.score > 30000 }
+                .take(5)
+            val secondCandidates = dictionary.getPinyinExactCandidates(secondPart)
+                .filter { it.type != CandidateType.LONG_OR_LOW_FREQ && it.score > 30000 }
+                .take(5)
+
+            for (fc in firstCandidates) {
+                for (sc in secondCandidates) {
+                    if (fc.text.length == 1 && sc.text.length == 1) {
+                        val combinedText = fc.text + sc.text
+                        val combinedScore = fc.score + sc.score - 100000
+
+                        if (combinedScore > 50000) {
+                            val combinedCode = fc.code + sc.code
+                            results.add(
+                                Candidate(
+                                    combinedText,
+                                    combinedCode,
+                                    combinedScore,
+                                    CandidateType.NORMAL,
+                                    completeComp.pinyinString,
+                                    CandidateOrigin.SAFE_DYNAMIC_COMPOSITION
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        return results.sortedByDescending { it.score }.take(limit)
     }
 
     fun getCandidates(limit: Int = 30): List<Candidate> {
@@ -329,6 +401,9 @@ class T9Engine(private val dictionary: DictionaryProvider) {
     }
 
     fun commitCandidate(candidate: Candidate): Candidate {
+        if (candidate.text != buffer && candidate.sourcePinyin.isNotEmpty()) {
+            userDictionary?.recordSelection(candidate.text, candidate.sourcePinyin)
+        }
         clear()
         return candidate
     }

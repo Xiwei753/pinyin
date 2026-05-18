@@ -5427,6 +5427,7 @@
 不能玩游戏	bu neng wan you xi	148
 不能下载	bu neng xia zai	211140
 不能眼睁睁看着你	bu neng yan zheng zheng kan zhe ni	100
+不能要求	bu neng yao qiu	100000
 不能以礼让为国	bu neng yi li rang wei guo	1
 不能喻之于怀	bu neng yu zhi yu huai	1
 不能再快点儿吗	bu neng zai kuai dian er ma	100
@@ -5522,6 +5523,7 @@
 补肾益气胶囊	bu shen yi qi jiao nang	1
 补肾益寿胶囊	bu shen yi shou jiao nang	51
 不是	bu shi	501670
+不是吧	bu shi ba	100000
 不识彩依真情义	bu shi cai yi zhen qing yi	100
 布氏杜父圆鳍鱼	bu shi du fu yuan qi yu	1
 布氏刚果灯鳉	bu shi gang guo deng jiang	1
@@ -5723,7 +5725,7 @@
 不需要	bu xu yao	389270
 不需要爱情	bu xu yao ai qing	165
 不许这样了以后	bu xu zhe yang le yi hou	100
-不要	bu yao	501028
+不要	bu yao	100000
 不要抱着侥幸心理	bu yao bao zhe jiao xing xin li	100
 不要不懂装懂	bu yao bu dong zhuang dong	395
 不要到处跑	bu yao dao chu pao	190
@@ -5787,7 +5789,7 @@
 不因虚度年华而悔恨	bu yin xu du nian hua er hui hen	100
 不应	bu ying	268620
 不应墩姓尚随公	bu ying dun xing shang sui gong	1
-不用	bu yong	500382
+不用	bu yong	100000
 不用本钱的勾当	bu yong ben qian de gou dang	100
 不用跟着我们了	bu yong gen zhe wo men le	100
 不用那么多	bu yong na me duo	189
@@ -15828,6 +15830,7 @@
 对氨基苯甲酸	dui an ji ben jia suan	1
 对氨基偶氮苯	dui an ji ou dan ben	2
 对氨基水杨酸钠	dui an ji shui yang suan na	2
+对吧	dui ba	100000
 对本	dui ben	230715
 对苯二甲酸	dui ben er jia suan	5260
 对苯基苯酚	dui ben ji ben fen	192
@@ -29619,6 +29622,7 @@
 几次	ji ci	337320
 即此爱汝一念	ji ci ai ru yi nian	16
 计次循环首	ji ci xun huan shou	40
+计次循环尾	ji ci xun huan wei	35
 即从巴峡穿巫峡	ji cong ba xia chuan wu xia	1180
 吉村马特海笋	ji cun ma te hai sun	1
 寄存器长度	ji cun qi chang du	95
@@ -30345,6 +30349,7 @@
 几天	ji tian	307520
 几天都没有喝水	ji tian dou mei you he shui	100
 疾霆不暇掩目	ji ting bu xia yan mu	1
+己酮可可碱	ji tong ke ke jian	35
 棘头虫动物门	ji tou chong dong wu men	1
 姬透目天蚕蛾	ji tou mu tian can e	1
 击兔伐狐穷岁年	ji tu fa hu qiong sui nian	1180
@@ -30446,6 +30451,7 @@
 急性糜烂性胃炎	ji xing mi lan xing wei yan	5
 急性弥漫性腹膜炎	ji xing mi man xing fu mo yan	31
 急性排斥反应	ji xing pai chi fan ying	34
+急性盆腔炎	ji xing pen qiang yan	35
 急性气管炎	ji xing qi guan yan	41
 急性气管支气管炎	ji xing qi guan zhi qi guan yan	22
 急性前列腺炎	ji xing qian lie xian yan	58
@@ -30763,6 +30769,7 @@
 贾家村村委会	jia jia cun cun wei hui	1
 家家都有难念的经	jia jia dou you nan nian de jing	100
 家家都有戏	jia jia dou you xi	65
+家家福超市	jia jia fu chao shi	35
 家家扶得醉人归	jia jia fu de zui ren gui	10
 家家户户都会做	jia jia hu hu dou hui zuo	100
 家家户户都有车	jia jia hu hu dou you che	100
@@ -31759,6 +31766,7 @@
 江北区委党校	jiang bei qu wei dang xiao	2
 将比分扳平	jiang bi fen ban ping	3300
 江草江花处处鲜	jiang cao jiang hua chu chu xian	2
+酱炒萝卜糕	jiang chao luo bo gao	35
 江城哈尼族彝族自治县	jiang cheng ha ni zu yi zu zi zhi xian	100
 江城梅花引	jiang cheng mei hua yin	60
 江城如画里	jiang cheng ru hua li	1180
@@ -32082,6 +32090,7 @@
 江西财经大学	jiang xi cai jing da xue	5470
 江西大酒店	jiang xi da jiu dian	209
 江西发现世界珍蝶宽尾凤蝶	jiang xi fa xian shi jie zhen die kuan wei feng die	1
+浆洗街街道	jiang xi jie jie dao	35
 江西金格科技	jiang xi jin ge ke ji	87
 江西金格科技股份有限公司	jiang xi jin ge ke ji gu fen you xian gong si	87
 江西老年病医院	jiang xi lao nian bing yi yuan	1
@@ -32500,6 +32509,7 @@
 教育局	jiao yu ju	222405
 教育考试院	jiao yu kao shi yuan	20760
 教育乱收费	jiao yu luan shou fei	18705
+教育伦理学	jiao yu lun li xue	35
 教育培训	jiao yu pei xun	179495
 教育社会学	jiao yu she hui xue	955
 教育设施重大安全事故罪	jiao yu she shi zhong da an quan shi gu zui	97
@@ -33187,6 +33197,7 @@
 进了	jin le	265625
 尽了主要赡养义务	jin le zhu yao shan yang yi wu	100
 尽了最大的努力	jin le zui da de nu li	100
+尽力了	jin li le	100000
 金莲花软胶囊	jin lian hua ruan jiao nang	3
 金莲清热颗粒	jin lian qing re ke li	2
 金莲清热泡腾片	jin lian qing re pao teng pian	11
@@ -33345,6 +33356,7 @@
 金莎盛况没在一起	jin sha sheng kuang mei zai yi qi	100
 金沙水拍云崖暖	jin sha shui pai yun ya nuan	29
 金山开发区	jin shan kai fa qu	39
+锦山牛肉干	jin shan niu rou gan	35
 金山麒麟办公软件	jin shan qi lin ban gong ruan jian	87
 金山冉冉波涛雨	jin shan ran ran bo tao yu	1
 金山软件公司	jin shan ruan jian gong si	49
@@ -33478,6 +33490,7 @@
 金秀瑶族自治县	jin xiu yao zu zi zhi xian	100
 锦筵红烛月未午	jin yan hong zhu yue wei wu	100
 尽眼凝滑无瑕疵	jin yan ning hua wu xia ci	1
+金焰绣线菊	jin yan xiu xian ju	35
 金阳光测试	jin yang guang ce shi	50
 晋阳已陷休回顾	jin yang yi xian xiu hui gu	1
 金腰燕真缘吸虫	jin yao yan zhen yuan xi chong	1
@@ -36414,7 +36427,7 @@
 科研新成果	ke yan xin cheng guo	435
 科研院所和高校	ke yan yuan suo he gao xiao	100
 可也未必办不到	ke ye wei bi ban bu dao	100
-可以	ke yi	505814
+可以	ke yi	100000
 可以把	ke yi ba	244000
 可以帮助	ke yi bang zhu	83280
 可移不连续性	ke yi bu lian xu xing	1
@@ -42193,7 +42206,7 @@
 没什么直接关联	mei shen me zhi jie guan lian	100
 美晟国际广场	mei sheng guo ji guang chang	13
 梅圣俞诗集序	mei sheng yu shi ji xu	1
-没事	mei shi	282085
+没事	mei shi	100000
 梅氏半杆脂鲤	mei shi ban gan zhi li	1
 美式橄榄球	mei shi gan lan qiu	3333
 没事就吃溜溜梅	mei shi jiu chi liu liu mei	100
@@ -42264,6 +42277,7 @@
 美味口孵非鲫	mei wei kou fu fei ji	1
 美味茄汁里脊	mei wei qie zhi li ji	1
 玫纹丝隆头鱼	mei wen si long tou yu	1
+没问题	mei wen ti	100000
 没想到	mei xiang dao	373390
 没想到啊没想到	mei xiang dao a mei xiang dao	100
 没想到竟说出如此粗鄙之语	mei xiang dao jing shuo chu ru ci cu bi zhi yu	100
@@ -45042,6 +45056,7 @@
 你就是我的唯一	ni jiu shi wo de wei yi	100
 你就是最靓的仔	ni jiu shi zui liang de zai	100
 你就知道什么叫作	ni jiu zhi dao shen me jiao zuo	100
+你觉得	ni jue de	100000
 你觉得我怎么样	ni jue de wo zen me yang	100
 尼卡太阳神形态	ni ka tai yang shen xing tai	100
 你看	ni kan	323715
@@ -59970,6 +59985,7 @@
 酸辣臊子蹄筋	suan la sao zi ti jin	1
 酸辣土豆丝	suan la tu dou si	896
 酸辣岩水豆花	suan la yan shui dou hua	4
+算了吧	suan le ba	100000
 酸萝卜老鸭汤	suan luo bo lao ya tang	92
 蒜苗煎牡蛎蛋饼	suan miao jian mu li dan bing	1
 蒜苗椒香腊肉	suan miao jiao xiang la rou	1
@@ -65681,7 +65697,7 @@
 我就发这个	wo jiu fa zhe ge	273
 我就是这般女子	wo jiu shi zhe ban nv zi	189
 我就问一下	wo jiu wen yi xia	339
-我觉得	wo jue de	500340
+我觉得	wo jue de	100000
 我觉得很不错的	wo jue de hen bu cuo de	100
 我觉得可以	wo jue de ke yi	110
 我觉得也是	wo jue de ye shi	1625
@@ -73588,7 +73604,7 @@
 野生药材资源保护管理条例	ye sheng yao cai zi yuan bao hu guan li tiao li	38
 野生植物保护法	ye sheng zhi wu bao hu fa	13
 野生植物园	ye sheng zhi wu yuan	80
-也是	ye shi	502261
+也是	ye shi	100000
 耶氏背斜眼鳚	ye shi bei xie yan wei	1
 叶氏古柏线虫	ye shi gu bai xian chong	1
 夜市千灯照碧云	ye shi qian deng zhao bi yun	9
@@ -74668,7 +74684,7 @@
 一阶微分方程	yi jie wei fen fang cheng	235
 伊金霍洛旗	yi jin huo luo qi	1360
 益津降糖胶囊	yi jin jiang tang jiao nang	4
-已经	yi jing	502755
+已经	yi jing	100000
 已经爆发了激战	yi jing bao fa le ji zhan	100
 已经被	yi jing bei	500266
 已经不是当年的	yi jing bu shi dang nian de	100
@@ -77402,7 +77418,7 @@
 鼬猬摩利诺斯线虫	you wei mo li nuo si xian chong	1
 有为者亦若是	you wei zhe yi ruo shi	16
 又闻此语重唧唧	you wen ci yu chong ji ji	12
-有问题	you wen ti	185510
+有问题	you wen ti	100000
 尤文图斯俱乐部	you wen tu si ju le bu	100
 又闻子规啼夜月	you wen zi gui ti ye yue	12
 有无	you wu	265310
@@ -79733,7 +79749,7 @@
 怎及天心之皓月	zen ji tian xin zhi hao yue	100
 怎么	zen me	501014
 怎么爱你都不嫌多	zen me ai ni dou bu xian duo	100
-怎么办	zen me ban	363590
+怎么办	zen me ban	100000
 怎么不关你的事	zen me bu guan ni de shi	100
 怎么不关你们的事	zen me bu guan ni men de shi	100
 怎么不回啊	zen me bu hui a	50
@@ -80883,35 +80899,17 @@
 这是什么意思啊	zhe shi shen me yi si a	100
 这是通知不是商量	zhe shi tong zhi bu shi shang liang	100
 这是为什么	zhe shi wei shen me	19035
-这是为什么呢	zhe shi wei shen me ne	100
-这是我的号码	zhe shi wo de hao ma	100
-这是我的权利	zhe shi wo de quan li	100
-这是我的问题	zhe shi wo de wen ti	100
-这是我的新号	zhe shi wo de xin hao	100
-这是我的星球	zhe shi wo de xing qiu	100
 这是我们的最后一代	zhe shi wo men de zui hou yi dai	100
 这是我们最后一代	zhe shi wo men zui hou yi dai	100
-这是要干啥啊	zhe shi yao gan sha a	100
 这是一个	zhe shi yi ge	395860
-这是一个高手	zhe shi yi ge gao shou	100
 这是一种	zhe shi yi zhong	153650
 这是因为	zhe shi yin wei	155265
 这是怎么回事	zhe shi zen me hui shi	27870
-这是自寻死路	zhe shi zi xun si lu	100
 这是最后一次了	zhe shi zui hou yi ci le	100
-这是最重要的	zhe shi zui zhong yao de	100
-这首歌的歌词	zhe shou ge de ge ci	100
 这书能让你戒烟	zhe shu neng rang ni jie yan	100
-这谁顶得住啊	zhe shui ding de zhu a	100
-这四周的空气	zhe si zhou de kong qi	100
-这算什么事啊	zhe suan shen me shi a	100
-这算什么事儿	zhe suan shen me shi er	100
 这算什么事儿啊	zhe suan shen me shi er a	100
 这算什么事儿啊呀	zhe suan shen me shi er a ya	100
-这算什么事呀	zhe suan shen me shi ya	100
 这酸爽的感觉	zhe suan shuang de gan jue	1111
-这所有的一切	zhe suo you de yi qie	100
-这他妈的也行	zhe ta ma de ye xing	100
 蔗糖脂肪酸酯	zhe tang zhi fang suan zhi	136
 折腾来折腾去	zhe teng lai zhe teng qu	100
 这条	zhe tiao	294220
@@ -80946,6 +80944,7 @@
 哲学基本问题	zhe xue ji ben wen ti	815
 遮掩春山滞上才	zhe yan chun shan zhi shang cai	1
 这样	zhe yang	503115
+这样吧	zhe yang ba	100000
 这样不是很棒	zhe yang bu shi hen bang	100
 这样不是很好	zhe yang bu shi hen hao	100
 这样不太好吧	zhe yang bu tai hao ba	100
@@ -81102,6 +81101,7 @@
 真的很想就这样	zhen de hen xiang jiu zhe yang	100
 真的回不去了	zhen de hui bu qu le	100
 真的假不了	zhen de jia bu liao	815
+真的假的	zhen de jia de	100000
 真的假的啊	zhen de jia de a	1615
 真的没想到	zhen de mei xiang dao	197
 真的没有办法	zhen de mei you ban fa	100
