@@ -7,8 +7,10 @@ import android.view.LayoutInflater
 import android.widget.TextView
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 import io.github.xiwei753.pinyin.t9.data.DictionaryManager
+import io.github.xiwei753.pinyin.t9.data.DictionaryState
+import io.github.xiwei753.pinyin.t9.data.DictionaryStateListener
 
-open class XiweiT9ImeService : InputMethodService() {
+open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
 
     private lateinit var bufferText: TextView
     private lateinit var candidateContainer: LinearLayout
@@ -19,9 +21,52 @@ open class XiweiT9ImeService : InputMethodService() {
 
     internal var debugLogger: T9DebugLogger = AndroidDebugLogger()
 
+    private var isDictPreparing = false
+
     override fun onCreate() {
         super.onCreate()
         ensureCoreInitialized()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        DictionaryManager.unregisterListener(this)
+    }
+
+    override fun onStateChanged(state: DictionaryState) {
+        // Run on main thread
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            isDictPreparing = state is DictionaryState.Preparing
+            when (state) {
+                is DictionaryState.Ready -> {
+                    if (this::controller.isInitialized) {
+                        val engine = T9Engine(state.dictionary)
+                        controller.attachEngine(engine)
+                        if (this::bufferText.isInitialized) {
+                            refreshUi()
+                        }
+                    }
+                }
+                is DictionaryState.Fallback -> {
+                    if (this::controller.isInitialized) {
+                        // For fallback, we need to manually fetch the fallback dict which gets prepared synchronously.
+                        // Or we can call DictionaryManager.getProviderBlocking on a background thread.
+                        // But since getReadyProviderOrNull will return null, we can do:
+                        Thread {
+                            val dict = DictionaryManager.getProviderBlocking(this)
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                val engine = T9Engine(dict)
+                                controller.attachEngine(engine)
+                                if (this::bufferText.isInitialized) {
+                                    refreshUi()
+                                }
+                            }
+                        }.start()
+                    }
+                }
+                else -> {}
+            }
+        }
     }
 
     private fun ensureCoreInitialized() {
@@ -32,10 +77,16 @@ open class XiweiT9ImeService : InputMethodService() {
             hapticFeedbackManager = HapticFeedbackManager(this, settingsRepository)
         }
         if (!this::controller.isInitialized) {
-            val dictionary = DictionaryManager.getProvider(this)
-            val engine = T9Engine(dictionary)
-            controller = T9ImeController(engine)
+            controller = T9ImeController(null)
             T9DebugLogStore.initFileLogging(filesDir)
+
+            DictionaryManager.registerListener(this)
+            DictionaryManager.prepareAsync(this)
+
+            val readyDict = DictionaryManager.getReadyProviderOrNull()
+            if (readyDict != null) {
+                controller.attachEngine(T9Engine(readyDict))
+            }
         }
     }
 
@@ -83,7 +134,7 @@ open class XiweiT9ImeService : InputMethodService() {
     private fun resetCompositionState() {
         ensureCoreInitialized()
 
-        if (controller.engine.buffer.isNotEmpty()) {
+        if (controller.rawBuffer.isNotEmpty()) {
             currentInputConnection?.finishComposingText()
         }
 
@@ -184,7 +235,7 @@ open class XiweiT9ImeService : InputMethodService() {
             val result = controller.onSeparator()
             handleResult(result)
             if (result is T9ImeController.ActionResult.Refresh) {
-                logAction("KEY_1", "syllable separation: appended separator to buffer '${controller.engine.buffer}'")
+                logAction("KEY_1", "syllable separation: appended separator to buffer '${controller.rawBuffer}'")
             } else {
                 logAction("KEY_1", "buffer empty -> no-op")
             }
@@ -214,7 +265,7 @@ open class XiweiT9ImeService : InputMethodService() {
         val result = controller.onDelete()
         when (result) {
             is T9ImeController.ActionResult.Refresh -> {
-                logAction("KEY_DEL", "buffer '${controller.engine.buffer}' -> engine.backspace()")
+                logAction("KEY_DEL", "buffer '${controller.rawBuffer}' -> engine.backspace()")
                 refreshUi()
             }
             is T9ImeController.ActionResult.SendDelete -> {
@@ -275,10 +326,46 @@ open class XiweiT9ImeService : InputMethodService() {
         val limit = settingsRepository.getCandidateCount()
         val candidates = controller.refreshCandidates(limit)
 
-        if (candidates.isEmpty()) {
+        if (candidates.isEmpty() && !isDictPreparing) {
             candidateContainer.visibility = View.GONE
         } else {
             candidateContainer.visibility = View.VISIBLE
+        }
+
+        if (isDictPreparing) {
+            for (i in 0 until candidateContainer.childCount) {
+                candidateContainer.getChildAt(i).visibility = View.GONE
+            }
+
+            val btn: TextView = if (candidateContainer.childCount > 0) {
+                val b = candidateContainer.getChildAt(0) as TextView
+                b.visibility = View.VISIBLE
+                b
+            } else {
+                val newBtn = TextView(this).apply {
+                    textSize = 18f
+                    val currentTheme = settingsRepository.getTheme()
+                    val isDark = currentTheme == "dark" || (currentTheme == "system" && (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES))
+                    setTextColor(if (isDark) android.graphics.Color.parseColor("#E0E0E0") else android.graphics.Color.parseColor("#333333"))
+                    gravity = android.view.Gravity.CENTER
+                    setPadding(32, 16, 32, 16)
+                    background = getDrawable(R.drawable.candidate_bg)
+                    isClickable = false
+                    isFocusable = false
+                }
+                val layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    setMargins(0, 0, 16, 0)
+                }
+                candidateContainer.addView(newBtn, layoutParams)
+                newBtn
+            }
+            btn.text = "词库准备中..."
+            btn.setOnClickListener(null)
+
+            return
         }
 
         for ((index, candidate) in candidates.withIndex()) {
@@ -326,6 +413,10 @@ open class XiweiT9ImeService : InputMethodService() {
 
         val tag = "XiweiT9Debug"
         val engine = controller.engine
+        if (engine == null) {
+            debugLogger.log(tag, "Engine not initialized yet.")
+            return
+        }
         debugLogger.log(tag, "================== T9 Debug Info ==================")
         debugLogger.log(tag, "raw buffer: ${engine.buffer}")
         debugLogger.log(tag, "getPreedit(): ${engine.getPreedit()}")

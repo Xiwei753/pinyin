@@ -7,23 +7,22 @@ import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.TextView
+import io.github.xiwei753.pinyin.t9.data.DictionaryManager
+import io.github.xiwei753.pinyin.t9.data.DictionaryState
+import io.github.xiwei753.pinyin.t9.data.DictionaryStateListener
 
-class MainActivity : Activity() {
+class MainActivity : Activity(), DictionaryStateListener {
+
+    private lateinit var dictStatusText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val dict = io.github.xiwei753.pinyin.t9.data.DictionaryManager.getProvider(this) as io.github.xiwei753.pinyin.t9.data.SQLiteDictionary
-        val dictStatusText = findViewById<TextView>(R.id.text_main_dict_status)
+        dictStatusText = findViewById(R.id.text_main_dict_status)
 
-        if (dict.isFallback) {
-            dictStatusText.text = "词库状态: 加载失败，已回退 (${dict.loadedWordCount} 词)"
-            dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
-        } else {
-            dictStatusText.text = "词库已加载 ${dict.loadedWordCount} 词"
-            dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
-        }
+        DictionaryManager.prepareAsync(this)
+        DictionaryManager.registerListener(this)
 
         findViewById<Button>(R.id.btn_enable_ime).setOnClickListener {
             val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
@@ -38,6 +37,31 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.btn_settings).setOnClickListener {
             val intent = Intent(this, SettingsActivity::class.java)
             startActivity(intent)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        DictionaryManager.unregisterListener(this)
+    }
+
+    override fun onStateChanged(state: DictionaryState) {
+        runOnUiThread {
+            when (state) {
+                is DictionaryState.NotStarted, is DictionaryState.Preparing -> {
+                    dictStatusText.text = "词库状态: 正在准备..."
+                    dictStatusText.setTextColor(android.graphics.Color.parseColor("#FFA000"))
+                }
+                is DictionaryState.Ready -> {
+                    val dict = state.dictionary
+                    dictStatusText.text = "词库已加载 ${dict.loadedWordCount} 词"
+                    dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
+                }
+                is DictionaryState.Fallback -> {
+                    dictStatusText.text = "词库状态: 加载失败，已回退"
+                    dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
+                }
+            }
         }
     }
 }

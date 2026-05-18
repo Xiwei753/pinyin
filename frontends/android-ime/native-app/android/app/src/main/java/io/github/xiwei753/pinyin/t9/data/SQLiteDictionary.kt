@@ -11,62 +11,69 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import kotlin.system.measureTimeMillis
 
-class SQLiteDictionary(private val context: Context) : DictionaryProvider {
+class SQLiteDictionary private constructor(
+    private var db: SQLiteDatabase?,
+    val isFallback: Boolean,
+    val loadedWordCount: Int
+) : DictionaryProvider {
 
-    private val dbName = "t9_dict.db"
-    private var db: SQLiteDatabase? = null
+    companion object {
+        private const val DB_NAME = "t9_dict.db"
 
-    var isFallback: Boolean = false
-        private set
-    var loadedWordCount: Int = 0
-        private set
+        fun prepareAndOpen(context: Context): SQLiteDictionary {
+            val dbFile = context.getDatabasePath(DB_NAME)
 
-    init {
-        openDatabase()
-    }
+            try {
+                // Very simple versioning: check if asset length matches local file length
+                val assetStream = context.assets.open(DB_NAME)
+                val assetSize = assetStream.available()
+                assetStream.close()
 
-    private fun openDatabase() {
-        val dbFile = context.getDatabasePath(dbName)
+                if (!dbFile.exists() || dbFile.length() != assetSize.toLong()) {
+                    Log.d("SQLiteDictionary", "Copying database from assets. Old size: ${if(dbFile.exists()) dbFile.length() else 0}, New size: $assetSize")
+                    dbFile.parentFile?.mkdirs()
 
-        try {
-            // Very simple versioning: check if asset length matches local file length
-            val assetStream = context.assets.open(dbName)
-            val assetSize = assetStream.available()
-            assetStream.close()
+                    val tmpFile = File(dbFile.absolutePath + ".tmp")
+                    copyDatabase(context, tmpFile)
 
-            if (!dbFile.exists() || dbFile.length() != assetSize.toLong()) {
-                Log.d("SQLiteDictionary", "Copying database from assets. Old size: ${if(dbFile.exists()) dbFile.length() else 0}, New size: $assetSize")
-                dbFile.parentFile?.mkdirs()
-                copyDatabase(dbFile)
+                    // Atomic rename to prevent partial corruption
+                    if (tmpFile.renameTo(dbFile)) {
+                        Log.d("SQLiteDictionary", "Successfully replaced db file.")
+                    } else {
+                        Log.e("SQLiteDictionary", "Failed to rename tmp file to db file.")
+                        throw RuntimeException("Failed to rename temporary database file.")
+                    }
+                }
+
+                val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+
+                var loadedWordCount = 0
+                var isFallback = false
+                val cursor = db.rawQuery("SELECT COUNT(*) FROM entries", null)
+                if (cursor != null && cursor.moveToFirst()) {
+                    loadedWordCount = cursor.getInt(0)
+                    cursor.close()
+                }
+                Log.d("SQLiteDictionary", "Successfully opened db with $loadedWordCount entries")
+                return SQLiteDictionary(db, isFallback, loadedWordCount)
+            } catch (e: Exception) {
+                Log.e("SQLiteDictionary", "Error opening database", e)
+                return SQLiteDictionary(null, true, 2) // Fallback mode word count
             }
+        }
 
-            db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-
-            val cursor = db?.rawQuery("SELECT COUNT(*) FROM entries", null)
-            if (cursor != null && cursor.moveToFirst()) {
-                loadedWordCount = cursor.getInt(0)
-                isFallback = false
-                cursor.close()
+        private fun copyDatabase(context: Context, dbFile: File) {
+            val inputStream: InputStream = context.assets.open(DB_NAME)
+            val outputStream = FileOutputStream(dbFile)
+            val buffer = ByteArray(1024 * 32)
+            var length: Int
+            while (inputStream.read(buffer).also { length = it } > 0) {
+                outputStream.write(buffer, 0, length)
             }
-            Log.d("SQLiteDictionary", "Successfully opened db with $loadedWordCount entries")
-        } catch (e: Exception) {
-            Log.e("SQLiteDictionary", "Error opening database", e)
-            isFallback = true
-            loadedWordCount = 2 // Fallback mode word count
+            outputStream.flush()
+            outputStream.close()
+            inputStream.close()
         }
-    }
-
-    private fun copyDatabase(dbFile: File) {
-        val inputStream: InputStream = context.assets.open(dbName)
-        val outputStream = FileOutputStream(dbFile)
-        val buffer = ByteArray(1024 * 32)
-        var length: Int
-        while (inputStream.read(buffer).also { length = it } > 0) {
-            outputStream.write(buffer, 0, length)
-        }
-        outputStream.flush()
-        outputStream.close()
-        inputStream.close()
     }
 
     private fun cursorToCandidates(cursor: android.database.Cursor, forcePrefixOrigin: Boolean = false): List<Candidate> {

@@ -9,10 +9,14 @@ import android.widget.Spinner
 import android.widget.Toast
 import android.widget.AdapterView
 import android.view.View
+import io.github.xiwei753.pinyin.t9.data.DictionaryManager
+import io.github.xiwei753.pinyin.t9.data.DictionaryState
+import io.github.xiwei753.pinyin.t9.data.DictionaryStateListener
 
-class SettingsActivity : Activity() {
+class SettingsActivity : Activity(), DictionaryStateListener {
 
     private lateinit var settingsRepository: SettingsRepository
+    private lateinit var dictStatusText: android.widget.TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,15 +85,34 @@ class SettingsActivity : Activity() {
         }
 
         // Dictionary Status
-        val dictStatusText = findViewById<android.widget.TextView>(R.id.text_dict_status)
-        val dict = io.github.xiwei753.pinyin.t9.data.DictionaryManager.getProvider(this) as io.github.xiwei753.pinyin.t9.data.SQLiteDictionary
+        dictStatusText = findViewById(R.id.text_dict_status)
 
-        if (dict.isFallback) {
-            dictStatusText.text = "词库加载失败，已回退到示例词库，${dict.loadedWordCount} 词"
-            dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
-        } else {
-            dictStatusText.text = "内置词库已加载：rime-ice 来源，${dict.loadedWordCount} 词"
-            dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
+        DictionaryManager.prepareAsync(this)
+        DictionaryManager.registerListener(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        DictionaryManager.unregisterListener(this)
+    }
+
+    override fun onStateChanged(state: DictionaryState) {
+        runOnUiThread {
+            when (state) {
+                is DictionaryState.NotStarted, is DictionaryState.Preparing -> {
+                    dictStatusText.text = "正在准备词库..."
+                    dictStatusText.setTextColor(android.graphics.Color.parseColor("#FFA000"))
+                }
+                is DictionaryState.Ready -> {
+                    val dict = state.dictionary
+                    dictStatusText.text = "内置词库已加载：rime-ice 来源，${dict.loadedWordCount} 词"
+                    dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
+                }
+                is DictionaryState.Fallback -> {
+                    dictStatusText.text = "词库加载失败，已回退到示例词库"
+                    dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
+                }
+            }
         }
     }
 
