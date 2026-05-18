@@ -118,6 +118,13 @@ class T9EngineGoldenTest {
     }
 
     @Test
+    fun testLoadedWordCountGreaterThan30000() {
+        val dict = TestSQLiteDictionary(TestPaths.assetDatabase().absolutePath)
+        assertTrue(dict.getLoadedWordCount() > 30000)
+        assertTrue(dict.getPinyinExactCandidates("wo").isNotEmpty())
+    }
+
+    @Test
     fun testSeparatorBuTaiXing() {
         val engine = loadRealEngine()
         val sepDigits = "28182419464"

@@ -80,6 +80,30 @@ class T9ImeControllerTest {
     }
 
     @Test
+    fun testZeroKeyDoesNotClearBufferWhenNoCandidatesAndUnreadyDict() {
+        // Mock a dictionary that returns no candidates (e.g. unready or empty)
+        `when`(dictionary.getPinyinExactCandidates(anyString())).thenReturn(emptyList())
+        `when`(dictionary.getSingleSyllableCandidates(anyString())).thenReturn(emptyList())
+
+        controller.inputDigit("9")
+        controller.inputDigit("6")
+        controller.refreshCandidates(30)
+        assertTrue(controller.currentCandidates.isEmpty())
+
+        // Buffer has "96"
+        assertEquals("96", engine.buffer)
+
+        // Press 0
+        val result = controller.onZero()
+
+        // It should return NoAction to prevent destroying user input
+        assertTrue("Should return NoAction", result is T9ImeController.ActionResult.NoAction)
+
+        // Ensure buffer is still there
+        assertEquals("96", engine.buffer)
+    }
+
+    @Test
     fun testSeparatorKeyWithSeparatedInput() {
         controller.inputDigit("2")
         controller.inputDigit("8")
