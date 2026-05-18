@@ -242,4 +242,29 @@ class T9ImeControllerTest {
         assertEquals("Candidates should be limited to requested count", 1, candidates.size)
         assertEquals("一", candidates[0].text)
     }
+
+    @Test
+    fun testFallbackBufferWhenEngineIsNull() {
+        val noEngineController = T9ImeController(null)
+        noEngineController.inputDigit("9")
+        noEngineController.inputDigit("6")
+        assertEquals("96", noEngineController.rawBuffer)
+        assertEquals("96", noEngineController.preedit)
+
+        val result = noEngineController.onZero()
+        assertTrue(result is T9ImeController.ActionResult.NoAction)
+        assertEquals("96", noEngineController.rawBuffer)
+
+        noEngineController.onSeparator()
+        assertEquals("961", noEngineController.rawBuffer)
+
+        noEngineController.onDelete()
+        assertEquals("96", noEngineController.rawBuffer)
+
+        val newEngine = T9Engine(mock(DictionaryProvider::class.java))
+        noEngineController.attachEngine(newEngine)
+        assertEquals("96", noEngineController.rawBuffer)
+        assertEquals("96", newEngine.buffer)
+    }
+
 }

@@ -3,12 +3,14 @@ package io.github.xiwei753.pinyin.t9
 import io.github.xiwei753.pinyin.t9.core.Candidate
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 
-class T9ImeController(val engine: T9Engine) {
+class T9ImeController(var engine: T9Engine?) {
 
     private var _currentCandidates: List<Candidate> = emptyList()
+    private var fallbackBuffer: String = ""
 
     val currentCandidates: List<Candidate> get() = _currentCandidates
-    val preedit: String get() = engine.getPreedit()
+    val preedit: String get() = engine?.getPreedit() ?: fallbackBuffer
+    val rawBuffer: String get() = engine?.buffer ?: fallbackBuffer
 
     sealed class ActionResult {
         data class CommitText(val text: String) : ActionResult()
@@ -17,38 +19,78 @@ class T9ImeController(val engine: T9Engine) {
         object NoAction : ActionResult()
     }
 
+    fun attachEngine(newEngine: T9Engine) {
+        this.engine = newEngine
+        for (char in fallbackBuffer) {
+            newEngine.inputDigit(char.toString())
+        }
+        fallbackBuffer = ""
+    }
+
     fun inputDigit(digit: String) {
-        engine.inputDigit(digit)
+        val eng = engine
+        if (eng != null) {
+            eng.inputDigit(digit)
+        } else {
+            if (digit.matches(Regex("^[1-9]$"))) {
+                fallbackBuffer += digit
+            }
+        }
     }
 
     fun onSeparator(): ActionResult {
-        return if (engine.buffer.isNotEmpty()) {
-            engine.inputDigit("1")
-            ActionResult.Refresh
+        val eng = engine
+        if (eng != null) {
+            return if (eng.buffer.isNotEmpty()) {
+                eng.inputDigit("1")
+                ActionResult.Refresh
+            } else {
+                ActionResult.NoAction
+            }
         } else {
-            ActionResult.NoAction
+            return if (fallbackBuffer.isNotEmpty()) {
+                fallbackBuffer += "1"
+                ActionResult.Refresh
+            } else {
+                ActionResult.NoAction
+            }
         }
     }
 
     fun onZero(): ActionResult {
-        if (engine.buffer.isEmpty()) {
-            return ActionResult.CommitText(" ")
+        val eng = engine
+        if (eng != null) {
+            if (eng.buffer.isEmpty()) {
+                return ActionResult.CommitText(" ")
+            }
+            if (_currentCandidates.isNotEmpty()) {
+                val candidate = _currentCandidates[0]
+                eng.commitCandidate(candidate)
+                _currentCandidates = emptyList()
+                return ActionResult.CommitText(candidate.text)
+            }
+            // If buffer is not empty but dictionary hasn't loaded properly to give candidates, we don't drop the buffer.
+            return ActionResult.NoAction
+        } else {
+            if (fallbackBuffer.isEmpty()) {
+                return ActionResult.CommitText(" ")
+            }
+            return ActionResult.NoAction
         }
-        if (_currentCandidates.isNotEmpty()) {
-            val candidate = _currentCandidates[0]
-            engine.commitCandidate(candidate)
-            _currentCandidates = emptyList()
-            return ActionResult.CommitText(candidate.text)
-        }
-        // If buffer is not empty but dictionary hasn't loaded properly to give candidates, we don't drop the buffer.
-        // It's safer to do NoAction or commit raw digits if user insists, but clearing buffer is destructive.
-        return ActionResult.NoAction
     }
 
     fun onDelete(): ActionResult {
-        if (engine.buffer.isNotEmpty()) {
-            engine.backspace()
-            return ActionResult.Refresh
+        val eng = engine
+        if (eng != null) {
+            if (eng.buffer.isNotEmpty()) {
+                eng.backspace()
+                return ActionResult.Refresh
+            }
+        } else {
+            if (fallbackBuffer.isNotEmpty()) {
+                fallbackBuffer = fallbackBuffer.substring(0, fallbackBuffer.length - 1)
+                return ActionResult.Refresh
+            }
         }
         return ActionResult.SendDelete
     }
@@ -56,18 +98,25 @@ class T9ImeController(val engine: T9Engine) {
     fun onCandidateClick(index: Int): ActionResult {
         if (index < 0 || index >= _currentCandidates.size) return ActionResult.NoAction
         val candidate = _currentCandidates[index]
-        engine.commitCandidate(candidate)
+        engine?.commitCandidate(candidate)
         _currentCandidates = emptyList()
+        fallbackBuffer = ""
         return ActionResult.CommitText(candidate.text)
     }
 
     fun refreshCandidates(limit: Int): List<Candidate> {
-        _currentCandidates = engine.getVisibleCandidates(limit)
+        val eng = engine
+        _currentCandidates = if (eng != null) {
+            eng.getVisibleCandidates(limit)
+        } else {
+            emptyList()
+        }
         return _currentCandidates
     }
 
     fun reset() {
-        engine.clear()
+        engine?.clear()
+        fallbackBuffer = ""
         _currentCandidates = emptyList()
     }
 }
