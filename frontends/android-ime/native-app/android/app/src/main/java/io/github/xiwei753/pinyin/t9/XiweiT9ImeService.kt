@@ -10,7 +10,7 @@ import io.github.xiwei753.pinyin.t9.core.T9Engine
 import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
 import io.github.xiwei753.pinyin.t9.data.DictionaryManager
 
-class XiweiT9ImeService : InputMethodService() {
+open class XiweiT9ImeService : InputMethodService() {
 
     private lateinit var bufferText: TextView
     private lateinit var candidateContainer: LinearLayout
@@ -205,9 +205,10 @@ class XiweiT9ImeService : InputMethodService() {
         view.findViewById<TextView>(R.id.key_1).setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
             if (engine.buffer.isNotEmpty()) {
+                logAction("KEY_1", "syllable separation: appending 1 to buffer '${engine.buffer}'")
                 onDigitPressed("1")
             } else {
-                // Future: symbol panel or nothing
+                logAction("KEY_1", "buffer empty -> no-op")
             }
         }
 
@@ -234,10 +235,11 @@ class XiweiT9ImeService : InputMethodService() {
 
     private fun onDeletePressed() {
         if (engine.buffer.isNotEmpty()) {
+            logAction("KEY_DEL", "buffer '${engine.buffer}' -> engine.backspace()")
             engine.backspace()
             updateUi()
         } else {
-            // If buffer is empty, send a backspace to the app
+            logAction("KEY_DEL", "buffer empty -> send DEL key event to app")
             currentInputConnection?.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DEL))
             currentInputConnection?.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DEL))
         }
@@ -245,14 +247,16 @@ class XiweiT9ImeService : InputMethodService() {
 
     private fun onZeroPressed() {
         if (engine.buffer.isEmpty()) {
+            logAction("KEY_0", "buffer empty -> commit space")
             currentInputConnection?.commitText(" ", 1)
         } else {
             if (currentCandidates.isNotEmpty()) {
                 val candidateToCommit = currentCandidates[0]
+                logAction("KEY_0", "buffer non-empty, has ${currentCandidates.size} candidates -> commit first: ${candidateToCommit.text}")
                 val committed = engine.commitCandidate(candidateToCommit)
                 currentInputConnection?.commitText(committed.text, 1)
             } else {
-                currentInputConnection?.commitText(engine.buffer, 1)
+                logAction("KEY_0", "buffer non-empty, no candidates -> clear engine")
                 engine.clear()
             }
             updateUi()
@@ -346,9 +350,15 @@ class XiweiT9ImeService : InputMethodService() {
     private fun onCandidateClicked(index: Int) {
         if (index >= 0 && index < currentCandidates.size) {
             val candidateToCommit = currentCandidates[index]
+            logAction("CANDIDATE_CLICK", "index=$index text=${candidateToCommit.text} pinyin=${candidateToCommit.sourcePinyin}")
             val committed = engine.commitCandidate(candidateToCommit)
             currentInputConnection?.commitText(committed.text, 1)
             updateUi()
         }
+    }
+
+    private fun logAction(action: String, detail: String) {
+        if (!settingsRepository.isDebugLoggingEnabled()) return
+        debugLogger.log("XiweiT9Action", "$action: $detail")
     }
 }

@@ -1,9 +1,12 @@
 package io.github.xiwei753.pinyin.t9
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Button
 import android.widget.Switch
 import android.widget.Spinner
+import android.widget.Toast
 import android.widget.AdapterView
 import android.view.View
 
@@ -19,7 +22,6 @@ class SettingsActivity : Activity() {
 
         val hapticSwitch = findViewById<Switch>(R.id.switch_haptic)
         hapticSwitch.isChecked = settingsRepository.isHapticFeedbackEnabled()
-        // Prevent system from triggering its own haptic feedback on the switch which might cause crashes
         hapticSwitch.isHapticFeedbackEnabled = false
 
         hapticSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -32,6 +34,9 @@ class SettingsActivity : Activity() {
         debugLoggingSwitch.setOnCheckedChangeListener { _, isChecked ->
             settingsRepository.setDebugLoggingEnabled(isChecked)
         }
+
+        val exportLogButton = findViewById<Button>(R.id.btn_export_log)
+        exportLogButton.setOnClickListener { exportDebugLogs() }
 
         // Candidate count
         val candidateCountSpinner = findViewById<Spinner>(R.id.spinner_candidate_count)
@@ -86,5 +91,19 @@ class SettingsActivity : Activity() {
             dictStatusText.text = "✅ rime-ice 已加载 (${dictManager.loadedWordCount} 词)"
             dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
         }
+    }
+
+    private fun exportDebugLogs() {
+        val logContent = T9DebugLogStore.dump()
+        if (logContent.isEmpty()) {
+            Toast.makeText(this, "当前没有调试日志，请先打开调试日志开关并使用输入法", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, logContent)
+        }
+        startActivity(Intent.createChooser(shareIntent, "导出调试日志"))
     }
 }
