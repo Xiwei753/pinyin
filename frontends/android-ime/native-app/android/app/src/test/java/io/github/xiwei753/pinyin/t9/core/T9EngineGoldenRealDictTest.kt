@@ -1,6 +1,6 @@
 package io.github.xiwei753.pinyin.t9.core
 
-import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
+import io.github.xiwei753.pinyin.t9.testutil.TestSQLiteDictionary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -10,7 +10,7 @@ import io.github.xiwei753.pinyin.t9.testutil.TestPaths
 
 class T9EngineGoldenRealDictTest {
     private fun realEngine(): T9Engine {
-        return T9Engine(BuiltinDictionary(FileInputStream(TestPaths.assetDictionary())))
+        return T9Engine(TestSQLiteDictionary(TestPaths.assetDatabase().absolutePath))
     }
 
     private fun typeDigits(engine: T9Engine, digits: String) {

@@ -24,8 +24,28 @@ class MainActivity : Activity() {
             dictStatusText.text = "词库状态: 加载失败，已回退 (${dict.loadedWordCount} 词)"
             dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
         } else {
-            dictStatusText.text = "词库状态: 已加载 (${dict.loadedWordCount} 词)"
+            dictStatusText.text = "词库已加载 ${dict.loadedWordCount} 词"
             dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
+        }
+
+        // Add auto-refresh polling just in case it takes a moment to copy DB on first launch
+        if (dict == null) {
+            dictStatusText.postDelayed(object : Runnable {
+                override fun run() {
+                    val newDict = io.github.xiwei753.pinyin.t9.data.DictionaryManager.instance
+                    if (newDict != null) {
+                        if (newDict.isFallback) {
+                            dictStatusText.text = "词库状态: 加载失败，已回退 (${newDict.loadedWordCount} 词)"
+                            dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
+                        } else {
+                            dictStatusText.text = "词库已加载 ${newDict.loadedWordCount} 词"
+                            dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
+                        }
+                    } else {
+                        dictStatusText.postDelayed(this, 500)
+                    }
+                }
+            }, 500)
         }
 
         findViewById<Button>(R.id.btn_enable_ime).setOnClickListener {

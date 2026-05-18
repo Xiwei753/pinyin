@@ -6,7 +6,6 @@ import android.widget.LinearLayout
 import android.view.LayoutInflater
 import android.widget.TextView
 import io.github.xiwei753.pinyin.t9.core.T9Engine
-import io.github.xiwei753.pinyin.t9.data.BuiltinDictionary
 import io.github.xiwei753.pinyin.t9.data.DictionaryManager
 
 open class XiweiT9ImeService : InputMethodService() {

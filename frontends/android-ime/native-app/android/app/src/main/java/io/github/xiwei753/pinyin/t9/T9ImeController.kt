@@ -40,9 +40,9 @@ class T9ImeController(val engine: T9Engine) {
             _currentCandidates = emptyList()
             return ActionResult.CommitText(candidate.text)
         }
-        engine.clear()
-        _currentCandidates = emptyList()
-        return ActionResult.Refresh
+        // If buffer is not empty but dictionary hasn't loaded properly to give candidates, we don't drop the buffer.
+        // It's safer to do NoAction or commit raw digits if user insists, but clearing buffer is destructive.
+        return ActionResult.NoAction
     }
 
     fun onDelete(): ActionResult {

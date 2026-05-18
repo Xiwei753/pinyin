@@ -45,4 +45,5 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.3.1")
+    testImplementation("org.xerial:sqlite-jdbc:3.41.2.1")
 }

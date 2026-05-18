@@ -74,8 +74,8 @@ class T9ImeControllerTest {
         controllerWithSpy.refreshCandidates(30)
 
         val result = controllerWithSpy.onZero()
-        assertTrue("Should return Refresh", result is T9ImeController.ActionResult.Refresh)
-        assertTrue("Buffer should be empty", engineSpy.buffer.isEmpty())
+        assertTrue("Should return NoAction", result is T9ImeController.ActionResult.NoAction)
+        assertFalse("Buffer should not be empty", engineSpy.buffer.isEmpty())
         assertTrue("Candidates should be empty", controllerWithSpy.currentCandidates.isEmpty())
     }
 
