@@ -105,7 +105,7 @@ open class UserDictionary private constructor(
         return candidates
     }
 
-    fun getUserBoost(pinyin: String, text: String): Int {
+    open fun getUserBoost(pinyin: String, text: String): Int {
         if (db == null) return 0
 
         val cursor = db?.rawQuery("""
@@ -129,7 +129,7 @@ open class UserDictionary private constructor(
         Log.d("UserDictionary", "Cleared user dictionary")
     }
 
-    fun close() {
+    open fun close() {
         db?.close()
         db = null
         instance = null
