@@ -33,7 +33,7 @@ open class XiweiT9ImeService : InputMethodService() {
             hapticFeedbackManager = HapticFeedbackManager(this, settingsRepository)
         }
         if (!this::controller.isInitialized) {
-            val dictionary: BuiltinDictionary = DictionaryManager.getInstance(this)
+            val dictionary = DictionaryManager.getProvider(this)
             val engine = T9Engine(dictionary)
             controller = T9ImeController(engine)
             T9DebugLogStore.initFileLogging(filesDir)
