@@ -111,6 +111,16 @@ class TestSQLiteDictionary(dbPath: String) : DictionaryProvider {
         return res
     }
 
+    fun getLoadedWordCount(): Int {
+        val conn = connection ?: return 0
+        val stmt = conn.createStatement()
+        val rs = stmt.executeQuery("SELECT COUNT(*) FROM entries")
+        val count = if (rs.next()) rs.getInt(1) else 0
+        rs.close()
+        stmt.close()
+        return count
+    }
+
     fun close() {
         connection?.close()
     }

@@ -43,6 +43,7 @@ jobs:
       - name: Verify Generated Dictionary Is Committed
         run: |
           git diff --exit-code frontends/android-ime/native-app/android/app/src/main/assets/t9_source_dict.tsv
+          git diff --exit-code frontends/android-ime/native-app/android/app/src/main/assets/t9_dict.db
 
       - name: Set up JDK
         uses: actions/setup-java@v4

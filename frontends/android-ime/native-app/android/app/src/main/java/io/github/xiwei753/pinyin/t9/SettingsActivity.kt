@@ -82,30 +82,9 @@ class SettingsActivity : Activity() {
 
         // Dictionary Status
         val dictStatusText = findViewById<android.widget.TextView>(R.id.text_dict_status)
-        io.github.xiwei753.pinyin.t9.data.DictionaryManager.initAsync(this)
-        val dict = io.github.xiwei753.pinyin.t9.data.DictionaryManager.instance
+        val dict = io.github.xiwei753.pinyin.t9.data.DictionaryManager.getProvider(this) as io.github.xiwei753.pinyin.t9.data.SQLiteDictionary
 
-        if (dict == null) {
-            dictStatusText.text = "词库正在加载中..."
-            dictStatusText.setTextColor(android.graphics.Color.parseColor("#1976D2"))
-
-            dictStatusText.postDelayed(object : Runnable {
-                override fun run() {
-                    val newDict = io.github.xiwei753.pinyin.t9.data.DictionaryManager.instance
-                    if (newDict != null) {
-                        if (newDict.isFallback) {
-                            dictStatusText.text = "词库加载失败，已回退到示例词库，${newDict.loadedWordCount} 词"
-                            dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
-                        } else {
-                            dictStatusText.text = "内置词库已加载：rime-ice 来源，${newDict.loadedWordCount} 词"
-                            dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
-                        }
-                    } else {
-                        dictStatusText.postDelayed(this, 500)
-                    }
-                }
-            }, 500)
-        } else if (dict.isFallback) {
+        if (dict.isFallback) {
             dictStatusText.text = "词库加载失败，已回退到示例词库，${dict.loadedWordCount} 词"
             dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
         } else {

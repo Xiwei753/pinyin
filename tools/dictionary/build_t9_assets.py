@@ -246,7 +246,7 @@ def main() -> int:
 
     cursor.execute("""
         CREATE TABLE entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY,
             text TEXT NOT NULL,
             pinyin TEXT NOT NULL,
             syllable TEXT,
