@@ -6,12 +6,27 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.TextView
 
 class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        io.github.xiwei753.pinyin.t9.data.DictionaryManager.initAsync(this)
+        val dict = io.github.xiwei753.pinyin.t9.data.DictionaryManager.instance
+        val dictStatusText = findViewById<TextView>(R.id.text_main_dict_status)
+        if (dict == null) {
+            dictStatusText.text = "词库状态: 正在加载中..."
+            dictStatusText.setTextColor(android.graphics.Color.parseColor("#1976D2"))
+        } else if (dict.isFallback) {
+            dictStatusText.text = "词库状态: 加载失败，已回退 (${dict.loadedWordCount} 词)"
+            dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
+        } else {
+            dictStatusText.text = "词库状态: 已加载 (${dict.loadedWordCount} 词)"
+            dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
+        }
 
         findViewById<Button>(R.id.btn_enable_ime).setOnClickListener {
             val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)

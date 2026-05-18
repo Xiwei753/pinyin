@@ -82,13 +82,17 @@ class SettingsActivity : Activity() {
 
         // Dictionary Status
         val dictStatusText = findViewById<android.widget.TextView>(R.id.text_dict_status)
-        val dictManager = io.github.xiwei753.pinyin.t9.data.DictionaryManager.getInstance(this)
+        io.github.xiwei753.pinyin.t9.data.DictionaryManager.initAsync(this)
+        val dict = io.github.xiwei753.pinyin.t9.data.DictionaryManager.instance
 
-        if (dictManager.isFallback) {
-            dictStatusText.text = "词库加载失败，已回退到示例词库，${dictManager.loadedWordCount} 词"
+        if (dict == null) {
+            dictStatusText.text = "词库正在加载中..."
+            dictStatusText.setTextColor(android.graphics.Color.parseColor("#1976D2"))
+        } else if (dict.isFallback) {
+            dictStatusText.text = "词库加载失败，已回退到示例词库，${dict.loadedWordCount} 词"
             dictStatusText.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
         } else {
-            dictStatusText.text = "内置词库已加载：rime-ice 来源，${dictManager.loadedWordCount} 词"
+            dictStatusText.text = "内置词库已加载：rime-ice 来源，${dict.loadedWordCount} 词"
             dictStatusText.setTextColor(android.graphics.Color.parseColor("#388E3C"))
         }
     }

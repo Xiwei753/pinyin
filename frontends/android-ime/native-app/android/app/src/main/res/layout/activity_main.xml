@@ -37,8 +37,9 @@
         android:layout_marginBottom="16dp" />
 
     <TextView
+        android:id="@+id/text_main_dict_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="词库状态: 已加载"
+        android:text="词库状态: 正在加载中..."
         android:layout_marginTop="32dp" />
 </LinearLayout>
