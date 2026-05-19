@@ -251,4 +251,108 @@ class KeyboardActionHandlerTest {
         verify(sink).commitText("我")
         assertEquals("", handler.rawBuffer)
     }
+
+    @Test
+    fun testChineseT9_clearComposingForRetype_clearsBufferNoCommit() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+        assertEquals("96", handler.rawBuffer)
+        assertTrue(handler.currentCandidates.isNotEmpty())
+
+        handler.onClearComposingForRetype()
+        assertEquals("", handler.rawBuffer)
+        assertEquals(0, handler.currentCandidates.size)
+        verify(sink, never()).commitText(anyString())
+        verify(sink, never()).sendDelete()
+    }
+
+    @Test
+    fun testEnglishT9_clearComposingForRetype_cancelsPendingNoCommit() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onDigitPressed("2")
+        assertTrue(handler.englishPending)
+        assertEquals("a", handler.preedit)
+
+        handler.onClearComposingForRetype()
+        assertEquals(false, handler.englishPending)
+        assertEquals("", handler.preedit)
+        verify(sink, never()).commitText(anyString())
+    }
+
+    @Test
+    fun testPunct_commma_commitsDirect() {
+        handler.onPunctCommit("，")
+        verify(sink).commitText("，")
+    }
+
+    @Test
+    fun testPunct_period_commitsDirect() {
+        handler.onPunctCommit("。")
+        verify(sink).commitText("。")
+    }
+
+    @Test
+    fun testPunct_question_commitsDirect() {
+        handler.onPunctCommit("？")
+        verify(sink).commitText("？")
+    }
+
+    @Test
+    fun testPunct_exclamation_commitsDirect() {
+        handler.onPunctCommit("！")
+        verify(sink).commitText("！")
+    }
+
+    @Test
+    fun testPunct_commitsComposingFirstThenPunct() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+
+        handler.onPunctCommit("，")
+        verify(sink).commitText("我")
+        verify(sink).commitText("，")
+        assertEquals("", handler.rawBuffer)
+    }
+
+    @Test
+    fun testSpace_chineseEmptyBuffer_commitsSpace() {
+        handler.onSpace()
+        verify(sink).commitText(" ")
+    }
+
+    @Test
+    fun testSpace_chineseWithCandidate_commitsFirstCandidate() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+
+        handler.onSpace()
+        verify(sink).commitText("我")
+        assertEquals("", handler.rawBuffer)
+    }
+
+    @Test
+    fun testSpace_englishMode_commitsSpace() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onSpace()
+        verify(sink).commitText(" ")
+    }
+
+    @Test
+    fun testPunct_doesNotPolluteT9Buffer() {
+        handler.onPunctCommit("，")
+        assertEquals("", handler.rawBuffer)
+        assertEquals("", handler.preedit)
+    }
 }

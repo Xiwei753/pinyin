@@ -169,6 +169,55 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     private var view: View? = null
 
+    private fun setTextColorOnAllKeys(rootView: View, textColor: Int, subColor: Int) {
+        val allKeyTextIds = listOf(
+            R.id.key_1_text,
+            R.id.key_2_number, R.id.key_2_letters,
+            R.id.key_3_number, R.id.key_3_letters,
+            R.id.key_4_number, R.id.key_4_letters,
+            R.id.key_5_number, R.id.key_5_letters,
+            R.id.key_6_number, R.id.key_6_letters,
+            R.id.key_7_number, R.id.key_7_letters,
+            R.id.key_8_number, R.id.key_8_letters,
+            R.id.key_9_number, R.id.key_9_letters,
+            R.id.key_0_number, R.id.key_0_text,
+            R.id.punct_1, R.id.punct_2, R.id.punct_3, R.id.punct_4,
+            R.id.key_del, R.id.key_retype,
+            R.id.key_toggle_symbol, R.id.key_toggle_number, R.id.key_space,
+            R.id.key_toggle_english, R.id.key_enter
+        )
+        for (id in allKeyTextIds) {
+            val tv = rootView.findViewById<TextView>(id)
+            if (tv != null) {
+                if (id == R.id.key_2_number || id == R.id.key_3_number ||
+                    id == R.id.key_4_number || id == R.id.key_5_number ||
+                    id == R.id.key_6_number || id == R.id.key_7_number ||
+                    id == R.id.key_8_number || id == R.id.key_9_number ||
+                    id == R.id.key_0_text) {
+                    tv.setTextColor(subColor)
+                } else {
+                    tv.setTextColor(textColor)
+                }
+            }
+        }
+        val allSymbolKeys = listOf(R.id.sym_1, R.id.sym_2, R.id.sym_3, R.id.sym_4, R.id.sym_5, R.id.sym_6,
+            R.id.sym_7, R.id.sym_8, R.id.sym_9, R.id.sym_10, R.id.sym_11, R.id.sym_12,
+            R.id.sym_13, R.id.sym_14, R.id.sym_15, R.id.sym_16, R.id.sym_17, R.id.sym_18,
+            R.id.sym_19, R.id.sym_20, R.id.sym_21, R.id.sym_22, R.id.sym_23, R.id.sym_24,
+            R.id.sym_25, R.id.sym_26, R.id.sym_27, R.id.sym_28, R.id.sym_29, R.id.sym_30,
+            R.id.sym_back, R.id.sym_number, R.id.sym_del, R.id.sym_enter, R.id.sym_hide,
+            R.id.num_0, R.id.num_1, R.id.num_2, R.id.num_3, R.id.num_4, R.id.num_5,
+            R.id.num_6, R.id.num_7, R.id.num_8, R.id.num_9, R.id.num_dot,
+            R.id.num_del, R.id.num_back, R.id.num_symbol, R.id.num_hide, R.id.num_enter
+        )
+        for (id in allSymbolKeys) {
+            rootView.findViewById<TextView>(id)?.setTextColor(textColor)
+        }
+        for (i in 0 until candidateContainer.childCount) {
+            (candidateContainer.getChildAt(i) as? TextView)?.setTextColor(textColor)
+        }
+    }
+
     private fun applyThemeAndHeight(rootView: View) {
         this.view = rootView
         val theme = settingsRepository.getTheme()
@@ -183,16 +232,14 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         val bgColor = if (isDark) android.graphics.Color.parseColor("#121212") else android.graphics.Color.parseColor("#F0F0F0")
         val candidateBarColor = if (isDark) android.graphics.Color.parseColor("#1E1E1E") else android.graphics.Color.parseColor("#FFFFFF")
         val textColor = if (isDark) android.graphics.Color.parseColor("#E0E0E0") else android.graphics.Color.parseColor("#333333")
+        val subColor = if (isDark) android.graphics.Color.parseColor("#888888") else android.graphics.Color.parseColor("#999999")
 
         rootView.setBackgroundColor(bgColor)
         rootView.findViewById<LinearLayout>(R.id.candidate_bar).setBackgroundColor(candidateBarColor)
         bufferText.setTextColor(if (isDark) android.graphics.Color.parseColor("#888888") else android.graphics.Color.parseColor("#888888"))
 
-        val allT9 = listOf(
-            R.id.key_1, R.id.key_2, R.id.key_3, R.id.key_4, R.id.key_5, R.id.key_6,
-            R.id.key_7, R.id.key_8, R.id.key_9, R.id.key_toggle_symbol, R.id.key_0, R.id.key_del,
-            R.id.key_toggle_english, R.id.key_toggle_number, R.id.key_hide, R.id.key_enter
-        )
+        setTextColorOnAllKeys(rootView, textColor, subColor)
+
         val heightSetting = settingsRepository.getKeyboardHeight()
         val density = resources.displayMetrics.density
         val rowHeightPx = when (heightSetting) {
@@ -200,31 +247,29 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             "high" -> (56 * density).toInt()
             else -> (48 * density).toInt()
         }
-        for (id in allT9) {
-            val keyView = rootView.findViewById<TextView>(id)
-            if (keyView != null) {
-                keyView.setTextColor(textColor)
-                val parent = keyView.parent as? android.widget.FrameLayout
-                if (parent != null) {
-                    val params = parent.layoutParams
-                    params.height = rowHeightPx
-                    parent.layoutParams = params
-                }
-            }
+        val bottomRowHeightPx = when (heightSetting) {
+            "low" -> (40 * density).toInt()
+            "high" -> (48 * density).toInt()
+            else -> (44 * density).toInt()
         }
 
-        val allSymbolKeys = listOf(R.id.sym_1, R.id.sym_2, R.id.sym_3, R.id.sym_4, R.id.sym_5, R.id.sym_6,
-            R.id.sym_7, R.id.sym_8, R.id.sym_9, R.id.sym_10, R.id.sym_11, R.id.sym_12,
-            R.id.sym_13, R.id.sym_14, R.id.sym_15, R.id.sym_16, R.id.sym_17, R.id.sym_18,
-            R.id.sym_19, R.id.sym_20, R.id.sym_21, R.id.sym_22, R.id.sym_23, R.id.sym_24,
-            R.id.sym_25, R.id.sym_26, R.id.sym_27, R.id.sym_28, R.id.sym_29, R.id.sym_30)
-        for (id in allSymbolKeys) {
-            rootView.findViewById<TextView>(id)?.setTextColor(textColor)
+        val t9RowIds = listOf(R.id.row_t9_1, R.id.row_t9_2, R.id.row_t9_3, R.id.row_t9_4)
+        for (id in t9RowIds) {
+            rootView.findViewById<View>(id)?.layoutParams?.height = rowHeightPx
         }
+        rootView.findViewById<View>(R.id.row_bottom)?.layoutParams?.height = bottomRowHeightPx
 
-        for (i in 0 until candidateContainer.childCount) {
-            (candidateContainer.getChildAt(i) as? TextView)?.setTextColor(textColor)
+        val symRowIds = listOf(R.id.row_sym_1, R.id.row_sym_2, R.id.row_sym_3, R.id.row_sym_4, R.id.row_sym_5, R.id.row_sym_6)
+        for (id in symRowIds) {
+            rootView.findViewById<View>(id)?.layoutParams?.height = rowHeightPx
         }
+        rootView.findViewById<View>(R.id.row_sym_bottom)?.layoutParams?.height = bottomRowHeightPx
+
+        val numRowIds = listOf(R.id.row_num_1, R.id.row_num_2, R.id.row_num_3, R.id.row_num_4)
+        for (id in numRowIds) {
+            rootView.findViewById<View>(id)?.layoutParams?.height = rowHeightPx
+        }
+        rootView.findViewById<View>(R.id.row_num_bottom)?.layoutParams?.height = bottomRowHeightPx
     }
 
 
@@ -238,31 +283,34 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
         val toggleEnglish = view?.findViewById<TextView>(R.id.key_toggle_english)
         if (toggleEnglish != null) {
-            toggleEnglish.text = if (handler.keyboardMode == KeyboardMode.EnglishT9) "英" else "中"
+            toggleEnglish.text = if (handler.keyboardMode == KeyboardMode.EnglishT9) "英/中" else "中/英"
         }
     }
 
     private fun setupKeys(view: View) {
+        // T9 digit keys 2-9
         val numberKeys = mapOf(
             R.id.key_2 to "2", R.id.key_3 to "3", R.id.key_4 to "4",
             R.id.key_5 to "5", R.id.key_6 to "6", R.id.key_7 to "7",
             R.id.key_8 to "8", R.id.key_9 to "9"
         )
         for ((id, digit) in numberKeys) {
-            view.findViewById<TextView>(id)?.setOnClickListener { v ->
+            view.findViewById<View>(id)?.setOnClickListener { v ->
                 hapticFeedbackManager.performTap(v)
                 handler.onDigitPressed(digit)
                 logAction("DIGIT", digit)
             }
         }
 
-        view.findViewById<TextView>(R.id.key_1)?.setOnClickListener { v ->
+        // Key 1 - separator/分词
+        view.findViewById<View>(R.id.key_1_text)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
             handler.onSeparator()
             logAction("KEY_1", "separation")
         }
 
-        val delKey = view.findViewById<TextView>(R.id.key_del)
+        // Delete key
+        val delKey = view.findViewById<View>(R.id.key_del)
         delKey?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
             handler.onDelete()
@@ -279,18 +327,41 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             false
         }
 
-        view.findViewById<TextView>(R.id.key_0)?.setOnClickListener { v ->
+        // Key 0
+        view.findViewById<View>(R.id.key_0)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
             handler.onZero()
         }
 
-        view.findViewById<TextView>(R.id.key_toggle_symbol)?.setOnClickListener { v ->
+        // Retype key
+        view.findViewById<View>(R.id.key_retype)?.setOnClickListener { v ->
+            hapticFeedbackManager.performSpecialKey(v)
+            handler.onClearComposingForRetype()
+            logAction("RETYPE", "clear")
+        }
+
+        // Punct keys - commit directly
+        val punctKeys = mapOf(
+            R.id.punct_1 to "，", R.id.punct_2 to "。",
+            R.id.punct_3 to "？", R.id.punct_4 to "！"
+        )
+        for ((id, text) in punctKeys) {
+            view.findViewById<View>(id)?.setOnClickListener { v ->
+                hapticFeedbackManager.performTap(v)
+                handler.onPunctCommit(text)
+                logAction("PUNCT", text)
+            }
+        }
+
+        // Toggle symbol panel
+        view.findViewById<View>(R.id.key_toggle_symbol)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
             handler.switchKeyboardMode(KeyboardMode.Symbol)
             updateKeyboardPanel()
         }
 
-        view.findViewById<TextView>(R.id.key_toggle_english)?.setOnClickListener { v ->
+        // Toggle English/Chinese
+        view.findViewById<View>(R.id.key_toggle_english)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
             if (handler.keyboardMode == KeyboardMode.EnglishT9) {
                 handler.switchKeyboardMode(KeyboardMode.ChineseT9)
@@ -300,20 +371,22 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             updateKeyboardPanel()
         }
 
-        view.findViewById<TextView>(R.id.key_toggle_number)?.setOnClickListener { v ->
+        // Toggle number panel
+        view.findViewById<View>(R.id.key_toggle_number)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
             handler.switchKeyboardMode(KeyboardMode.Number)
             updateKeyboardPanel()
         }
 
-        view.findViewById<TextView>(R.id.key_hide)?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
-            handler.onHideKey()
-            updateKeyboardPanel()
-            requestHideSelf(0)
+        // Space key
+        view.findViewById<View>(R.id.key_space)?.setOnClickListener { v ->
+            hapticFeedbackManager.performTap(v)
+            handler.onSpace()
+            logAction("SPACE", "space")
         }
 
-        view.findViewById<TextView>(R.id.key_enter)?.setOnClickListener { v ->
+        // Enter key
+        view.findViewById<View>(R.id.key_enter)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
             handler.onEnter()
         }
@@ -361,10 +434,6 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             updateKeyboardPanel()
             requestHideSelf(0)
         }
-        view.findViewById<TextView>(R.id.sym_more)?.setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-        }
-
         val numKeys = listOf(
             R.id.num_1 to "1", R.id.num_2 to "2", R.id.num_3 to "3",
             R.id.num_4 to "4", R.id.num_5 to "5", R.id.num_6 to "6",

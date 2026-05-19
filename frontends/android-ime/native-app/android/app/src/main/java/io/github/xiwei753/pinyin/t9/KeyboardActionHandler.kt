@@ -184,9 +184,74 @@ class KeyboardActionHandler(
         }
     }
 
+    fun onClearComposingForRetype() {
+        engine?.clear()
+        fallbackBuffer = ""
+        _currentCandidates = emptyList()
+
+        if (englishPending) {
+            englishPending = false
+            actionSink.cancelEnglishTimeout()
+            englishDigit = ' '
+            englishIndex = 0
+        }
+
+        actionSink.refreshUi()
+    }
+
+    fun onSpace() {
+        if (keyboardMode == KeyboardMode.ChineseT9) {
+            val eng = engine
+            if (eng != null) {
+                if (eng.buffer.isEmpty()) {
+                    actionSink.commitText(" ")
+                } else if (_currentCandidates.isNotEmpty()) {
+                    val candidate = _currentCandidates[0]
+                    eng.commitCandidate(candidate)
+                    _currentCandidates = emptyList()
+                    actionSink.commitText(candidate.text)
+                    actionSink.refreshUi()
+                } else {
+                    val text = eng.getPreedit()
+                    if (text.isNotEmpty()) {
+                        actionSink.commitText(text)
+                        eng.clear()
+                        fallbackBuffer = ""
+                        _currentCandidates = emptyList()
+                        actionSink.refreshUi()
+                    } else {
+                        actionSink.commitText(" ")
+                    }
+                }
+            } else {
+                if (fallbackBuffer.isNotEmpty()) {
+                    actionSink.commitText(fallbackBuffer)
+                    fallbackBuffer = ""
+                    _currentCandidates = emptyList()
+                    actionSink.refreshUi()
+                } else {
+                    actionSink.commitText(" ")
+                }
+            }
+        } else if (keyboardMode == KeyboardMode.EnglishT9) {
+            if (englishPending) {
+                commitEnglishChar()
+            }
+            actionSink.commitText(" ")
+        }
+    }
+
+    fun onPunctCommit(text: String) {
+        if (keyboardMode == KeyboardMode.ChineseT9 && rawBuffer.isNotEmpty()) {
+            commitFirstCandidateOrPreedit()
+        } else if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
+            commitEnglishChar()
+        }
+        actionSink.commitText(text)
+    }
+
     fun onDelete() {
         if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
-            val letters = englishMultiTapLetters[englishDigit] ?: ""
             if (englishIndex > 0) {
                 englishIndex--
                 actionSink.refreshUi()
