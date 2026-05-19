@@ -22,10 +22,10 @@ class XiweiT9ImeServiceLifecycleTest {
 
         val engine = mock(T9Engine::class.java)
         `when`(engine.buffer).thenReturn("")
-        val controller = T9ImeController(engine)
-        val ctrlField = XiweiT9ImeService::class.java.getDeclaredField("controller")
+        val handler = KeyboardActionHandler(mock(ImeActionSink::class.java)).apply { attachEngine(engine) }
+        val ctrlField = XiweiT9ImeService::class.java.getDeclaredField("handler")
         ctrlField.isAccessible = true
-        ctrlField.set(service, controller)
+        ctrlField.set(service, handler)
     }
 
     @Test
@@ -70,45 +70,6 @@ class XiweiT9ImeServiceLifecycleTest {
         }
     }
 
-    private fun getResetMethod(): Method {
-        val method = XiweiT9ImeService::class.java.getDeclaredMethod("resetCompositionState")
-        method.isAccessible = true
-        return method
-    }
 
-    @Test
-    fun testResetCompositionState_UI_Not_Initialized_Does_Not_Crash() {
-        val service = XiweiT9ImeService()
-        setMockCore(service)
 
-        try {
-            getResetMethod().invoke(service)
-            assertTrue(true)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            fail("Should not crash: ${e.cause}")
-        }
-    }
-
-    @Test
-    fun testResetCompositionState_UI_Initialized_Clears_Correctly() {
-        val service = XiweiT9ImeService()
-        setMockCore(service)
-
-        val bufferTextMock = mock(TextView::class.java)
-        val bufferField = XiweiT9ImeService::class.java.getDeclaredField("bufferText")
-        bufferField.isAccessible = true
-        bufferField.set(service, bufferTextMock)
-
-        val containerMock = mock(LinearLayout::class.java)
-        val containerField = XiweiT9ImeService::class.java.getDeclaredField("candidateContainer")
-        containerField.isAccessible = true
-        containerField.set(service, containerMock)
-
-        getResetMethod().invoke(service)
-
-        verify(bufferTextMock).text = ""
-        verify(containerMock).removeAllViews()
-        verify(containerMock).visibility = View.GONE
-    }
 }

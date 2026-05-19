@@ -17,7 +17,7 @@ import io.github.xiwei753.pinyin.t9.data.DictionaryState
 import io.github.xiwei753.pinyin.t9.data.DictionaryStateListener
 import io.github.xiwei753.pinyin.t9.data.UserDictionary
 
-open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
+open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, ImeActionSink {
 
     @android.annotation.SuppressLint("SoonBlockedPrivateApi")
     internal var testInputConnection: InputConnection? = null
@@ -32,7 +32,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
     private lateinit var panelSymbol: View
     private lateinit var panelNumber: View
 
-    private lateinit var controller: T9ImeController
+    private lateinit var handler: KeyboardActionHandler
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var hapticFeedbackManager: HapticFeedbackManager
     private var userDictionary: UserDictionary? = null
@@ -42,16 +42,8 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
     private var isDictPreparing = false
     private var keyboardMode = KeyboardMode.ChineseT9
 
-    private val englishMultiTapLetters = mapOf(
-        '2' to "abc", '3' to "def", '4' to "ghi", '5' to "jkl",
-        '6' to "mno", '7' to "pqrs", '8' to "tuv", '9' to "wxyz"
-    )
-    private var englishDigit = ' '
-    private var englishIndex = 0
     private val englishTimer by lazy { Handler(Looper.getMainLooper()) }
-    private val englishTimeoutMs = 600L
-    private var englishPending = false
-    private val englishTimeoutRunnable = Runnable { commitEnglishChar() }
+    private var currentEnglishRunnable: Runnable? = null
 
     private val deleteHandler by lazy { Handler(Looper.getMainLooper()) }
     private var deleteLongPressRunning = false
@@ -71,7 +63,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
     override fun onDestroy() {
         super.onDestroy()
         DictionaryManager.unregisterListener(this)
-        englishTimer.removeCallbacks(englishTimeoutRunnable)
+        cancelEnglishTimeout()
         deleteHandler.removeCallbacksAndMessages(null)
     }
 
@@ -80,19 +72,19 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
             isDictPreparing = state is DictionaryState.Preparing
             when (state) {
                 is DictionaryState.Ready -> {
-                    if (this::controller.isInitialized) {
+                    if (this::handler.isInitialized) {
                         val engine = T9Engine(state.dictionary, userDictionary)
-                        controller.attachEngine(engine)
+                        handler.attachEngine(engine)
                         if (this::bufferText.isInitialized) refreshUi()
                     }
                 }
                 is DictionaryState.Fallback -> {
-                    if (this::controller.isInitialized) {
+                    if (this::handler.isInitialized) {
                         Thread {
                             val dict = DictionaryManager.getProviderBlocking(this)
                             Handler(Looper.getMainLooper()).post {
                                 val engine = T9Engine(dict, userDictionary)
-                                controller.attachEngine(engine)
+                                handler.attachEngine(engine)
                                 if (this::bufferText.isInitialized) refreshUi()
                             }
                         }.start()
@@ -110,14 +102,14 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
         if (!this::hapticFeedbackManager.isInitialized) {
             hapticFeedbackManager = HapticFeedbackManager(this, settingsRepository)
         }
-        if (!this::controller.isInitialized) {
-            controller = T9ImeController(null)
+        if (!this::handler.isInitialized) {
+            handler = KeyboardActionHandler(this)
             T9DebugLogStore.initFileLogging(filesDir)
             DictionaryManager.registerListener(this)
             DictionaryManager.prepareAsync(this)
             val readyDict = DictionaryManager.getReadyProviderOrNull()
             if (readyDict != null) {
-                controller.attachEngine(T9Engine(readyDict, userDictionary))
+                handler.attachEngine(T9Engine(readyDict, userDictionary))
             }
         }
     }
@@ -140,38 +132,30 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
         super.onStartInputView(info, restarting)
         currentEditorInfo = info
         view?.let { applyThemeAndHeight(it) }
-        resetCompositionState()
+        if (this::handler.isInitialized) handler.onFinishInput()
     }
 
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         super.onStartInput(info, restarting)
         currentEditorInfo = info
-        resetCompositionState()
+        if (this::handler.isInitialized) handler.onFinishInput()
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
-        switchKeyboardMode(KeyboardMode.ChineseT9)
+        handler.switchKeyboardMode(KeyboardMode.ChineseT9); updateKeyboardPanel()
     }
 
     override fun onFinishInput() {
         super.onFinishInput()
-        resetCompositionState()
+        if (this::handler.isInitialized) handler.onFinishInput()
     }
 
     override fun onWindowHidden() {
         super.onWindowHidden()
-        resetCompositionState()
+        if (this::handler.isInitialized) handler.onFinishInput()
     }
 
-    private fun resetCompositionState() {
-        ensureCoreInitialized()
-        if (controller.rawBuffer.isNotEmpty()) {
-            currentInputConnection?.finishComposingText()
-        }
-        if (this::controller.isInitialized) controller.reset()
-        resetUiStateIfReady()
-    }
 
     private fun resetUiStateIfReady() {
         if (this::bufferText.isInitialized) bufferText.text = ""
@@ -241,131 +225,97 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
         }
     }
 
-    private fun switchKeyboardMode(targetMode: KeyboardMode) {
-        leavingCurrentMode()
-        keyboardMode = targetMode
-        updateKeyboardPanel()
-        resetUiStateIfReady()
-        logAction("MODE_SWITCH", "$targetMode")
-    }
 
-    private fun leavingCurrentMode() {
-        when (keyboardMode) {
-            KeyboardMode.ChineseT9 -> {
-                if (controller.rawBuffer.isNotEmpty()) {
-                    commitFirstCandidateOrPreedit()
-                }
-            }
-            KeyboardMode.EnglishT9 -> {
-                if (englishPending) {
-                    commitEnglishChar()
-                }
-            }
-            KeyboardMode.Symbol, KeyboardMode.Number -> {
-                // nothing to clean up
-            }
-        }
-    }
 
     private fun updateKeyboardPanel() {
-        panelT9.visibility = if (keyboardMode == KeyboardMode.ChineseT9 || keyboardMode == KeyboardMode.EnglishT9) View.VISIBLE else View.GONE
-        panelSymbol.visibility = if (keyboardMode == KeyboardMode.Symbol) View.VISIBLE else View.GONE
-        panelNumber.visibility = if (keyboardMode == KeyboardMode.Number) View.VISIBLE else View.GONE
+        if (!this::handler.isInitialized) return
+        val keyboardMode = handler.keyboardMode
+        panelT9.visibility = if (keyboardMode == KeyboardMode.ChineseT9 || handler.keyboardMode == KeyboardMode.EnglishT9) View.VISIBLE else View.GONE
+        panelSymbol.visibility = if (handler.keyboardMode == KeyboardMode.Symbol) View.VISIBLE else View.GONE
+        panelNumber.visibility = if (handler.keyboardMode == KeyboardMode.Number) View.VISIBLE else View.GONE
 
         val toggleEnglish = view?.findViewById<TextView>(R.id.key_toggle_english)
         if (toggleEnglish != null) {
-            toggleEnglish.text = if (keyboardMode == KeyboardMode.EnglishT9) "英" else "中"
+            toggleEnglish.text = if (handler.keyboardMode == KeyboardMode.EnglishT9) "英" else "中"
         }
     }
 
     private fun setupKeys(view: View) {
-        // Chinese T9 digit keys (2-9)
         val numberKeys = mapOf(
             R.id.key_2 to "2", R.id.key_3 to "3", R.id.key_4 to "4",
             R.id.key_5 to "5", R.id.key_6 to "6", R.id.key_7 to "7",
             R.id.key_8 to "8", R.id.key_9 to "9"
         )
         for ((id, digit) in numberKeys) {
-            view.findViewById<TextView>(id).setOnClickListener { v ->
+            view.findViewById<TextView>(id)?.setOnClickListener { v ->
                 hapticFeedbackManager.performTap(v)
-                if (keyboardMode == KeyboardMode.EnglishT9) {
-                    onEnglishDigit(digit)
-                } else {
-                    onDigitPressed(digit)
-                }
+                handler.onDigitPressed(digit)
+                logAction("DIGIT", digit)
             }
         }
 
-        view.findViewById<TextView>(R.id.key_1).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.key_1)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            if (keyboardMode == KeyboardMode.EnglishT9) {
-                onEnglishDigit("1")
-            } else {
-                val result = controller.onSeparator()
-                handleResult(result)
-                if (result is T9ImeController.ActionResult.Refresh) {
-                    logAction("KEY_1", "separation")
-                }
-            }
+            handler.onSeparator()
+            logAction("KEY_1", "separation")
         }
 
         val delKey = view.findViewById<TextView>(R.id.key_del)
-        delKey.setOnClickListener { v ->
+        delKey?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            onDeletePressed()
+            handler.onDelete()
         }
-        delKey.setOnLongClickListener { v ->
+        delKey?.setOnLongClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
             startDeleteLongPress()
             true
         }
-        delKey.setOnTouchListener { _, event ->
+        delKey?.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
                 stopDeleteLongPress()
             }
             false
         }
 
-        view.findViewById<TextView>(R.id.key_0).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.key_0)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            if (keyboardMode == KeyboardMode.EnglishT9) {
-                currentInputConnection?.commitText(" ", 1)
+            handler.onZero()
+        }
+
+        view.findViewById<TextView>(R.id.key_toggle_symbol)?.setOnClickListener { v ->
+            hapticFeedbackManager.performTap(v)
+            handler.switchKeyboardMode(KeyboardMode.Symbol)
+            updateKeyboardPanel()
+        }
+
+        view.findViewById<TextView>(R.id.key_toggle_english)?.setOnClickListener { v ->
+            hapticFeedbackManager.performTap(v)
+            if (handler.keyboardMode == KeyboardMode.EnglishT9) {
+                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
             } else {
-                onZeroPressed()
+                handler.switchKeyboardMode(KeyboardMode.EnglishT9)
             }
+            updateKeyboardPanel()
         }
 
-        view.findViewById<TextView>(R.id.key_toggle_symbol).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.key_toggle_number)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            switchKeyboardMode(KeyboardMode.Symbol)
+            handler.switchKeyboardMode(KeyboardMode.Number)
+            updateKeyboardPanel()
         }
 
-        view.findViewById<TextView>(R.id.key_toggle_english).setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            if (keyboardMode == KeyboardMode.EnglishT9) {
-                switchKeyboardMode(KeyboardMode.ChineseT9)
-            } else {
-                switchKeyboardMode(KeyboardMode.EnglishT9)
-            }
-        }
-
-        view.findViewById<TextView>(R.id.key_toggle_number).setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            switchKeyboardMode(KeyboardMode.Number)
-        }
-
-        view.findViewById<TextView>(R.id.key_hide).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.key_hide)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            switchKeyboardMode(KeyboardMode.ChineseT9)
+            handler.onHideKey()
+            updateKeyboardPanel()
             requestHideSelf(0)
         }
 
-        view.findViewById<TextView>(R.id.key_enter).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.key_enter)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            onEnterPressed()
+            handler.onEnter()
         }
 
-        // Symbol panel keys
         val symbolTexts = listOf(
             R.id.sym_1 to "，", R.id.sym_2 to "。", R.id.sym_3 to "？", R.id.sym_4 to "！",
             R.id.sym_5 to "：", R.id.sym_6 to "；", R.id.sym_7 to "、", R.id.sym_8 to "“",
@@ -377,40 +327,42 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
             R.id.sym_29 to "<", R.id.sym_30 to ">"
         )
         for ((id, text) in symbolTexts) {
-            view.findViewById<TextView>(id).setOnClickListener { v ->
+            view.findViewById<TextView>(id)?.setOnClickListener { v ->
                 hapticFeedbackManager.performTap(v)
-                currentInputConnection?.commitText(text, 1)
-                switchKeyboardMode(KeyboardMode.ChineseT9)
+                handler.onDigitPressed(text)
+                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+                updateKeyboardPanel()
             }
         }
 
-        view.findViewById<TextView>(R.id.sym_back).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.sym_back)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            switchKeyboardMode(KeyboardMode.ChineseT9)
+            handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+            updateKeyboardPanel()
         }
-        view.findViewById<TextView>(R.id.sym_number).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.sym_number)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            switchKeyboardMode(KeyboardMode.Number)
+            handler.switchKeyboardMode(KeyboardMode.Number)
+            updateKeyboardPanel()
         }
-        view.findViewById<TextView>(R.id.sym_del).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.sym_del)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            sendSystemDelete()
+            handler.onDelete()
         }
-        view.findViewById<TextView>(R.id.sym_enter).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.sym_enter)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            sendEditorActionOrNewline()
+            handler.onEnter()
         }
-        view.findViewById<TextView>(R.id.sym_hide).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.sym_hide)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            switchKeyboardMode(KeyboardMode.ChineseT9)
+            handler.onHideKey()
+            updateKeyboardPanel()
             requestHideSelf(0)
         }
-        view.findViewById<TextView>(R.id.sym_more).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.sym_more)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            // already in symbol mode; no-op
         }
 
-        // Number panel keys
         val numKeys = listOf(
             R.id.num_1 to "1", R.id.num_2 to "2", R.id.num_3 to "3",
             R.id.num_4 to "4", R.id.num_5 to "5", R.id.num_6 to "6",
@@ -418,116 +370,48 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
             R.id.num_0 to "0", R.id.num_dot to "."
         )
         for ((id, text) in numKeys) {
-            view.findViewById<TextView>(id).setOnClickListener { v ->
+            view.findViewById<TextView>(id)?.setOnClickListener { v ->
                 hapticFeedbackManager.performTap(v)
-                currentInputConnection?.commitText(text, 1)
+                handler.onDigitPressed(text)
             }
         }
 
-        view.findViewById<TextView>(R.id.num_del).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.num_del)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            sendSystemDelete()
+            handler.onDelete()
         }
-        view.findViewById<TextView>(R.id.num_back).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.num_back)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            switchKeyboardMode(KeyboardMode.ChineseT9)
+            handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+            updateKeyboardPanel()
         }
-        view.findViewById<TextView>(R.id.num_symbol).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.num_symbol)?.setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            switchKeyboardMode(KeyboardMode.Symbol)
+            handler.switchKeyboardMode(KeyboardMode.Symbol)
+            updateKeyboardPanel()
         }
-        view.findViewById<TextView>(R.id.num_hide).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.num_hide)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            switchKeyboardMode(KeyboardMode.ChineseT9)
+            handler.onHideKey()
+            updateKeyboardPanel()
             requestHideSelf(0)
         }
-        view.findViewById<TextView>(R.id.num_enter).setOnClickListener { v ->
+        view.findViewById<TextView>(R.id.num_enter)?.setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            sendEditorActionOrNewline()
+            handler.onEnter()
         }
     }
 
-    private fun onEnglishDigit(digit: String) {
-        val d = digit[0]
-        val letters = englishMultiTapLetters[d]
-        if (letters == null) {
-            commitEnglishChar()
-            return
-        }
-        if (englishPending && d == englishDigit) {
-            englishIndex = (englishIndex + 1) % letters.length
-        } else {
-            commitEnglishChar()
-            englishDigit = d
-            englishIndex = 0
-        }
-        englishPending = true
-        englishTimer.removeCallbacks(englishTimeoutRunnable)
-        englishTimer.postDelayed(englishTimeoutRunnable, englishTimeoutMs)
-        val composing = letters[englishIndex].toString()
-        bufferText.text = composing
-    }
 
-    private fun commitEnglishChar() {
-        if (!englishPending) return
-        englishPending = false
-        englishTimer.removeCallbacks(englishTimeoutRunnable)
-        val letters = englishMultiTapLetters[englishDigit] ?: run { englishDigit = ' '; return }
-        if (englishIndex < letters.length) {
-            currentInputConnection?.commitText(letters[englishIndex].toString(), 1)
-        }
-        bufferText.text = ""
-        englishDigit = ' '
-        englishIndex = 0
-    }
 
-    private fun onDigitPressed(digit: String) {
-        controller.inputDigit(digit)
-        refreshUi()
-        logAction("DIGIT", digit)
-    }
 
-    private fun onDeletePressed() {
-        if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
-            val letters = englishMultiTapLetters[englishDigit] ?: ""
-            if (englishIndex > 0) {
-                englishIndex--
-                val composing = letters[englishIndex].toString()
-                bufferText.text = composing
-            } else {
-                commitEnglishChar()
-                sendSystemDelete()
-            }
-            return
-        }
-        val result = controller.onDelete()
-        when (result) {
-            is T9ImeController.ActionResult.Refresh -> {
-                logAction("KEY_DEL", "buffer ${controller.rawBuffer}")
-                refreshUi()
-            }
-            is T9ImeController.ActionResult.SendDelete -> {
-                logAction("KEY_DEL", "send DEL")
-                sendSystemDelete()
-            }
-            else -> {}
-        }
-    }
 
     private fun startDeleteLongPress() {
         deleteLongPressRunning = true
         deleteHandler.post(object : Runnable {
             override fun run() {
                 if (!deleteLongPressRunning) return
-                if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
-                    commitEnglishChar()
-                }
-                val result = controller.onDelete()
-                if (result is T9ImeController.ActionResult.SendDelete) {
-                    sendSystemDelete()
-                } else {
-                    refreshUi()
-                }
+                handler.onDelete()
                 deleteHandler.postDelayed(this, deleteRepeatDelay)
             }
         })
@@ -538,66 +422,26 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
         deleteHandler.removeCallbacksAndMessages(null)
     }
 
-    private fun onZeroPressed() {
-        val result = controller.onZero()
-        when (result) {
-            is T9ImeController.ActionResult.CommitText -> {
-                logAction("KEY_0", "committing: ${result.text}")
-                currentInputConnection?.commitText(result.text, 1)
-                refreshUi()
-            }
-            is T9ImeController.ActionResult.Refresh -> {
-                logAction("KEY_0", "no candidates, clearing")
-                refreshUi()
-            }
-            else -> {}
-        }
-    }
 
-    private fun onCandidateClicked(index: Int) {
-        val result = controller.onCandidateClick(index)
-        if (result is T9ImeController.ActionResult.CommitText) {
-            logAction("CANDIDATE_CLICK", "committing: ${result.text}")
-            currentInputConnection?.commitText(result.text, 1)
-            refreshUi()
-        }
-    }
 
-    private fun onEnterPressed() {
-        if (controller.rawBuffer.isNotEmpty()) {
-            commitFirstCandidateOrPreedit()
-            return
-        }
-        val info = currentEditorInfo
-        if (info != null) {
-            val action = info.imeOptions and EditorInfo.IME_MASK_ACTION
-            if (action == EditorInfo.IME_ACTION_NONE || action == EditorInfo.IME_ACTION_UNSPECIFIED) {
-                currentInputConnection?.commitText("\n", 1)
-                return
-            }
-            currentInputConnection?.performEditorAction(action)
-            return
-        }
-        currentInputConnection?.commitText("\n", 1)
-    }
 
-    private fun commitFirstCandidateOrPreedit() {
-        val candidates = controller.currentCandidates
-        if (candidates.isNotEmpty()) {
-            onCandidateClicked(0)
-        } else if (controller.preedit.isNotEmpty()) {
-            currentInputConnection?.commitText(controller.preedit, 1)
-            controller.reset()
-            refreshUi()
-        }
-    }
 
-    private fun sendSystemDelete() {
+
+
+
+
+
+    // --- ImeActionSink implementation ---
+    override fun commitText(text: String) {
+        logAction("COMMIT", text)
+        currentInputConnection?.commitText(text, 1)
+    }
+    override fun sendDelete() {
+        logAction("KEY_DEL", "send DEL")
         currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
         currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
     }
-
-    private fun sendEditorActionOrNewline() {
+    override fun performEditorActionOrNewline() {
         val info = currentEditorInfo
         if (info != null) {
             val action = info.imeOptions and EditorInfo.IME_MASK_ACTION
@@ -610,23 +454,14 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
         }
         currentInputConnection?.commitText("\n", 1)
     }
-
-    private fun handleResult(result: T9ImeController.ActionResult) {
-        when (result) {
-            is T9ImeController.ActionResult.Refresh -> refreshUi()
-            is T9ImeController.ActionResult.CommitText -> {
-                currentInputConnection?.commitText(result.text, 1)
-                refreshUi()
-            }
-            is T9ImeController.ActionResult.SendDelete -> sendSystemDelete()
-            is T9ImeController.ActionResult.NoAction -> {}
-        }
+    override fun finishComposingText() {
+        currentInputConnection?.finishComposingText()
     }
-
-    private fun refreshUi() {
-        bufferText.text = controller.preedit
+    override fun refreshUi() {
+        if (!this::bufferText.isInitialized || !this::handler.isInitialized) return
+        bufferText.text = handler.preedit
         val limit = settingsRepository.getCandidateCount()
-        val candidates = controller.refreshCandidates(limit)
+        val candidates = handler.refreshCandidates(limit)
         candidateContainer.visibility = if (candidates.isEmpty() && !isDictPreparing) View.GONE else View.VISIBLE
 
         if (isDictPreparing) {
@@ -678,7 +513,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
             val ci = index
             btn.setOnClickListener { v ->
                 hapticFeedbackManager.performTap(v)
-                onCandidateClicked(ci)
+                handler.onCandidateClick(ci)
             }
         }
         for (i in candidates.size until candidateContainer.childCount) {
@@ -686,13 +521,21 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
         }
         logDebugInfo()
     }
+    override fun scheduleEnglishTimeout(runnable: Runnable, delayMs: Long) {
+        currentEnglishRunnable = runnable
+        englishTimer.postDelayed(runnable, delayMs)
+    }
+    override fun cancelEnglishTimeout() {
+        currentEnglishRunnable?.let { englishTimer.removeCallbacks(it) }
+        currentEnglishRunnable = null
+    }
 
     private fun logDebugInfo() {
         if (!settingsRepository.isDebugLoggingEnabled()) return
         val tag = "XiweiT9Debug"
-        val engine = controller.engine
+        val engine = handler.engine
         if (engine == null) { debugLogger.log(tag, "Engine not initialized yet."); return }
-        debugLogger.log(tag, "mode=$keyboardMode raw=${engine.buffer} preedit=${engine.getPreedit()}")
+        debugLogger.log(tag, "mode=${handler.keyboardMode} raw=${engine.buffer} preedit=${engine.getPreedit()}")
     }
 
     private fun logAction(action: String, detail: String) {
