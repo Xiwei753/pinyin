@@ -1,8 +1,10 @@
 package io.github.xiwei753.pinyin.t9
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.Switch
 import android.widget.Spinner
@@ -12,6 +14,7 @@ import android.view.View
 import io.github.xiwei753.pinyin.t9.data.DictionaryManager
 import io.github.xiwei753.pinyin.t9.data.DictionaryState
 import io.github.xiwei753.pinyin.t9.data.DictionaryStateListener
+import io.github.xiwei753.pinyin.t9.data.UserDictionary
 
 class SettingsActivity : Activity(), DictionaryStateListener {
 
@@ -89,6 +92,26 @@ class SettingsActivity : Activity(), DictionaryStateListener {
 
         DictionaryManager.prepareAsync(this)
         DictionaryManager.registerListener(this)
+
+        // Clear user dictionary
+        val clearUserDictButton = findViewById<Button>(R.id.btn_clear_user_dict)
+        clearUserDictButton.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("清空用户词库")
+                .setMessage("确定要清空所有用户输入历史吗？此操作不可撤销。")
+                .setPositiveButton("确定") { _, _ ->
+                    try {
+                        val userDict = UserDictionary.getInstance(applicationContext)
+                        userDict.clearUserDictionary()
+                        Toast.makeText(this, "用户词库已清空", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Log.e("SettingsActivity", "清空用户词库失败", e)
+                        Toast.makeText(this, "清空失败: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        }
     }
 
     override fun onDestroy() {
