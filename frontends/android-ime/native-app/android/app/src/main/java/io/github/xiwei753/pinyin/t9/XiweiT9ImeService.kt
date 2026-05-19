@@ -31,6 +31,8 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     private lateinit var panelT9: View
     private lateinit var panelSymbol: View
     private lateinit var panelNumber: View
+    private lateinit var readingTextViews: List<TextView>
+    private lateinit var punctTextViews: List<TextView>
 
     private lateinit var handler: KeyboardActionHandler
     private lateinit var settingsRepository: SettingsRepository
@@ -122,6 +124,18 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         panelT9 = view.findViewById(R.id.panel_t9)
         panelSymbol = view.findViewById(R.id.panel_symbol)
         panelNumber = view.findViewById(R.id.panel_number)
+        readingTextViews = listOf(
+            view.findViewById(R.id.reading_1),
+            view.findViewById(R.id.reading_2),
+            view.findViewById(R.id.reading_3),
+            view.findViewById(R.id.reading_4)
+        )
+        punctTextViews = listOf(
+            view.findViewById(R.id.punct_1),
+            view.findViewById(R.id.punct_2),
+            view.findViewById(R.id.punct_3),
+            view.findViewById(R.id.punct_4)
+        )
         setupKeys(view)
         applyThemeAndHeight(view)
         updateKeyboardPanel()
@@ -184,7 +198,8 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             R.id.punct_1, R.id.punct_2, R.id.punct_3, R.id.punct_4,
             R.id.key_del, R.id.key_retype,
             R.id.key_toggle_symbol, R.id.key_toggle_number, R.id.key_space,
-            R.id.key_toggle_english, R.id.key_enter
+            R.id.key_toggle_english, R.id.key_enter,
+            R.id.reading_1, R.id.reading_2, R.id.reading_3, R.id.reading_4
         )
         for (id in allKeyTextIds) {
             val tv = rootView.findViewById<TextView>(id)
@@ -257,6 +272,10 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         for (id in t9RowIds) {
             rootView.findViewById<View>(id)?.layoutParams?.height = rowHeightPx
         }
+        // Fix keyboard_main height so left/right match_parent columns render correctly.
+        val interRowMarginPx = (4 * density).toInt()
+        val keyboardMainHeight = 3 * rowHeightPx + 2 * interRowMarginPx
+        rootView.findViewById<View>(R.id.keyboard_main)?.layoutParams?.height = keyboardMainHeight
         rootView.findViewById<View>(R.id.row_bottom)?.layoutParams?.height = bottomRowHeightPx
 
         val symRowIds = listOf(R.id.row_sym_1, R.id.row_sym_2, R.id.row_sym_3, R.id.row_sym_4, R.id.row_sym_5, R.id.row_sym_6)
@@ -350,6 +369,21 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 hapticFeedbackManager.performTap(v)
                 handler.onPunctCommit(text)
                 logAction("PUNCT", text)
+            }
+        }
+
+        // Reading keys - select pinyin reading
+        val readingIds = listOf(R.id.reading_1, R.id.reading_2, R.id.reading_3, R.id.reading_4)
+        for (rid in readingIds) {
+            view.findViewById<View>(rid)?.setOnClickListener { v ->
+                val tv = v as? TextView ?: return@setOnClickListener
+                val reading = tv.text.toString()
+                if (reading.isNotEmpty()) {
+                    hapticFeedbackManager.performTap(v)
+                    handler.setActiveReading(reading)
+                    logAction("READING", reading)
+                    refreshUi()
+                }
             }
         }
 
@@ -590,7 +624,39 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         for (i in candidates.size until candidateContainer.childCount) {
             candidateContainer.getChildAt(i).visibility = View.GONE
         }
+        updateReadingRail()
         logDebugInfo()
+    }
+
+    private fun updateReadingRail() {
+        if (!this::readingTextViews.isInitialized || !this::handler.isInitialized) return
+        val readings = handler.readings
+        val rawBuffer = handler.rawBuffer
+        if (readings.isNotEmpty() && rawBuffer.isNotEmpty()) {
+            for (tv in punctTextViews) tv.visibility = View.GONE
+            var i = 0
+            while (i < readingTextViews.size && i < readings.size) {
+                val tv = readingTextViews[i]
+                val reading = readings[i]
+                tv.text = reading
+                tv.visibility = View.VISIBLE
+                if (reading == handler.activeReading) {
+                    tv.setBackgroundResource(R.drawable.key_bg)
+                    tv.alpha = 1.0f
+                } else {
+                    tv.setBackgroundResource(R.drawable.key_bg_special)
+                    tv.alpha = 0.85f
+                }
+                i++
+            }
+            while (i < readingTextViews.size) {
+                readingTextViews[i].visibility = View.GONE
+                i++
+            }
+        } else {
+            for (tv in punctTextViews) tv.visibility = View.VISIBLE
+            for (tv in readingTextViews) tv.visibility = View.GONE
+        }
     }
     override fun scheduleEnglishTimeout(runnable: Runnable, delayMs: Long) {
         currentEnglishRunnable = runnable

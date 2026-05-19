@@ -29,6 +29,21 @@ class KeyboardActionHandler(
 
     val rawBuffer: String get() = engine?.buffer ?: fallbackBuffer
 
+    val readings: List<String>
+        get() = engine?.readings ?: emptyList()
+
+    var activeReading: String?
+        get() = engine?.activeReading
+        set(value) {
+            engine?.let {
+                if (value != null) it.setActiveReading(value) else { /* can't set null */ }
+            }
+        }
+
+    fun setActiveReading(reading: String): Boolean {
+        return engine?.setActiveReading(reading) ?: false
+    }
+
     private val englishMultiTapLetters = mapOf(
         '2' to "abc", '3' to "def", '4' to "ghi", '5' to "jkl",
         '6' to "mno", '7' to "pqrs", '8' to "tuv", '9' to "wxyz"

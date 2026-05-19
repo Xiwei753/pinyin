@@ -355,4 +355,60 @@ class KeyboardActionHandlerTest {
         assertEquals("", handler.rawBuffer)
         assertEquals("", handler.preedit)
     }
+
+    // --- Active reading tests ---
+
+    @Test
+    fun testReadingsExposedWhenBufferNonEmpty() {
+        setupCandidates(listOf(
+            Candidate("梦", "6364", 50000, CandidateType.SINGLE_CHAR, "meng", CandidateOrigin.EXACT_SINGLE),
+            Candidate("能", "6364", 40000, CandidateType.SINGLE_CHAR, "neng", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("6")
+        handler.onDigitPressed("3")
+        handler.onDigitPressed("6")
+        handler.onDigitPressed("4")
+        val readings = handler.readings
+        assertTrue(readings.isNotEmpty())
+        assertTrue(readings.any { it == "meng" })
+        assertTrue(readings.any { it == "neng" })
+    }
+
+    @Test
+    fun testReadingsEmptyForEmptyBuffer() {
+        assertTrue(handler.readings.isEmpty())
+    }
+
+    @Test
+    fun testSetActiveReadingViaHandler() {
+        setupCandidates(listOf(
+            Candidate("梦", "6364", 50000, CandidateType.SINGLE_CHAR, "meng", CandidateOrigin.EXACT_SINGLE),
+            Candidate("能", "6364", 40000, CandidateType.SINGLE_CHAR, "neng", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("6")
+        handler.onDigitPressed("3")
+        handler.onDigitPressed("6")
+        handler.onDigitPressed("4")
+
+        val success = handler.setActiveReading("neng")
+        assertTrue(success)
+        assertEquals("neng", handler.preedit)
+    }
+
+    @Test
+    fun testSetActiveReadingDoesNotCommitText() {
+        setupCandidates(listOf(
+            Candidate("梦", "6364", 50000, CandidateType.SINGLE_CHAR, "meng", CandidateOrigin.EXACT_SINGLE),
+            Candidate("能", "6364", 40000, CandidateType.SINGLE_CHAR, "neng", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("6")
+        handler.onDigitPressed("3")
+        handler.onDigitPressed("6")
+        handler.onDigitPressed("4")
+        handler.refreshCandidates(30)
+
+        handler.setActiveReading("neng")
+        // No commit should have happened
+        verify(sink, never()).commitText(anyString())
+    }
 }

@@ -125,6 +125,57 @@ class T9EngineGoldenTest {
     }
 
     @Test
+    fun test6364ReadingsWithRealDict() {
+        val engine = loadRealEngine()
+        engine.inputDigit("6")
+        engine.inputDigit("3")
+        engine.inputDigit("6")
+        engine.inputDigit("4")
+
+        val readings = engine.readings
+        assertTrue("readings must contain meng", readings.any { it == "meng" })
+        assertTrue("readings must contain neng", readings.any { it == "neng" })
+        assertTrue("readings must contain men", readings.any { it == "men" })
+    }
+
+    @Test
+    fun test6364SelectNengWithRealDict() {
+        val engine = loadRealEngine()
+        engine.inputDigit("6")
+        engine.inputDigit("3")
+        engine.inputDigit("6")
+        engine.inputDigit("4")
+
+        val success = engine.setActiveReading("neng")
+        assertTrue("setActiveReading(neng) must succeed", success)
+        assertEquals("neng", engine.getPreedit())
+
+        val visible = engine.getVisibleCandidates()
+        assertTrue("neng candidates must contain 能", visible.any { it.text == "能" })
+        // 能 should be near the top
+        val firstText = visible.first().text
+        assertTrue("neng first candidate should be 能, was $firstText", firstText == "能")
+    }
+
+    @Test
+    fun test6364SelectMengWithRealDict() {
+        val engine = loadRealEngine()
+        engine.inputDigit("6")
+        engine.inputDigit("3")
+        engine.inputDigit("6")
+        engine.inputDigit("4")
+
+        val success = engine.setActiveReading("meng")
+        assertTrue("setActiveReading(meng) must succeed", success)
+        assertEquals("meng", engine.getPreedit())
+
+        val visible = engine.getVisibleCandidates()
+        assertTrue("meng candidates must contain 梦", visible.any { it.text == "梦" })
+        assertTrue("meng candidates must contain 蒙", visible.any { it.text == "蒙" })
+        assertTrue("meng candidates must contain 萌", visible.any { it.text == "萌" })
+    }
+
+    @Test
     fun testSeparatorBuTaiXing() {
         val engine = loadRealEngine()
         val sepDigits = "28182419464"

@@ -9,6 +9,61 @@ class T9Engine(
     var buffer = ""
         private set
 
+    var activeReading: String? = null
+        private set
+
+    val readings: List<String>
+        get() {
+            if (buffer.isEmpty()) return emptyList()
+            val comps = pinyinComposer.getCompositions(buffer)
+            val result = linkedSetOf<String>()
+
+            // 1. Readings from compositions ordered by beam score
+            for (comp in comps) {
+                if (comp.pinyinList.isEmpty()) continue
+                if (comp.pinyinList.size == 1) {
+                    if (comp.pinyinString.isNotEmpty()) result.add(comp.pinyinString)
+                } else if (comp.isComplete) {
+                    val lastLen = comp.pinyinList.last().length
+                    if (lastLen >= 2) {
+                        if (comp.pinyinString.isNotEmpty()) result.add(comp.pinyinString)
+                    } else {
+                        // Multi-syllable where last syllable is single letter (e.g. "men i")
+                        // Show prefix without the trailing single-letter syllable
+                        val prefix = comp.pinyinList.dropLast(1).joinToString(" ")
+                        if (prefix.isNotEmpty()) result.add(prefix)
+                    }
+                } else {
+                    // Incomplete composition: show prefix that is complete
+                    val prefix = comp.pinyinList.dropLast(1).joinToString(" ")
+                    if (prefix.isNotEmpty()) result.add(prefix)
+                }
+            }
+
+            // 2. Prefix-only exact syllable decodings (longer prefixes first)
+            // This adds readings like "men" for buffer prefix "636"
+            for (end in buffer.length downTo 1) {
+                val prefix = buffer.substring(0, end)
+                for (s in PinyinSyllableDecoder.getExactSyllables(prefix)) {
+                    if (s.isNotEmpty() && s !in result) result.add(s)
+                }
+            }
+
+            return result.toList()
+        }
+
+    fun setActiveReading(reading: String): Boolean {
+        if (buffer.isEmpty()) return false
+        // Check against all readings, including prefix readings
+        val allReadings = readings
+        if (reading in allReadings) {
+            activeReading = reading
+            lastVisibleBuffer = ""
+            return true
+        }
+        return false
+    }
+
     private val pinyinComposer = T9PinyinComposer()
     private var lastBuffer = ""
     private var lastCandidates = listOf<Candidate>()
@@ -16,6 +71,7 @@ class T9Engine(
 
     private var lastVisibleCandidates = listOf<Candidate>()
     private var lastVisibleLimit = -1
+    private var lastVisibleBuffer = ""
     private var lastInternalCandidates = listOf<Candidate>()
 
     fun getCompositions(): List<PinyinComposition> {
@@ -29,26 +85,31 @@ class T9Engine(
     fun inputDigit(digit: String) {
         if (digit.matches(Regex("^[1-9]$"))) {
             buffer += digit
+            activeReading = null
         }
     }
 
     fun backspace() {
         if (buffer.isNotEmpty()) {
             buffer = buffer.substring(0, buffer.length - 1)
+            activeReading = null
         }
     }
 
     fun clear() {
         buffer = ""
+        activeReading = null
         lastBuffer = ""
         lastCandidates = emptyList()
         lastLimit = -1
         lastVisibleCandidates = emptyList()
         lastVisibleLimit = -1
+        lastVisibleBuffer = ""
     }
 
     fun getPreedit(): String {
         if (buffer.isEmpty()) return ""
+        if (activeReading != null) return activeReading!!
         val visible = getVisibleCandidates(2)
         val bestCandidate = visible.firstOrNull()
 
@@ -63,12 +124,32 @@ class T9Engine(
 
     fun getVisibleCandidates(limit: Int = 30): List<Candidate> {
         if (buffer.isEmpty()) return emptyList()
-        if (buffer == lastBuffer && limit == lastVisibleLimit && lastVisibleCandidates.isNotEmpty()) {
+        if (buffer == lastVisibleBuffer && limit == lastVisibleLimit && lastVisibleCandidates.isNotEmpty()) {
             return lastVisibleCandidates
         }
 
         val compositions = pinyinComposer.getCompositions(buffer)
-        val primaryPinyin = compositions.firstOrNull { it.isComplete }?.pinyinString ?: ""
+        val active = activeReading
+
+        val hasExactCompMatch = active != null && compositions.any { it.pinyinString == active }
+
+        val activeComp = if (active != null && hasExactCompMatch) {
+            compositions.firstOrNull { it.pinyinString == active }
+        } else {
+            if (active != null) {
+                compositions.firstOrNull {
+                    it.pinyinList.isNotEmpty() && it.pinyinList[0] == active
+                }
+            } else null
+        }
+
+        val primaryPinyin: String = if (hasExactCompMatch && active != null) {
+            active
+        } else if (active != null) {
+            active
+        } else {
+            compositions.firstOrNull { it.isComplete }?.pinyinString ?: ""
+        }
 
         val userCandidates = if (primaryPinyin.isNotEmpty() && userDictionary != null) {
             userDictionary!!.getUserCandidates(primaryPinyin).map { c ->
@@ -79,7 +160,21 @@ class T9Engine(
             emptyList()
         }
 
-        val exactCandidatesRaw = generateCandidates(buffer, limit + 10, allowDynamic = false)
+        val exactCandidatesRaw = if (active != null && !hasExactCompMatch) {
+            val code = T9CodeMapper.toCode(active)
+            val singleCandidates = dictionary.getSingleSyllableCandidates(active)
+            singleCandidates.map { c ->
+                var adjustedScore = c.score
+                val extraLen = c.code.length - code.length
+                if (extraLen > 0) adjustedScore -= extraLen * 50000
+                Candidate(c.text, c.code, adjustedScore, c.type, active, c.origin)
+            }.filter { c ->
+                c.origin == CandidateOrigin.EXACT_SINGLE || c.origin == CandidateOrigin.EXACT_PHRASE
+            }
+        } else {
+            generateCandidates(buffer, limit + 10, allowDynamic = false,
+                preferredPinyin = if (hasExactCompMatch && active != null) active else null)
+        }
 
         val exactCandidates = exactCandidatesRaw.filter { c ->
             if (c.origin != CandidateOrigin.EXACT_SINGLE && c.origin != CandidateOrigin.EXACT_PHRASE) return@filter false
@@ -99,8 +194,8 @@ class T9Engine(
 
         val hasExactPhrase = exactCandidates.any { it.origin == CandidateOrigin.EXACT_PHRASE && it.text.length >= 2 }
 
-        val safeDynamicCandidates = if (!hasExactPhrase && buffer.length >= 5) {
-            generateSafeDynamicCandidates(compositions, limit).map { c ->
+        val safeDynamicCandidates = if (!hasExactPhrase && buffer.length >= 5 && hasExactCompMatch) {
+            generateSafeDynamicCandidates(compositions, limit, preferredPinyin = activeReading).map { c ->
                 c.copy(origin = CandidateOrigin.SAFE_DYNAMIC_COMPOSITION)
             }
         } else {
@@ -117,15 +212,22 @@ class T9Engine(
 
         lastVisibleCandidates = finalCandidates
         lastVisibleLimit = limit
+        lastVisibleBuffer = buffer
 
         return finalCandidates
     }
 
     private fun generateSafeDynamicCandidates(
         compositions: List<PinyinComposition>,
-        limit: Int
+        limit: Int,
+        preferredPinyin: String? = null
     ): List<Candidate> {
-        val completeComp = compositions.firstOrNull { it.isComplete } ?: return emptyList()
+        val comps = if (preferredPinyin != null) {
+            compositions.filter { it.pinyinString == preferredPinyin }
+        } else {
+            compositions
+        }
+        val completeComp = comps.firstOrNull { it.isComplete } ?: return emptyList()
         if (completeComp.pinyinList.size < 2) return emptyList()
 
         val pinyins = completeComp.pinyinList
@@ -179,8 +281,18 @@ class T9Engine(
         return lastCandidates
     }
 
-    private fun generateCandidates(currentBuffer: String, limit: Int, allowDynamic: Boolean = true): List<Candidate> {
-        val compositions = pinyinComposer.getCompositions(currentBuffer)
+    private fun generateCandidates(currentBuffer: String, limit: Int, allowDynamic: Boolean = true,
+                                   preferredPinyin: String? = null): List<Candidate> {
+        val allCompositions = pinyinComposer.getCompositions(currentBuffer)
+        if (allCompositions.isEmpty()) {
+            return listOf(Candidate(currentBuffer, currentBuffer, -Int.MAX_VALUE, CandidateType.NORMAL, currentBuffer))
+        }
+
+        val compositions = if (preferredPinyin != null) {
+            allCompositions.filter { it.pinyinString == preferredPinyin }
+        } else {
+            allCompositions
+        }
         if (compositions.isEmpty()) {
             return listOf(Candidate(currentBuffer, currentBuffer, -Int.MAX_VALUE, CandidateType.NORMAL, currentBuffer))
         }
