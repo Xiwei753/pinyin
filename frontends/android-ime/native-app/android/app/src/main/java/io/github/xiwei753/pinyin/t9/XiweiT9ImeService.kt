@@ -1,5 +1,6 @@
 package io.github.xiwei753.pinyin.t9
 
+import android.annotation.SuppressLint
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
 import android.os.Looper
@@ -7,6 +8,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
 import android.widget.LinearLayout
 import android.widget.TextView
 import io.github.xiwei753.pinyin.t9.core.T9Engine
@@ -16,6 +18,13 @@ import io.github.xiwei753.pinyin.t9.data.DictionaryStateListener
 import io.github.xiwei753.pinyin.t9.data.UserDictionary
 
 open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
+
+    @android.annotation.SuppressLint("SoonBlockedPrivateApi")
+    internal var testInputConnection: InputConnection? = null
+
+    override fun getCurrentInputConnection(): InputConnection? {
+        return testInputConnection ?: super.getCurrentInputConnection()
+    }
 
     private lateinit var bufferText: TextView
     private lateinit var candidateContainer: LinearLayout
@@ -142,8 +151,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
-        resetCompositionState()
-        keyboardMode = KeyboardMode.ChineseT9
+        switchKeyboardMode(KeyboardMode.ChineseT9)
     }
 
     override fun onFinishInput() {
@@ -233,6 +241,32 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
         }
     }
 
+    private fun switchKeyboardMode(targetMode: KeyboardMode) {
+        leavingCurrentMode()
+        keyboardMode = targetMode
+        updateKeyboardPanel()
+        resetUiStateIfReady()
+        logAction("MODE_SWITCH", "$targetMode")
+    }
+
+    private fun leavingCurrentMode() {
+        when (keyboardMode) {
+            KeyboardMode.ChineseT9 -> {
+                if (controller.rawBuffer.isNotEmpty()) {
+                    commitFirstCandidateOrPreedit()
+                }
+            }
+            KeyboardMode.EnglishT9 -> {
+                if (englishPending) {
+                    commitEnglishChar()
+                }
+            }
+            KeyboardMode.Symbol, KeyboardMode.Number -> {
+                // nothing to clean up
+            }
+        }
+    }
+
     private fun updateKeyboardPanel() {
         panelT9.visibility = if (keyboardMode == KeyboardMode.ChineseT9 || keyboardMode == KeyboardMode.EnglishT9) View.VISIBLE else View.GONE
         panelSymbol.visibility = if (keyboardMode == KeyboardMode.Symbol) View.VISIBLE else View.GONE
@@ -303,35 +337,26 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
 
         view.findViewById<TextView>(R.id.key_toggle_symbol).setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            keyboardMode = KeyboardMode.Symbol
-            updateKeyboardPanel()
-            resetUiStateIfReady()
+            switchKeyboardMode(KeyboardMode.Symbol)
         }
 
         view.findViewById<TextView>(R.id.key_toggle_english).setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
             if (keyboardMode == KeyboardMode.EnglishT9) {
-                commitEnglishChar()
-                keyboardMode = KeyboardMode.ChineseT9
+                switchKeyboardMode(KeyboardMode.ChineseT9)
             } else {
-                if (controller.rawBuffer.isNotEmpty()) {
-                    commitFirstCandidateOrPreedit()
-                }
-                keyboardMode = KeyboardMode.EnglishT9
+                switchKeyboardMode(KeyboardMode.EnglishT9)
             }
-            updateKeyboardPanel()
         }
 
         view.findViewById<TextView>(R.id.key_toggle_number).setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            keyboardMode = KeyboardMode.Number
-            updateKeyboardPanel()
-            resetUiStateIfReady()
+            switchKeyboardMode(KeyboardMode.Number)
         }
 
         view.findViewById<TextView>(R.id.key_hide).setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            resetCompositionState()
+            switchKeyboardMode(KeyboardMode.ChineseT9)
             requestHideSelf(0)
         }
 
@@ -355,22 +380,17 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
             view.findViewById<TextView>(id).setOnClickListener { v ->
                 hapticFeedbackManager.performTap(v)
                 currentInputConnection?.commitText(text, 1)
-                keyboardMode = KeyboardMode.ChineseT9
-                updateKeyboardPanel()
-                refreshUi()
+                switchKeyboardMode(KeyboardMode.ChineseT9)
             }
         }
 
         view.findViewById<TextView>(R.id.sym_back).setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            keyboardMode = KeyboardMode.ChineseT9
-            updateKeyboardPanel()
-            refreshUi()
+            switchKeyboardMode(KeyboardMode.ChineseT9)
         }
         view.findViewById<TextView>(R.id.sym_number).setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            keyboardMode = KeyboardMode.Number
-            updateKeyboardPanel()
+            switchKeyboardMode(KeyboardMode.Number)
         }
         view.findViewById<TextView>(R.id.sym_del).setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
@@ -378,16 +398,16 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
         }
         view.findViewById<TextView>(R.id.sym_enter).setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            onEnterPressed()
+            sendEditorActionOrNewline()
         }
         view.findViewById<TextView>(R.id.sym_hide).setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
+            switchKeyboardMode(KeyboardMode.ChineseT9)
             requestHideSelf(0)
         }
         view.findViewById<TextView>(R.id.sym_more).setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            keyboardMode = KeyboardMode.Symbol
-            updateKeyboardPanel()
+            // already in symbol mode; no-op
         }
 
         // Number panel keys
@@ -410,22 +430,20 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
         }
         view.findViewById<TextView>(R.id.num_back).setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            keyboardMode = KeyboardMode.ChineseT9
-            updateKeyboardPanel()
-            refreshUi()
+            switchKeyboardMode(KeyboardMode.ChineseT9)
         }
         view.findViewById<TextView>(R.id.num_symbol).setOnClickListener { v ->
             hapticFeedbackManager.performTap(v)
-            keyboardMode = KeyboardMode.Symbol
-            updateKeyboardPanel()
+            switchKeyboardMode(KeyboardMode.Symbol)
         }
         view.findViewById<TextView>(R.id.num_hide).setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
+            switchKeyboardMode(KeyboardMode.ChineseT9)
             requestHideSelf(0)
         }
         view.findViewById<TextView>(R.id.num_enter).setOnClickListener { v ->
             hapticFeedbackManager.performSpecialKey(v)
-            onEnterPressed()
+            sendEditorActionOrNewline()
         }
     }
 
@@ -577,6 +595,20 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener {
     private fun sendSystemDelete() {
         currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
         currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
+    }
+
+    private fun sendEditorActionOrNewline() {
+        val info = currentEditorInfo
+        if (info != null) {
+            val action = info.imeOptions and EditorInfo.IME_MASK_ACTION
+            if (action == EditorInfo.IME_ACTION_NONE || action == EditorInfo.IME_ACTION_UNSPECIFIED) {
+                currentInputConnection?.commitText("\n", 1)
+                return
+            }
+            currentInputConnection?.performEditorAction(action)
+            return
+        }
+        currentInputConnection?.commitText("\n", 1)
     }
 
     private fun handleResult(result: T9ImeController.ActionResult) {
