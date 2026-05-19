@@ -47,15 +47,7 @@ jobs:
             echo "Error: t9_dict.db was not generated"
             exit 1
           fi
-          # Verify the DB can be queried
-          python3 -c "
-import sqlite3
-conn = sqlite3.connect('/tmp/t9AssetsCheck/t9_dict.db')
-count = conn.execute('SELECT COUNT(*) FROM entries').fetchone()[0]
-print(f'Database has {count} entries')
-assert count > 30000, f'Expected >30000 entries, got {count}'
-conn.close()
-"
+          python3 -c "import sqlite3; conn = sqlite3.connect('/tmp/t9AssetsCheck/t9_dict.db'); count = conn.execute('SELECT COUNT(*) FROM entries').fetchone()[0]; print(f'Database has {count} entries'); assert count > 30000; conn.close()"
 
       - name: Set up JDK
         uses: actions/setup-java@v4
