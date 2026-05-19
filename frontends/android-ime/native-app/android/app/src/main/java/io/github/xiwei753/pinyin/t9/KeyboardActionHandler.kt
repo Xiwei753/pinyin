@@ -253,24 +253,20 @@ class KeyboardActionHandler(
         return _currentCandidates
     }
 
-    fun reset() {
+    fun discardCompositionForLifecycle() {
         engine?.clear()
         fallbackBuffer = ""
         _currentCandidates = emptyList()
+
         if (englishPending) {
-            commitEnglishChar()
+            englishPending = false
+            actionSink.cancelEnglishTimeout()
+            englishDigit = ' '
+            englishIndex = 0
         }
+
+        actionSink.finishComposingText()
         actionSink.refreshUi()
-    }
-
-    fun onFinishInput() {
-        actionSink.finishComposingText()
-        reset()
-    }
-
-    fun onWindowHidden() {
-        actionSink.finishComposingText()
-        reset()
     }
 
     fun onHideKey() {
@@ -279,7 +275,7 @@ class KeyboardActionHandler(
         } else if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
             commitEnglishChar()
         }
-        actionSink.finishComposingText()
+        discardCompositionForLifecycle()
         keyboardMode = KeyboardMode.ChineseT9
         actionSink.refreshUi()
     }
