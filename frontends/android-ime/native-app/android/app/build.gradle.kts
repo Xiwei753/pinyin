@@ -1,25 +1,9 @@
-val generateT9DictionaryAssets by tasks.registering(Exec::class) {
-    description = "Generate t9_source_dict.tsv and t9_dict.db from Rime dictionary sources"
-    workingDir = file("../../../../../")
-    val outDir = file("${project.buildDir}/generated/t9Assets")
-    commandLine("python3", "tools/dictionary/build_t9_assets.py", "--out-dir", outDir.absolutePath)
-
-    inputs.dir("../../../../../third_party/rime-ice/cn_dicts")
-    inputs.dir("../../../../../tools/dictionary")
-    outputs.dir(outDir)
-}
-
-tasks.withType<Test> {
-    testLogging {
-        showStandardStreams = true
-    }
-    dependsOn(generateT9DictionaryAssets)
-}
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+val t9AssetsDir = layout.buildDirectory.dir("generated/t9Assets")
 
 android {
     namespace = "io.github.xiwei753.pinyin.t9"
@@ -52,22 +36,34 @@ android {
 
     sourceSets {
         getByName("main") {
-            assets.srcDirs("src/main/assets", "${project.buildDir}/generated/t9Assets")
+            assets.srcDirs("src/main/assets", t9AssetsDir)
         }
     }
 }
 
-// Ensure asset merging tasks depend on dictionary generation
-tasks.whenTaskAdded {
-    if (name.startsWith("merge") && name.endsWith("Assets")) {
-        dependsOn(generateT9DictionaryAssets)
+val generateT9DictionaryAssets by tasks.registering(Exec::class) {
+    description = "Generate t9_source_dict.tsv and t9_dict.db from Rime dictionary sources"
+    workingDir = file("../../../../../")
+    commandLine("python3", "tools/dictionary/build_t9_assets.py", "--out-dir", t9AssetsDir.get().asFile.absolutePath)
+
+    inputs.dir("../../../../../third_party/rime-ice/cn_dicts")
+    inputs.dir("../../../../../tools/dictionary")
+    outputs.dir(t9AssetsDir)
+}
+
+tasks.withType<Test> {
+    testLogging {
+        showStandardStreams = true
     }
+    dependsOn(generateT9DictionaryAssets)
+}
+
+tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
+    dependsOn(generateT9DictionaryAssets)
 }
 
 dependencies {
-    // Keep it minimal
     implementation("androidx.core:core-ktx:1.12.0")
-    // No complex dependencies as requested
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.3.1")
