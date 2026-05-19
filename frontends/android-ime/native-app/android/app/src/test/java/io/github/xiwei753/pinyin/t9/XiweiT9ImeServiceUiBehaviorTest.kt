@@ -79,7 +79,8 @@ class XiweiT9ImeServiceUiBehaviorTest {
         `when`(rootView.findViewById<LinearLayout>(R.id.candidate_bar)).thenReturn(candidateBar)
         for (id in listOf(R.id.key_1, R.id.key_2, R.id.key_3, R.id.key_4, R.id.key_5,
                 R.id.key_6, R.id.key_7, R.id.key_8, R.id.key_9,
-                R.id.key_star, R.id.key_0, R.id.key_del)) {
+                R.id.key_toggle_symbol, R.id.key_0, R.id.key_del, R.id.key_toggle_english,
+                R.id.key_toggle_number, R.id.key_hide, R.id.key_enter)) {
             `when`(rootView.findViewById<android.widget.TextView>(id)).thenReturn(key1)
         }
 

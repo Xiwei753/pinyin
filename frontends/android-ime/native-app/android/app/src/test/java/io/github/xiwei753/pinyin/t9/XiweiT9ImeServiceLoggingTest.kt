@@ -68,6 +68,6 @@ class XiweiT9ImeServiceLoggingTest {
 
         assertTrue("Logger should be called when enabled", fakeLogger.logs.isNotEmpty())
         assertEquals("XiweiT9Debug", fakeLogger.logs[0].first)
-        assertTrue(fakeLogger.logs.any { it.second.contains("================== T9 Debug Info ==================") })
+        assertTrue(fakeLogger.logs.any { it.second.contains("mode=") })
     }
 }
