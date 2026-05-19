@@ -1,0 +1,199 @@
+package io.github.xiwei753.pinyin.t9
+
+import io.github.xiwei753.pinyin.t9.core.Candidate
+import io.github.xiwei753.pinyin.t9.core.CandidateOrigin
+import io.github.xiwei753.pinyin.t9.core.CandidateType
+import io.github.xiwei753.pinyin.t9.core.T9Engine
+import io.github.xiwei753.pinyin.t9.data.DictionaryProvider
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.never
+import org.mockito.Mockito.times
+
+class KeyboardActionHandlerTest {
+
+    private lateinit var sink: ImeActionSink
+    private lateinit var handler: KeyboardActionHandler
+    private lateinit var dictionary: DictionaryProvider
+    private lateinit var engine: T9Engine
+
+    @Before
+    fun setUp() {
+        sink = mock(ImeActionSink::class.java)
+        handler = KeyboardActionHandler(sink)
+        dictionary = mock(DictionaryProvider::class.java)
+        engine = T9Engine(dictionary)
+        handler.attachEngine(engine)
+    }
+
+    private fun setupCandidates(candidates: List<Candidate>) {
+        `when`(dictionary.getPinyinExactCandidates(anyString())).thenReturn(emptyList())
+        `when`(dictionary.getSingleSyllableCandidates(anyString())).thenReturn(candidates)
+    }
+
+    @Test
+    fun testChineseT9_96_yields_wo_and_candidate() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        val candidates = handler.refreshCandidates(30)
+
+        assertEquals("wo", handler.preedit)
+        assertEquals("96", handler.rawBuffer)
+        assertTrue(candidates.any { it.text == "我" })
+    }
+
+    @Test
+    fun testChineseT9_0_key_commits_candidate() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+
+        handler.onZero()
+        verify(sink).commitText("我")
+        assertEquals("", handler.rawBuffer)
+    }
+
+    @Test
+    fun testChineseT9_0_key_commits_space_when_empty() {
+        handler.onZero()
+        verify(sink).commitText(" ")
+    }
+
+    @Test
+    fun testChineseT9_1_key_separator() {
+        handler.onDigitPressed("2")
+        handler.onDigitPressed("8")
+        handler.onSeparator()
+        assertEquals("281", handler.rawBuffer)
+    }
+
+    @Test
+    fun testChineseT9_delete_composing() {
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.onDelete()
+        assertEquals("9", handler.rawBuffer)
+        verify(sink, never()).sendDelete()
+    }
+
+    @Test
+    fun testChineseT9_delete_empty() {
+        handler.onDelete()
+        verify(sink).sendDelete()
+    }
+
+    @Test
+    fun testChineseT9_candidate_click() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+
+        handler.onCandidateClick(0)
+        verify(sink).commitText("我")
+        assertEquals("", handler.rawBuffer)
+    }
+
+    @Test
+    fun testModeSwitch_ChineseToSymbol_Commits() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        verify(sink).commitText("我")
+        assertEquals(KeyboardMode.Symbol, handler.keyboardMode)
+    }
+
+    @Test
+    fun testModeSwitch_SymbolToChinese_BufferEmpty() {
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+        assertEquals("", handler.rawBuffer)
+    }
+
+    @Test
+    fun testSymbolMode_commitsDirectly() {
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        handler.onDigitPressed("，")
+        verify(sink).commitText("，")
+    }
+
+    @Test
+    fun testSymbolMode_delete_sendsSystemDelete() {
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        handler.onDelete()
+        verify(sink).sendDelete()
+    }
+
+    @Test
+    fun testSymbolMode_enter_performsEditorAction() {
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        handler.onEnter()
+        verify(sink).performEditorActionOrNewline()
+    }
+
+    @Test
+    fun testNumberMode_commitsDirectly() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.onDigitPressed("5")
+        verify(sink).commitText("5")
+    }
+
+    @Test
+    fun testNumberMode_delete_sendsSystemDelete() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.onDelete()
+        verify(sink).sendDelete()
+    }
+
+    @Test
+    fun testNumberMode_enter_performsEditorAction() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.onEnter()
+        verify(sink).performEditorActionOrNewline()
+    }
+
+    @Test
+    fun testEnglishMode_multitap_cycles() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onDigitPressed("2")
+        assertEquals("a", handler.preedit)
+        assertTrue(handler.englishPending)
+
+        handler.onDigitPressed("2")
+        assertEquals("b", handler.preedit)
+
+        handler.onDigitPressed("2")
+        assertEquals("c", handler.preedit)
+
+        handler.onDigitPressed("2")
+        assertEquals("a", handler.preedit)
+    }
+
+    @Test
+    fun testEnglishMode_switchMode_commitsPending() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onDigitPressed("2") // 'a'
+        handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+        verify(sink).commitText("a")
+        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
+    }
+}

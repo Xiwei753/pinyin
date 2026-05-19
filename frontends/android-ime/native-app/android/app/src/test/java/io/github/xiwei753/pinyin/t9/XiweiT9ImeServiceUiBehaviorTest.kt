@@ -33,14 +33,14 @@ class XiweiT9ImeServiceUiBehaviorTest {
         `when`(engine.getCompositions()).thenReturn(emptyList())
         `when`(engine.getInternalCandidates()).thenReturn(emptyList())
 
-        val controller = T9ImeController(engine)
+        val handler = KeyboardActionHandler(mock(ImeActionSink::class.java)).apply { attachEngine(engine) }
 
         val repo = mock(SettingsRepository::class.java)
         `when`(repo.getCandidateCount()).thenReturn(15)
         `when`(repo.isDebugLoggingEnabled()).thenReturn(false)
         `when`(repo.getTheme()).thenReturn("system")
 
-        injectField(service, "controller", controller)
+        injectField(service, "handler", handler)
         injectField(service, "settingsRepository", repo)
         injectField(service, "hapticFeedbackManager", mock(HapticFeedbackManager::class.java))
         injectField(service, "bufferText", mock(android.widget.TextView::class.java))
@@ -71,7 +71,7 @@ class XiweiT9ImeServiceUiBehaviorTest {
 
         injectField(service, "settingsRepository", repo)
         injectField(service, "hapticFeedbackManager", mock(HapticFeedbackManager::class.java))
-        injectField(service, "controller", T9ImeController(mock(T9Engine::class.java)))
+        injectField(service, "handler", KeyboardActionHandler(mock(ImeActionSink::class.java)).apply { attachEngine(mock(T9Engine::class.java)) })
         injectField(service, "bufferText", key1)
         injectField(service, "candidateContainer", candidateBar)
 
@@ -105,7 +105,7 @@ class XiweiT9ImeServiceUiBehaviorTest {
             `when`(engine.getInternalCandidates()).thenReturn(emptyList())
             `when`(engine.getVisibleCandidates(anyInt())).thenReturn(emptyList())
 
-            injectField(service, "controller", T9ImeController(engine))
+            injectField(service, "handler", KeyboardActionHandler(mock(ImeActionSink::class.java)).apply { attachEngine(engine) })
             injectField(service, "settingsRepository", mock(SettingsRepository::class.java))
             injectField(service, "hapticFeedbackManager", mock(HapticFeedbackManager::class.java))
 

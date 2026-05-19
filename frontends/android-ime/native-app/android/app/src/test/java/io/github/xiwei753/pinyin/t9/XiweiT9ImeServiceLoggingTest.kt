@@ -29,10 +29,10 @@ class XiweiT9ImeServiceLoggingTest {
 
         val mockDict = mock(DictionaryProvider::class.java)
         val engine = T9Engine(mockDict)
-        val controller = T9ImeController(engine)
-        val ctrlField = XiweiT9ImeService::class.java.getDeclaredField("controller")
+        val handler = KeyboardActionHandler(mock(ImeActionSink::class.java)).apply { attachEngine(engine) }
+        val ctrlField = XiweiT9ImeService::class.java.getDeclaredField("handler")
         ctrlField.isAccessible = true
-        ctrlField.set(service, controller)
+        ctrlField.set(service, handler)
 
         val mockContainer = mock(android.widget.LinearLayout::class.java)
         val containerField = XiweiT9ImeService::class.java.getDeclaredField("candidateContainer")

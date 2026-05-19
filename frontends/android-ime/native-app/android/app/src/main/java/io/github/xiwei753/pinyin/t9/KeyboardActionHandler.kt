@@ -1,0 +1,286 @@
+package io.github.xiwei753.pinyin.t9
+
+import io.github.xiwei753.pinyin.t9.core.Candidate
+import io.github.xiwei753.pinyin.t9.core.T9Engine
+
+class KeyboardActionHandler(
+    private val actionSink: ImeActionSink
+) {
+    var engine: T9Engine? = null
+        private set
+
+    var keyboardMode: KeyboardMode = KeyboardMode.ChineseT9
+        private set
+
+    private var _currentCandidates: List<Candidate> = emptyList()
+    private var fallbackBuffer: String = ""
+
+    val currentCandidates: List<Candidate> get() = _currentCandidates
+
+    val preedit: String get() {
+        if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
+            val letters = englishMultiTapLetters[englishDigit]
+            if (letters != null && englishIndex < letters.length) {
+                return letters[englishIndex].toString()
+            }
+        }
+        return engine?.getPreedit() ?: fallbackBuffer
+    }
+
+    val rawBuffer: String get() = engine?.buffer ?: fallbackBuffer
+
+    private val englishMultiTapLetters = mapOf(
+        '2' to "abc", '3' to "def", '4' to "ghi", '5' to "jkl",
+        '6' to "mno", '7' to "pqrs", '8' to "tuv", '9' to "wxyz"
+    )
+    private var englishDigit = ' '
+    private var englishIndex = 0
+    var englishPending = false
+        private set
+    private val englishTimeoutRunnable = Runnable { commitEnglishChar() }
+
+    fun attachEngine(newEngine: T9Engine) {
+        this.engine = newEngine
+        for (char in fallbackBuffer) {
+            newEngine.inputDigit(char.toString())
+        }
+        fallbackBuffer = ""
+    }
+
+    fun switchKeyboardMode(targetMode: KeyboardMode) {
+        if (keyboardMode == targetMode) return
+        leavingCurrentMode()
+        keyboardMode = targetMode
+        actionSink.refreshUi()
+    }
+
+    private fun leavingCurrentMode() {
+        when (keyboardMode) {
+            KeyboardMode.ChineseT9 -> {
+                if (rawBuffer.isNotEmpty()) {
+                    commitFirstCandidateOrPreedit()
+                }
+            }
+            KeyboardMode.EnglishT9 -> {
+                if (englishPending) {
+                    commitEnglishChar()
+                }
+            }
+            else -> {}
+        }
+        actionSink.finishComposingText()
+    }
+
+    private fun commitFirstCandidateOrPreedit() {
+        if (_currentCandidates.isNotEmpty()) {
+            onCandidateClick(0)
+        } else if (preedit.isNotEmpty()) {
+            actionSink.commitText(preedit)
+            engine?.clear()
+            fallbackBuffer = ""
+            _currentCandidates = emptyList()
+            actionSink.refreshUi()
+        }
+    }
+
+    fun onDigitPressed(digit: String) {
+        when (keyboardMode) {
+            KeyboardMode.EnglishT9 -> onEnglishDigit(digit)
+            KeyboardMode.ChineseT9 -> onChineseDigit(digit)
+            KeyboardMode.Number, KeyboardMode.Symbol -> {
+                actionSink.commitText(digit)
+            }
+        }
+    }
+
+    private fun onChineseDigit(digit: String) {
+        val eng = engine
+        if (eng != null) {
+            eng.inputDigit(digit)
+        } else {
+            if (digit.matches(Regex("^[1-9]$"))) {
+                fallbackBuffer += digit
+            }
+        }
+        actionSink.refreshUi()
+    }
+
+    private fun onEnglishDigit(digit: String) {
+        if (digit.length != 1) return
+        val d = digit[0]
+        val letters = englishMultiTapLetters[d]
+        if (letters == null) {
+            commitEnglishChar()
+            return
+        }
+        if (englishPending && d == englishDigit) {
+            englishIndex = (englishIndex + 1) % letters.length
+        } else {
+            commitEnglishChar()
+            englishDigit = d
+            englishIndex = 0
+        }
+        englishPending = true
+        actionSink.cancelEnglishTimeout()
+        actionSink.scheduleEnglishTimeout(englishTimeoutRunnable, 600L)
+        actionSink.refreshUi()
+    }
+
+    fun commitEnglishChar() {
+        if (!englishPending) return
+        englishPending = false
+        actionSink.cancelEnglishTimeout()
+        val letters = englishMultiTapLetters[englishDigit] ?: run { englishDigit = ' '; return }
+        if (englishIndex < letters.length) {
+            actionSink.commitText(letters[englishIndex].toString())
+        }
+        englishDigit = ' '
+        englishIndex = 0
+        actionSink.refreshUi()
+    }
+
+    fun onSeparator() {
+        if (keyboardMode == KeyboardMode.ChineseT9) {
+            val eng = engine
+            if (eng != null) {
+                if (eng.buffer.isNotEmpty()) {
+                    eng.inputDigit("1")
+                    actionSink.refreshUi()
+                }
+            } else {
+                if (fallbackBuffer.isNotEmpty()) {
+                    fallbackBuffer += "1"
+                    actionSink.refreshUi()
+                }
+            }
+        }
+    }
+
+    fun onZero() {
+        if (keyboardMode == KeyboardMode.EnglishT9) {
+            commitEnglishChar()
+            actionSink.commitText(" ")
+            return
+        }
+        if (keyboardMode == KeyboardMode.ChineseT9) {
+            val eng = engine
+            if (eng != null) {
+                if (eng.buffer.isEmpty()) {
+                    actionSink.commitText(" ")
+                } else if (_currentCandidates.isNotEmpty()) {
+                    val candidate = _currentCandidates[0]
+                    eng.commitCandidate(candidate)
+                    _currentCandidates = emptyList()
+                    actionSink.commitText(candidate.text)
+                    actionSink.refreshUi()
+                }
+            } else {
+                if (fallbackBuffer.isEmpty()) {
+                    actionSink.commitText(" ")
+                }
+            }
+        } else if (keyboardMode == KeyboardMode.Number) {
+            actionSink.commitText("0")
+        }
+    }
+
+    fun onDelete() {
+        if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
+            val letters = englishMultiTapLetters[englishDigit] ?: ""
+            if (englishIndex > 0) {
+                englishIndex--
+                actionSink.refreshUi()
+            } else {
+                commitEnglishChar()
+                actionSink.sendDelete()
+            }
+            return
+        }
+        if (keyboardMode == KeyboardMode.ChineseT9) {
+            val eng = engine
+            if (eng != null) {
+                if (eng.buffer.isNotEmpty()) {
+                    eng.backspace()
+                    actionSink.refreshUi()
+                    return
+                }
+            } else {
+                if (fallbackBuffer.isNotEmpty()) {
+                    if (fallbackBuffer.isNotEmpty()) {
+                        fallbackBuffer = fallbackBuffer.substring(0, fallbackBuffer.length - 1)
+                    }
+                    actionSink.refreshUi()
+                    return
+                }
+            }
+        }
+        actionSink.sendDelete()
+    }
+
+    fun onEnter() {
+        if (keyboardMode == KeyboardMode.ChineseT9) {
+            if (rawBuffer.isNotEmpty()) {
+                commitFirstCandidateOrPreedit()
+                return
+            }
+        } else if (keyboardMode == KeyboardMode.EnglishT9) {
+            if (englishPending) {
+                commitEnglishChar()
+                return
+            }
+        }
+        actionSink.performEditorActionOrNewline()
+    }
+
+    fun onCandidateClick(index: Int) {
+        if (keyboardMode != KeyboardMode.ChineseT9) return
+        if (index < 0 || index >= _currentCandidates.size) return
+        val candidate = _currentCandidates[index]
+        engine?.commitCandidate(candidate)
+        _currentCandidates = emptyList()
+        fallbackBuffer = ""
+        actionSink.commitText(candidate.text)
+        actionSink.refreshUi()
+    }
+
+    fun refreshCandidates(limit: Int): List<Candidate> {
+        val eng = engine
+        _currentCandidates = if (eng != null && keyboardMode == KeyboardMode.ChineseT9) {
+            eng.getVisibleCandidates(limit)
+        } else {
+            emptyList()
+        }
+        return _currentCandidates
+    }
+
+    fun reset() {
+        engine?.clear()
+        fallbackBuffer = ""
+        _currentCandidates = emptyList()
+        if (englishPending) {
+            commitEnglishChar()
+        }
+        actionSink.refreshUi()
+    }
+
+    fun onFinishInput() {
+        actionSink.finishComposingText()
+        reset()
+    }
+
+    fun onWindowHidden() {
+        actionSink.finishComposingText()
+        reset()
+    }
+
+    fun onHideKey() {
+        if (keyboardMode == KeyboardMode.ChineseT9 && rawBuffer.isNotEmpty()) {
+            commitFirstCandidateOrPreedit()
+        } else if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
+            commitEnglishChar()
+        }
+        actionSink.finishComposingText()
+        keyboardMode = KeyboardMode.ChineseT9
+        actionSink.refreshUi()
+    }
+}
