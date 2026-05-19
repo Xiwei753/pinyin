@@ -40,7 +40,8 @@ class XiweiT9ImeServiceUiBehaviorTest {
         injectField(service, "handler", handler)
         injectField(service, "settingsRepository", repo)
         injectField(service, "hapticFeedbackManager", mock(HapticFeedbackManager::class.java))
-        injectField(service, "bufferText", mock(android.widget.TextView::class.java))
+        injectField(service, "pinyinFloatingBar", mock(android.view.View::class.java))
+        injectField(service, "pinyinFloatingText", mock(android.widget.TextView::class.java))
         injectField(service, "candidateContainer", mock(android.widget.LinearLayout::class.java))
 
         try {
@@ -59,8 +60,8 @@ class XiweiT9ImeServiceUiBehaviorTest {
         injectField(service, "settingsRepository", mock(SettingsRepository::class.java))
         injectField(service, "hapticFeedbackManager", mock(HapticFeedbackManager::class.java))
         injectField(service, "handler", KeyboardActionHandler(mock(ImeActionSink::class.java)).apply { attachEngine(mock(T9Engine::class.java)) })
-        val mockBt = mock(android.widget.TextView::class.java)
-        injectField(service, "bufferText", mockBt)
+        injectField(service, "pinyinFloatingBar", mock(android.view.View::class.java))
+        injectField(service, "pinyinFloatingText", mock(android.widget.TextView::class.java))
         val candidateBar = mock(android.widget.LinearLayout::class.java)
         injectField(service, "candidateContainer", candidateBar)
 

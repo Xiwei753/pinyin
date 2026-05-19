@@ -18,30 +18,13 @@ class T9Engine(
             val comps = pinyinComposer.getCompositions(buffer)
             val result = linkedSetOf<String>()
 
-            // 1. Readings from compositions ordered by beam score
             for (comp in comps) {
                 if (comp.pinyinList.isEmpty()) continue
-                if (comp.pinyinList.size == 1) {
-                    if (comp.pinyinString.isNotEmpty()) result.add(comp.pinyinString)
-                } else if (comp.isComplete) {
-                    val lastLen = comp.pinyinList.last().length
-                    if (lastLen >= 2) {
-                        if (comp.pinyinString.isNotEmpty()) result.add(comp.pinyinString)
-                    } else {
-                        // Multi-syllable where last syllable is single letter (e.g. "men i")
-                        // Show prefix without the trailing single-letter syllable
-                        val prefix = comp.pinyinList.dropLast(1).joinToString(" ")
-                        if (prefix.isNotEmpty()) result.add(prefix)
-                    }
-                } else {
-                    // Incomplete composition: show prefix that is complete
-                    val prefix = comp.pinyinList.dropLast(1).joinToString(" ")
-                    if (prefix.isNotEmpty()) result.add(prefix)
+                for (syl in comp.pinyinList) {
+                    if (syl.isNotEmpty() && syl !in result) result.add(syl)
                 }
             }
 
-            // 2. Prefix-only exact syllable decodings (longer prefixes first)
-            // This adds readings like "men" for buffer prefix "636"
             for (end in buffer.length downTo 1) {
                 val prefix = buffer.substring(0, end)
                 for (s in PinyinSyllableDecoder.getExactSyllables(prefix)) {
@@ -52,9 +35,22 @@ class T9Engine(
             return result.toList()
         }
 
+    fun getReadingDigitSpan(reading: String): String {
+        if (buffer.isEmpty() || reading.isEmpty()) return ""
+        val code = T9CodeMapper.toCode(reading)
+        if (buffer.startsWith(code)) return code
+        val comps = pinyinComposer.getCompositions(buffer)
+        for (comp in comps) {
+            val idx = comp.pinyinList.indexOf(reading)
+            if (idx >= 0 && idx < comp.segmentDigits.size) {
+                return comp.segmentDigits[idx]
+            }
+        }
+        return code
+    }
+
     fun setActiveReading(reading: String): Boolean {
         if (buffer.isEmpty()) return false
-        // Check against all readings, including prefix readings
         val allReadings = readings
         if (reading in allReadings) {
             activeReading = reading
@@ -62,6 +58,27 @@ class T9Engine(
             return true
         }
         return false
+    }
+
+    fun commitReadingAndKeepBuffer(reading: String): String? {
+        if (buffer.isEmpty() || reading.isEmpty()) return null
+        val digitSpan = getReadingDigitSpan(reading)
+        if (digitSpan.isEmpty()) return null
+
+        val cands = dictionary.getSingleSyllableCandidates(reading)
+        val best = cands.firstOrNull { it.origin == CandidateOrigin.EXACT_SINGLE || it.origin == CandidateOrigin.EXACT_PHRASE }
+            ?: cands.firstOrNull()
+        if (best == null) return null
+
+        userDictionary?.recordSelection(best.text, reading)
+        val remainingBuffer = buffer.replaceFirst(digitSpan, "", ignoreCase = false)
+        buffer = remainingBuffer
+        activeReading = null
+        lastVisibleBuffer = ""
+        lastBuffer = ""
+        lastCandidates = emptyList()
+        lastVisibleCandidates = emptyList()
+        return best.text
     }
 
     private val pinyinComposer = T9PinyinComposer()

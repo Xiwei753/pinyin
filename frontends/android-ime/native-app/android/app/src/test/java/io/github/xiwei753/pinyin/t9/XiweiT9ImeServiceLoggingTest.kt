@@ -39,10 +39,15 @@ class XiweiT9ImeServiceLoggingTest {
         containerField.isAccessible = true
         containerField.set(service, mockContainer)
 
-        val mockBufferText = mock(android.widget.TextView::class.java)
-        val bufferField = XiweiT9ImeService::class.java.getDeclaredField("bufferText")
-        bufferField.isAccessible = true
-        bufferField.set(service, mockBufferText)
+        val mockPinyinFloatingBar = mock(android.view.View::class.java)
+        val floatingBarField = XiweiT9ImeService::class.java.getDeclaredField("pinyinFloatingBar")
+        floatingBarField.isAccessible = true
+        floatingBarField.set(service, mockPinyinFloatingBar)
+
+        val mockPinyinFloatingText = mock(android.widget.TextView::class.java)
+        val floatingTextField = XiweiT9ImeService::class.java.getDeclaredField("pinyinFloatingText")
+        floatingTextField.isAccessible = true
+        floatingTextField.set(service, mockPinyinFloatingText)
     }
 
     private fun triggerLogDebugInfo() {

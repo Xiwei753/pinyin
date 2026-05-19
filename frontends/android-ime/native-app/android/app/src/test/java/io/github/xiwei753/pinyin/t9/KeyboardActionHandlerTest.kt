@@ -382,8 +382,8 @@ class KeyboardActionHandlerTest {
     @Test
     fun testSetActiveReadingViaHandler() {
         setupCandidates(listOf(
-            Candidate("梦", "6364", 50000, CandidateType.SINGLE_CHAR, "meng", CandidateOrigin.EXACT_SINGLE),
-            Candidate("能", "6364", 40000, CandidateType.SINGLE_CHAR, "neng", CandidateOrigin.EXACT_SINGLE)
+            Candidate("能", "636", 50000, CandidateType.SINGLE_CHAR, "neng", CandidateOrigin.EXACT_SINGLE),
+            Candidate("梦", "6364", 40000, CandidateType.SINGLE_CHAR, "meng", CandidateOrigin.EXACT_SINGLE)
         ))
         handler.onDigitPressed("6")
         handler.onDigitPressed("3")
@@ -392,14 +392,14 @@ class KeyboardActionHandlerTest {
 
         val success = handler.setActiveReading("neng")
         assertTrue(success)
-        assertEquals("neng", handler.preedit)
+        verify(sink).commitText("能")
     }
 
     @Test
-    fun testSetActiveReadingDoesNotCommitText() {
+    fun testSetActiveReadingCommitsText() {
         setupCandidates(listOf(
-            Candidate("梦", "6364", 50000, CandidateType.SINGLE_CHAR, "meng", CandidateOrigin.EXACT_SINGLE),
-            Candidate("能", "6364", 40000, CandidateType.SINGLE_CHAR, "neng", CandidateOrigin.EXACT_SINGLE)
+            Candidate("能", "636", 50000, CandidateType.SINGLE_CHAR, "neng", CandidateOrigin.EXACT_SINGLE),
+            Candidate("梦", "6364", 40000, CandidateType.SINGLE_CHAR, "meng", CandidateOrigin.EXACT_SINGLE)
         ))
         handler.onDigitPressed("6")
         handler.onDigitPressed("3")
@@ -408,7 +408,6 @@ class KeyboardActionHandlerTest {
         handler.refreshCandidates(30)
 
         handler.setActiveReading("neng")
-        // No commit should have happened
-        verify(sink, never()).commitText(anyString())
+        verify(sink).commitText("能")
     }
 }

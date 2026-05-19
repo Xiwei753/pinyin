@@ -41,7 +41,14 @@ class KeyboardActionHandler(
         }
 
     fun setActiveReading(reading: String): Boolean {
-        return engine?.setActiveReading(reading) ?: false
+        val success = engine?.setActiveReading(reading) ?: false
+        if (success) {
+            val committedText = engine?.commitReadingAndKeepBuffer(reading)
+            if (committedText != null) {
+                actionSink.commitText(committedText)
+            }
+        }
+        return success
     }
 
     private val englishMultiTapLetters = mapOf(

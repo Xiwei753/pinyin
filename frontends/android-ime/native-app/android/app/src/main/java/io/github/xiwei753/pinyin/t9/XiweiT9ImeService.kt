@@ -26,13 +26,19 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         return testInputConnection ?: super.getCurrentInputConnection()
     }
 
-    private lateinit var bufferText: TextView
     private lateinit var candidateContainer: LinearLayout
+    private lateinit var pinyinFloatingBar: View
+    private lateinit var pinyinFloatingText: TextView
     private lateinit var panelT9: View
     private lateinit var panelSymbol: View
     private lateinit var panelNumber: View
     private lateinit var readingTextViews: List<TextView>
     private lateinit var punctTextViews: List<TextView>
+    private lateinit var symPagePunct: View
+    private lateinit var symPageMath: View
+    private lateinit var symPageBracket: View
+    private lateinit var symPageOther: View
+    private var currentSymCategory: String = "punct"
 
     private lateinit var handler: KeyboardActionHandler
     private lateinit var settingsRepository: SettingsRepository
@@ -77,7 +83,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                     if (this::handler.isInitialized) {
                         val engine = T9Engine(state.dictionary, userDictionary)
                         handler.attachEngine(engine)
-                        if (this::bufferText.isInitialized) refreshUi()
+                        if (this::pinyinFloatingBar.isInitialized) refreshUi()
                     }
                 }
                 is DictionaryState.Fallback -> {
@@ -87,7 +93,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                             Handler(Looper.getMainLooper()).post {
                                 val engine = T9Engine(dict, userDictionary)
                                 handler.attachEngine(engine)
-                                if (this::bufferText.isInitialized) refreshUi()
+                                if (this::pinyinFloatingBar.isInitialized) refreshUi()
                             }
                         }.start()
                     }
@@ -119,11 +125,16 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     override fun onCreateInputView(): View {
         ensureCoreInitialized()
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
-        bufferText = view.findViewById(R.id.buffer_text)
         candidateContainer = view.findViewById(R.id.candidate_container)
+        pinyinFloatingBar = view.findViewById(R.id.pinyin_floating_bar)
+        pinyinFloatingText = view.findViewById(R.id.pinyin_floating_text)
         panelT9 = view.findViewById(R.id.panel_t9)
         panelSymbol = view.findViewById(R.id.panel_symbol)
         panelNumber = view.findViewById(R.id.panel_number)
+        symPagePunct = view.findViewById(R.id.sym_page_punct)
+        symPageMath = view.findViewById(R.id.sym_page_math)
+        symPageBracket = view.findViewById(R.id.sym_page_bracket)
+        symPageOther = view.findViewById(R.id.sym_page_other)
         readingTextViews = listOf(
             view.findViewById(R.id.reading_1),
             view.findViewById(R.id.reading_2),
@@ -137,6 +148,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             view.findViewById(R.id.punct_4)
         )
         setupKeys(view)
+        setupSymbolCategories(view)
         applyThemeAndHeight(view)
         updateKeyboardPanel()
         return view
@@ -174,7 +186,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
 
     private fun resetUiStateIfReady() {
-        if (this::bufferText.isInitialized) bufferText.text = ""
+        if (this::pinyinFloatingBar.isInitialized) pinyinFloatingBar.visibility = View.GONE
         if (this::candidateContainer.isInitialized) {
             candidateContainer.removeAllViews()
             candidateContainer.visibility = View.GONE
@@ -194,7 +206,6 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             R.id.key_7_number, R.id.key_7_letters,
             R.id.key_8_number, R.id.key_8_letters,
             R.id.key_9_number, R.id.key_9_letters,
-            R.id.key_0_number, R.id.key_0_text,
             R.id.punct_1, R.id.punct_2, R.id.punct_3, R.id.punct_4,
             R.id.key_del, R.id.key_retype,
             R.id.key_toggle_symbol, R.id.key_toggle_number, R.id.key_space,
@@ -207,8 +218,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 if (id == R.id.key_2_number || id == R.id.key_3_number ||
                     id == R.id.key_4_number || id == R.id.key_5_number ||
                     id == R.id.key_6_number || id == R.id.key_7_number ||
-                    id == R.id.key_8_number || id == R.id.key_9_number ||
-                    id == R.id.key_0_text) {
+                    id == R.id.key_8_number || id == R.id.key_9_number) {
                     tv.setTextColor(subColor)
                 } else {
                     tv.setTextColor(textColor)
@@ -220,7 +230,13 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             R.id.sym_13, R.id.sym_14, R.id.sym_15, R.id.sym_16, R.id.sym_17, R.id.sym_18,
             R.id.sym_19, R.id.sym_20, R.id.sym_21, R.id.sym_22, R.id.sym_23, R.id.sym_24,
             R.id.sym_25, R.id.sym_26, R.id.sym_27, R.id.sym_28, R.id.sym_29, R.id.sym_30,
+            R.id.sym_31, R.id.sym_32, R.id.sym_33, R.id.sym_34, R.id.sym_35, R.id.sym_36,
+            R.id.sym_37, R.id.sym_38, R.id.sym_39, R.id.sym_40, R.id.sym_41, R.id.sym_42,
+            R.id.sym_43, R.id.sym_44, R.id.sym_45, R.id.sym_46, R.id.sym_47, R.id.sym_48,
+            R.id.sym_49, R.id.sym_50, R.id.sym_51, R.id.sym_52, R.id.sym_53, R.id.sym_54,
+            R.id.sym_55, R.id.sym_56, R.id.sym_57, R.id.sym_58, R.id.sym_59, R.id.sym_60,
             R.id.sym_back, R.id.sym_number, R.id.sym_del, R.id.sym_enter, R.id.sym_hide,
+            R.id.sym_tab_punct, R.id.sym_tab_math, R.id.sym_tab_bracket, R.id.sym_tab_other,
             R.id.num_0, R.id.num_1, R.id.num_2, R.id.num_3, R.id.num_4, R.id.num_5,
             R.id.num_6, R.id.num_7, R.id.num_8, R.id.num_9, R.id.num_dot,
             R.id.num_del, R.id.num_back, R.id.num_symbol, R.id.num_hide, R.id.num_enter
@@ -251,7 +267,8 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
         rootView.setBackgroundColor(bgColor)
         rootView.findViewById<LinearLayout>(R.id.candidate_bar).setBackgroundColor(candidateBarColor)
-        bufferText.setTextColor(if (isDark) android.graphics.Color.parseColor("#888888") else android.graphics.Color.parseColor("#888888"))
+        pinyinFloatingBar.setBackgroundColor(if (isDark) android.graphics.Color.parseColor("#2A2A2A") else android.graphics.Color.parseColor("#E8E8E8"))
+        pinyinFloatingText.setTextColor(textColor)
 
         setTextColorOnAllKeys(rootView, textColor, subColor)
 
@@ -278,9 +295,12 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         rootView.findViewById<View>(R.id.keyboard_main)?.layoutParams?.height = keyboardMainHeight
         rootView.findViewById<View>(R.id.row_bottom)?.layoutParams?.height = bottomRowHeightPx
 
-        val symRowIds = listOf(R.id.row_sym_1, R.id.row_sym_2, R.id.row_sym_3, R.id.row_sym_4, R.id.row_sym_5, R.id.row_sym_6)
-        for (id in symRowIds) {
-            rootView.findViewById<View>(id)?.layoutParams?.height = rowHeightPx
+        val symPageIds = listOf(R.id.sym_page_punct, R.id.sym_page_math, R.id.sym_page_bracket, R.id.sym_page_other)
+        for (id in symPageIds) {
+            val page = rootView.findViewById<LinearLayout>(id) ?: continue
+            for (i in 0 until page.childCount) {
+                page.getChildAt(i)?.layoutParams?.height = rowHeightPx
+            }
         }
         rootView.findViewById<View>(R.id.row_sym_bottom)?.layoutParams?.height = bottomRowHeightPx
 
@@ -303,6 +323,54 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         val toggleEnglish = view?.findViewById<TextView>(R.id.key_toggle_english)
         if (toggleEnglish != null) {
             toggleEnglish.text = if (handler.keyboardMode == KeyboardMode.EnglishT9) "英/中" else "中/英"
+        }
+    }
+
+    private fun setupSymbolCategories(view: View) {
+        val tabs = mapOf(
+            R.id.sym_tab_punct to "punct",
+            R.id.sym_tab_math to "math",
+            R.id.sym_tab_bracket to "bracket",
+            R.id.sym_tab_other to "other"
+        )
+        for ((id, category) in tabs) {
+            view.findViewById<View>(id)?.setOnClickListener { v ->
+                hapticFeedbackManager.performTap(v)
+                switchSymbolCategory(category)
+            }
+        }
+    }
+
+    private fun switchSymbolCategory(category: String) {
+        currentSymCategory = category
+        symPagePunct.visibility = if (category == "punct") View.VISIBLE else View.GONE
+        symPageMath.visibility = if (category == "math") View.VISIBLE else View.GONE
+        symPageBracket.visibility = if (category == "bracket") View.VISIBLE else View.GONE
+        symPageOther.visibility = if (category == "other") View.VISIBLE else View.GONE
+
+        val view = this.view ?: return
+        val isDark = when (settingsRepository.getTheme()) {
+            "dark" -> true; "light" -> false
+            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+        val activeBg = if (isDark) android.graphics.Color.parseColor("#333333") else android.graphics.Color.parseColor("#FFFFFF")
+        val inactiveBg = if (isDark) android.graphics.Color.parseColor("#1E1E1E") else android.graphics.Color.parseColor("#E0E0E0")
+        val activeText = if (isDark) android.graphics.Color.parseColor("#E0E0E0") else android.graphics.Color.parseColor("#333333")
+        val inactiveText = if (isDark) android.graphics.Color.parseColor("#888888") else android.graphics.Color.parseColor("#555555")
+
+        val tabIds = listOf(R.id.sym_tab_punct, R.id.sym_tab_math, R.id.sym_tab_bracket, R.id.sym_tab_other)
+        val tabCategories = listOf("punct", "math", "bracket", "other")
+        for ((tabId, tabCat) in tabIds.zip(tabCategories)) {
+            val tab = view.findViewById<TextView>(tabId)
+            if (tab != null) {
+                if (tabCat == category) {
+                    tab.setBackgroundColor(activeBg)
+                    tab.setTextColor(activeText)
+                } else {
+                    tab.setBackgroundColor(inactiveBg)
+                    tab.setTextColor(inactiveText)
+                }
+            }
         }
     }
 
@@ -346,11 +414,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             false
         }
 
-        // Key 0
-        view.findViewById<View>(R.id.key_0)?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
-            handler.onZero()
-        }
+        // Key 0 removed - merged into Enter
 
         // Retype key
         view.findViewById<View>(R.id.key_retype)?.setOnClickListener { v ->
@@ -427,13 +491,20 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
         val symbolTexts = listOf(
             R.id.sym_1 to "，", R.id.sym_2 to "。", R.id.sym_3 to "？", R.id.sym_4 to "！",
-            R.id.sym_5 to "：", R.id.sym_6 to "；", R.id.sym_7 to "、", R.id.sym_8 to "“",
-            R.id.sym_9 to "”", R.id.sym_10 to "‘", R.id.sym_11 to "’", R.id.sym_12 to "（",
-            R.id.sym_13 to "）", R.id.sym_14 to "《", R.id.sym_15 to "》", R.id.sym_16 to "—",
-            R.id.sym_17 to "…", R.id.sym_18 to "@", R.id.sym_19 to "#", R.id.sym_20 to "￥",
-            R.id.sym_21 to "%", R.id.sym_22 to "&", R.id.sym_23 to "*", R.id.sym_24 to "+",
-            R.id.sym_25 to "-", R.id.sym_26 to "=", R.id.sym_27 to "/", R.id.sym_28 to "\\",
-            R.id.sym_29 to "<", R.id.sym_30 to ">"
+            R.id.sym_5 to "：", R.id.sym_6 to "；", R.id.sym_7 to "、", R.id.sym_8 to """,
+            R.id.sym_9 to """, R.id.sym_10 to "'", R.id.sym_11 to "'", R.id.sym_12 to "—",
+            R.id.sym_13 to "…", R.id.sym_14 to "·", R.id.sym_15 to "～", R.id.sym_16 to "+",
+            R.id.sym_17 to "-", R.id.sym_18 to "×", R.id.sym_19 to "÷", R.id.sym_20 to "=",
+            R.id.sym_21 to "%", R.id.sym_22 to "&", R.id.sym_23 to "|", R.id.sym_24 to "√",
+            R.id.sym_25 to "≈", R.id.sym_26 to "", R.id.sym_27 to "≤", R.id.sym_28 to "≥",
+            R.id.sym_29 to "±", R.id.sym_30 to "", R.id.sym_31 to "（", R.id.sym_32 to "）",
+            R.id.sym_33 to "【", R.id.sym_34 to "】", R.id.sym_35 to "{", R.id.sym_36 to "}",
+            R.id.sym_37 to "《", R.id.sym_38 to "》", R.id.sym_39 to "[", R.id.sym_40 to "]",
+            R.id.sym_41 to "<", R.id.sym_42 to ">", R.id.sym_43 to "/", R.id.sym_44 to "\\",
+            R.id.sym_45 to "\\", R.id.sym_46 to "@", R.id.sym_47 to "#", R.id.sym_48 to "￥",
+            R.id.sym_49 to "$", R.id.sym_50 to "*", R.id.sym_51 to "^", R.id.sym_52 to "_",
+            R.id.sym_53 to "~", R.id.sym_54 to "`", R.id.sym_55 to "€", R.id.sym_56 to "£",
+            R.id.sym_57 to "¥", R.id.sym_58 to "©", R.id.sym_59 to "®", R.id.sym_60 to "™"
         )
         for ((id, text) in symbolTexts) {
             view.findViewById<TextView>(id)?.setOnClickListener { v ->
@@ -563,8 +634,13 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         currentInputConnection?.finishComposingText()
     }
     override fun refreshUi() {
-        if (!this::bufferText.isInitialized || !this::handler.isInitialized) return
-        bufferText.text = handler.preedit
+        if (!this::pinyinFloatingBar.isInitialized || !this::handler.isInitialized) return
+        val preedit = handler.preedit
+        val hasInput = handler.rawBuffer.isNotEmpty()
+
+        pinyinFloatingBar.visibility = if (hasInput && preedit.isNotEmpty()) View.VISIBLE else View.GONE
+        pinyinFloatingText.text = preedit
+
         val limit = settingsRepository.getCandidateCount()
         val candidates = handler.refreshCandidates(limit)
         candidateContainer.visibility = if (candidates.isEmpty() && !isDictPreparing) View.GONE else View.VISIBLE
