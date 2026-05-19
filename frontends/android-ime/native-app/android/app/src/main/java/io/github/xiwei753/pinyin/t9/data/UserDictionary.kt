@@ -7,9 +7,17 @@ import io.github.xiwei753.pinyin.t9.core.Candidate
 import io.github.xiwei753.pinyin.t9.core.CandidateOrigin
 import io.github.xiwei753.pinyin.t9.core.CandidateType
 
+interface UserDictionaryProvider {
+    fun recordSelection(text: String, pinyin: String)
+    fun getUserCandidates(pinyin: String): List<Candidate>
+    fun getUserBoost(pinyin: String, text: String): Int
+    fun clearUserDictionary()
+    fun close()
+}
+
 open class UserDictionary private constructor(
     private var db: SQLiteDatabase?
-) {
+) : UserDictionaryProvider {
     companion object {
         private const val DB_NAME = "user_dict.db"
 
@@ -50,7 +58,7 @@ open class UserDictionary private constructor(
         }
     }
 
-    open fun recordSelection(text: String, pinyin: String) {
+    override fun recordSelection(text: String, pinyin: String) {
         if (db == null) return
 
         if (!isValidLearning(text, pinyin)) {

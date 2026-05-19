@@ -4,7 +4,7 @@ import io.github.xiwei753.pinyin.t9.data.DictionaryProvider
 
 class T9Engine(
     private val dictionary: DictionaryProvider,
-    private var userDictionary: io.github.xiwei753.pinyin.t9.data.UserDictionary? = null
+    private var userDictionary: io.github.xiwei753.pinyin.t9.data.UserDictionaryProvider? = null
 ) {
     var buffer = ""
         private set
