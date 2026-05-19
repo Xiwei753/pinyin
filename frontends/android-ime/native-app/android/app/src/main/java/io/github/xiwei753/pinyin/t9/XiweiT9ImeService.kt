@@ -253,7 +253,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             else -> (44 * density).toInt()
         }
 
-        val t9RowIds = listOf(R.id.row_t9_1, R.id.row_t9_2, R.id.row_t9_3, R.id.row_t9_4)
+        val t9RowIds = listOf(R.id.row_t9_1, R.id.row_t9_2, R.id.row_t9_3)
         for (id in t9RowIds) {
             rootView.findViewById<View>(id)?.layoutParams?.height = rowHeightPx
         }
