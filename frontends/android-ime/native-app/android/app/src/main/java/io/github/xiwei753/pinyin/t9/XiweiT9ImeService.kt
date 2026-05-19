@@ -132,28 +132,30 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         super.onStartInputView(info, restarting)
         currentEditorInfo = info
         view?.let { applyThemeAndHeight(it) }
-        if (this::handler.isInitialized) handler.onFinishInput()
+        if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
     }
 
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         super.onStartInput(info, restarting)
         currentEditorInfo = info
-        if (this::handler.isInitialized) handler.onFinishInput()
+        if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
-        handler.switchKeyboardMode(KeyboardMode.ChineseT9); updateKeyboardPanel()
+        if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
+        if (this::handler.isInitialized) handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+        updateKeyboardPanel()
     }
 
     override fun onFinishInput() {
         super.onFinishInput()
-        if (this::handler.isInitialized) handler.onFinishInput()
+        if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
     }
 
     override fun onWindowHidden() {
         super.onWindowHidden()
-        if (this::handler.isInitialized) handler.onFinishInput()
+        if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
     }
 
 

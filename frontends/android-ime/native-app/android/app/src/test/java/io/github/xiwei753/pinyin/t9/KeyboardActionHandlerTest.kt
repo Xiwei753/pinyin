@@ -196,4 +196,59 @@ class KeyboardActionHandlerTest {
         verify(sink).commitText("a")
         assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
     }
+
+    @Test
+    fun testEnglishMode_discardCompositionForLifecycle_cancelsPending() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onDigitPressed("2")
+        assertEquals("a", handler.preedit)
+        assertTrue(handler.englishPending)
+
+        handler.discardCompositionForLifecycle()
+        verify(sink, never()).commitText("a")
+        assertEquals(false, handler.englishPending)
+        assertEquals("", handler.preedit)
+    }
+
+    @Test
+    fun testEnglishMode_onHideKey_commitsPending() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onDigitPressed("2")
+        assertEquals("a", handler.preedit)
+
+        handler.onHideKey()
+        verify(sink).commitText("a")
+        assertEquals(false, handler.englishPending)
+        assertEquals("", handler.preedit)
+    }
+
+    @Test
+    fun testChineseMode_discardCompositionForLifecycle_clearsBuffer() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+        assertEquals("96", handler.rawBuffer)
+
+        handler.discardCompositionForLifecycle()
+        verify(sink, never()).commitText(anyString())
+        assertEquals("", handler.rawBuffer)
+        assertEquals(0, handler.currentCandidates.size)
+    }
+
+    @Test
+    fun testChineseMode_onHideKey_commitsFirstCandidate() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+
+        handler.onHideKey()
+        verify(sink).commitText("我")
+        assertEquals("", handler.rawBuffer)
+    }
 }
