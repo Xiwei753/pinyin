@@ -32,10 +32,14 @@ class T9EngineUserDictTest {
         override fun getPrefixCandidates(code: String): List<Candidate> = emptyList()
     }
 
-    class MockUserDict : io.github.xiwei753.pinyin.t9.data.UserDictionary {
+    class MockUserDict : io.github.xiwei753.pinyin.t9.data.UserDictionaryProvider {
         private val userEntries = mutableMapOf<Pair<String, String>, Int>()
 
         override fun recordSelection(text: String, pinyin: String) {
+            if (text.isEmpty() || pinyin.isEmpty()) return
+            if (text.matches(Regex("^[0-9]+$"))) return
+            if (text.matches(Regex("^[a-zA-Z\\s]+$"))) return
+            if (text.contains(" ")) return
             val key = Pair(text, pinyin)
             userEntries[key] = (userEntries[key] ?: 0) + 1
         }
@@ -83,6 +87,9 @@ class T9EngineUserDictTest {
             engine.commitCandidate(woCand)
         }
 
+        // After commit the buffer is cleared; re-type digits to see boosted score
+        engine.inputDigit("9")
+        engine.inputDigit("6")
         val boosted = engine.getVisibleCandidates()
         val boostedWo = boosted.find { it.text == "我" }
 

@@ -1,3 +1,4 @@
+import argparse
 import os
 import re
 import sys
@@ -206,20 +207,29 @@ def get_candidate_origin(text: str) -> str:
     return "EXACT_PHRASE"
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Build T9 dictionary assets from Rime dictionary sources")
+    parser.add_argument("--out-dir", default=None, help="Output directory for generated assets")
+    args = parser.parse_args()
+
     root_dir = repo_root()
     input_file_base = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "base.dict.yaml")
     input_file_8105 = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "8105.dict.yaml")
     input_file_ext = os.path.join(root_dir, "third_party", "rime-ice", "cn_dicts", "ext.dict.yaml")
     input_file_common = os.path.join(root_dir, "tools", "dictionary", "android_common_phrases.tsv")
-    output_file = os.path.join(root_dir, "frontends", "android-ime", "native-app", "android", "app", "src", "main", "assets", "t9_source_dict.tsv")
-    output_db_file = os.path.join(root_dir, "frontends", "android-ime", "native-app", "android", "app", "src", "main", "assets", "t9_dict.db")
+
+    if args.out_dir:
+        output_dir = args.out_dir
+    else:
+        output_dir = os.path.join(root_dir, "frontends", "android-ime", "native-app", "android", "app", "src", "main", "assets")
+    output_file = os.path.join(output_dir, "t9_source_dict.tsv")
+    output_db_file = os.path.join(output_dir, "t9_dict.db")
 
     for path in (input_file_base, input_file_8105):
         if not os.path.exists(path):
             print(f"Error: Input file not found at {path}")
             return 1
 
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
 
     corrections = load_pinyin_corrections()
 

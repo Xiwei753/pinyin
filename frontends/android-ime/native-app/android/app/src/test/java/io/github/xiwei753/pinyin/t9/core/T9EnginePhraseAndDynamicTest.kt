@@ -31,7 +31,7 @@ class T9EnginePhraseAndDynamicTest {
     @Test
     fun yeShiContainsYeShi() {
         val engine = realEngine()
-        typeDigits(engine, "93474")
+        typeDigits(engine, "93744")
         val visibleTexts = engine.getVisibleCandidates().map { it.text }
         assertTrue("ye shi should contain '也是', actual=$visibleTexts", visibleTexts.contains("也是"))
     }
@@ -39,7 +39,7 @@ class T9EnginePhraseAndDynamicTest {
     @Test
     fun meiShiContainsMeiShi() {
         val engine = realEngine()
-        typeDigits(engine, "63474")
+        typeDigits(engine, "634744")
         val visibleTexts = engine.getVisibleCandidates().map { it.text }
         assertTrue("mei shi should contain '没事', actual=$visibleTexts", visibleTexts.contains("没事"))
     }
@@ -63,7 +63,7 @@ class T9EnginePhraseAndDynamicTest {
     @Test
     fun woJueDeContainsWoJueDe() {
         val engine = realEngine()
-        typeDigits(engine, "96533833")
+        typeDigits(engine, "9658333")
         val visibleTexts = engine.getVisibleCandidates().map { it.text }
         assertTrue("wo jue de should contain '我觉得', actual=$visibleTexts", visibleTexts.contains("我觉得"))
     }

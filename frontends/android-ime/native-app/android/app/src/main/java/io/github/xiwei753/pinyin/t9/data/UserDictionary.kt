@@ -79,7 +79,7 @@ open class UserDictionary private constructor(
         }
     }
 
-    open fun getUserCandidates(pinyin: String): List<Candidate> {
+    override fun getUserCandidates(pinyin: String): List<Candidate> {
         if (db == null) return emptyList()
 
         val cursor = db?.rawQuery("""
@@ -113,7 +113,7 @@ open class UserDictionary private constructor(
         return candidates
     }
 
-    open fun getUserBoost(pinyin: String, text: String): Int {
+    override fun getUserBoost(pinyin: String, text: String): Int {
         if (db == null) return 0
 
         val cursor = db?.rawQuery("""
@@ -132,12 +132,12 @@ open class UserDictionary private constructor(
         return boost
     }
 
-    open fun clearUserDictionary() {
+    override fun clearUserDictionary() {
         db?.execSQL("DELETE FROM user_entries")
         Log.d("UserDictionary", "Cleared user dictionary")
     }
 
-    open fun close() {
+    override fun close() {
         db?.close()
         db = null
         instance = null

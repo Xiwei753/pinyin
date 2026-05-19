@@ -7,7 +7,7 @@ object TestPaths {
         val rootStr = generateSequence(File(System.getProperty("user.dir")).absoluteFile) { it.parentFile }
             .firstOrNull { candidate ->
                 File(candidate, "tools/dictionary/build_t9_assets.py").isFile &&
-                    File(candidate, "frontends/android-ime/native-app/android/app/src/main/assets/t9_source_dict.tsv").isFile
+                    File(candidate, "AGENTS.md").isFile
             }?.absolutePath
             ?: throw IllegalStateException("Cannot find repository root from ${System.getProperty("user.dir")}")
         return File(rootStr)
@@ -17,15 +17,19 @@ object TestPaths {
         return File(repoRoot(), "frontends/android-ime/native-app/android")
     }
 
+    private fun generatedAssetsDir(): File {
+        return File(androidProjectRoot(), "app/build/generated/t9Assets")
+    }
+
     fun assetDictionary(): File {
-        val file = File(androidProjectRoot(), "app/src/main/assets/t9_source_dict.tsv")
-        require(file.isFile) { "Cannot find real asset dictionary at ${file.absolutePath}" }
+        val file = File(generatedAssetsDir(), "t9_source_dict.tsv")
+        require(file.isFile) { "Cannot find generated asset dictionary at ${file.absolutePath}. Run generateT9DictionaryAssets Gradle task first." }
         return file
     }
 
     fun assetDatabase(): File {
-        val file = File(androidProjectRoot(), "app/src/main/assets/t9_dict.db")
-        require(file.isFile) { "Cannot find real asset database at ${file.absolutePath}" }
+        val file = File(generatedAssetsDir(), "t9_dict.db")
+        require(file.isFile) { "Cannot find generated asset database at ${file.absolutePath}. Run generateT9DictionaryAssets Gradle task first." }
         return file
     }
 

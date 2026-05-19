@@ -36,14 +36,26 @@ jobs:
             exit 1
           fi
 
-      - name: Run Build Dictionary Assets Script
+      - name: Verify T9 Dictionary Asset Script
         run: |
-          python3 tools/dictionary/build_t9_assets.py
-
-      - name: Verify Generated Dictionary Is Committed
-        run: |
-          git diff --exit-code frontends/android-ime/native-app/android/app/src/main/assets/t9_source_dict.tsv
-          git diff --exit-code frontends/android-ime/native-app/android/app/src/main/assets/t9_dict.db
+          python3 tools/dictionary/build_t9_assets.py --out-dir /tmp/t9AssetsCheck
+          if [ ! -f "/tmp/t9AssetsCheck/t9_source_dict.tsv" ]; then
+            echo "Error: t9_source_dict.tsv was not generated"
+            exit 1
+          fi
+          if [ ! -f "/tmp/t9AssetsCheck/t9_dict.db" ]; then
+            echo "Error: t9_dict.db was not generated"
+            exit 1
+          fi
+          # Verify the DB can be queried
+          python3 -c "
+import sqlite3
+conn = sqlite3.connect('/tmp/t9AssetsCheck/t9_dict.db')
+count = conn.execute('SELECT COUNT(*) FROM entries').fetchone()[0]
+print(f'Database has {count} entries')
+assert count > 30000, f'Expected >30000 entries, got {count}'
+conn.close()
+"
 
       - name: Set up JDK
         uses: actions/setup-java@v4
