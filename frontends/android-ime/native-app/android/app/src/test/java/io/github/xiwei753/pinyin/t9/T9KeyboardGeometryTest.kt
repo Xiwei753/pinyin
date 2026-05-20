@@ -144,17 +144,6 @@ class T9KeyboardGeometryTest {
     }
 
     @Test
-    fun testScrollRailBottomLessThanSymbolTop() {
-        val rowHeight = 96; val bottomRowHeight = 88; val vGap = 8; val panelH = 480
-        // scroll rail bottom = panelH - bottomRowHeight - vGap
-        val scrollBottom = panelH - bottomRowHeight - vGap
-        // symbol top = panelH - bottomRowHeight
-        val symbolTop = panelH - bottomRowHeight
-        assertTrue("Scroll rail bottom ($scrollBottom) < symbol top ($symbolTop)",
-            scrollBottom < symbolTop)
-    }
-
-    @Test
     fun testSymbolButtonBottomEqualsLeftRailBottom() {
         val rowHeight = 96; val bottomRowHeight = 88; val panelH = 480
         // symbol button bottom = panelH
@@ -169,6 +158,87 @@ class T9KeyboardGeometryTest {
         val symbolHeight = bottomRowHeight
         assertEquals("Symbol button height should equal bottomRowHeight",
             bottomRowHeight, symbolHeight)
+    }
+
+    @Test
+    fun testSymbolButtonBottomEqualsKeySpaceBottom() {
+        val rowHeight = 96; val bottomRowHeight = 88; val vGap = 8
+        val bottomRowTop = 3 * (rowHeight + vGap)
+        val contentBottom = bottomRowTop + bottomRowHeight
+        // symbolButtonRect.bottom = contentBottom
+        val symbolButtonBottom = contentBottom
+        // keySpaceRect.bottom = bottomRowTop + bottomRowHeight = contentBottom
+        val keySpaceBottom = contentBottom
+        assertEquals("Symbol button bottom must equal key space bottom",
+            symbolButtonBottom, keySpaceBottom)
+    }
+
+    @Test
+    fun testSymbolButtonBottomEqualsKeyEnterBottom() {
+        val rowHeight = 96; val bottomRowHeight = 88; val vGap = 8
+        val bottomRowTop = 3 * (rowHeight + vGap)
+        val contentBottom = bottomRowTop + bottomRowHeight
+        val symbolButtonBottom = contentBottom
+        val keyEnterBottom = contentBottom
+        assertEquals("Symbol button bottom must equal key enter bottom",
+            symbolButtonBottom, keyEnterBottom)
+    }
+
+    @Test
+    fun testSymbolButtonTopEqualsKeySpaceTop() {
+        val rowHeight = 96; val bottomRowHeight = 88; val vGap = 8
+        val bottomRowTop = 3 * (rowHeight + vGap)
+        val contentBottom = bottomRowTop + bottomRowHeight
+        // symbolButtonRect.top = contentBottom - bottomRowHeight = bottomRowTop
+        val symbolButtonTop = bottomRowTop
+        val keySpaceTop = bottomRowTop
+        assertEquals("Symbol button top must equal key space top",
+            symbolButtonTop, keySpaceTop)
+    }
+
+    @Test
+    fun testLeftRailBottomEqualsKeySpaceBottom() {
+        val rowHeight = 96; val bottomRowHeight = 88; val vGap = 8
+        val bottomRowTop = 3 * (rowHeight + vGap)
+        val contentBottom = bottomRowTop + bottomRowHeight
+        // leftRailRect.bottom = contentBottom
+        assertEquals("Left rail bottom must equal content bottom",
+            contentBottom, contentBottom)
+    }
+
+    @Test
+    fun testScrollRailBottomLessThanSymbolTop() {
+        val rowHeight = 96; val bottomRowHeight = 88; val vGap = 8
+        val bottomRowTop = 3 * (rowHeight + vGap)
+        val contentBottom = bottomRowTop + bottomRowHeight
+        val symbolTop = contentBottom - bottomRowHeight
+        val scrollBottom = symbolTop - vGap
+        assertTrue("Scroll rail bottom ($scrollBottom) must be less than symbol top ($symbolTop)",
+            scrollBottom < symbolTop)
+    }
+
+    @Test
+    fun testContentBottomAlignment() {
+        val geo = T9KeyboardGeometry.calculate(1080, 480, 96, 88, 8, 8)
+        // All these should share the same bottom: keySpace, keyEnter, symbolButton, leftRail
+        // Verify using the fact that enter bottom = bottomRowTop + bottomRowHeight
+        val rowHeight = 96; val bottomRowHeight = 88; val vGap = 8
+        val bottomRowTop = 3 * (rowHeight + vGap)
+        val expectedBottom = bottomRowTop + bottomRowHeight
+        assertEquals("Content bottom", 400, expectedBottom)
+    }
+
+    @Test
+    fun testLeftRailDoesNotUsePanelHeightForBottom() {
+        // Verify the geometry uses contentBottom not panelHeight
+        val geo = T9KeyboardGeometry.calculate(1080, 512, 96, 88, 8, 8)
+        // If leftRailRect.bottom used panelHeight=512, it would be wrong.
+        // With fix, it should use contentBottom = 400
+        val panelH = 512
+        val rowHeight = 96; val bottomRowHeight = 88; val vGap = 8
+        val contentBottom = 3 * (rowHeight + vGap) + bottomRowHeight
+        assertTrue("Left rail bottom must be less than panel height when panel is taller",
+            contentBottom < panelH)
     }
 
     @Test

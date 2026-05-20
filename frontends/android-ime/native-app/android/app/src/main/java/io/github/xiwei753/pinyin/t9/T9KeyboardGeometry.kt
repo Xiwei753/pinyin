@@ -50,14 +50,17 @@ class T9KeyboardGeometry(
             val row2Top = row1Top + rowHeight + verticalGap
             val row3Top = row2Top + rowHeight + verticalGap
             val bottomRowTop = row3Top + rowHeight + verticalGap
+            val contentBottom = bottomRowTop + bottomRowHeight
 
-            val leftRailRect = Rect(0, 0, leftRailWidth, panelHeight)
+            // Left column and symbol button are sized to match content area, not panelHeight.
+            // This prevents the symbol button from extending below the bottom row.
+            val leftRailRect = Rect(0, 0, leftRailWidth, contentBottom)
 
-            // Symbol button at bottom-left, scroll rail fills above
-            val symbolButtonHeight = bottomRowHeight
-            val scrollRailBottom = panelHeight - symbolButtonHeight - verticalGap
-            val leftRailScrollRect = Rect(0, 0, leftRailWidth, scrollRailBottom)
-            val symbolButtonRect = Rect(0, panelHeight - symbolButtonHeight, leftRailWidth, panelHeight)
+            // Symbol button at bottom of content, same baseline as bottom row keys
+            val symbolButtonRect = Rect(0, contentBottom - bottomRowHeight, leftRailWidth, contentBottom)
+
+            // Scroll rail fills from top to symbol button top minus gap
+            val leftRailScrollRect = Rect(0, 0, leftRailWidth, symbolButtonRect.top - verticalGap)
 
             // Key width in top 3 rows (3 equal columns)
             val keyWidth = (midAreaWidth - 4 * horizontalGap) / 3
