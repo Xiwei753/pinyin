@@ -32,26 +32,11 @@
         </HorizontalScrollView>
     </LinearLayout>
 
-    <!-- Floating Pinyin Display -->
-    <LinearLayout
-        android:id="@+id/pinyin_floating_bar"
+
+    <FrameLayout
+        android:id="@+id/keyboard_shell"
         android:layout_width="match_parent"
-        android:layout_height="32dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:background="#E8E8E8"
-        android:visibility="gone"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp">
-        <TextView
-            android:id="@+id/pinyin_floating_text"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:textSize="18sp"
-            android:textColor="#333333"
-            android:gravity="center_vertical"
-            android:singleLine="true" />
-    </LinearLayout>
+        android:layout_height="260dp">
 
     <!-- Chinese/English T9 Panel -->
     <LinearLayout
@@ -790,4 +775,34 @@
         </LinearLayout>
     </LinearLayout>
 
+
+
+    <!-- Floating Pinyin Display -->
+    <LinearLayout
+        android:id="@+id/pinyin_floating_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="40dp"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="@drawable/pinyin_bg"
+        android:visibility="gone"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:elevation="4dp">
+        <TextView
+            android:id="@+id/pinyin_floating_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="#333333"
+            android:gravity="center_vertical"
+            android:singleLine="true" />
+    </LinearLayout>
+
+    </FrameLayout>
 </LinearLayout>
