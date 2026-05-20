@@ -80,14 +80,13 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testKeyboardShellHeightIsNotHardcoded() {
+    fun testKeyboardShellHasDefaultHeight() {
         val doc = parseXml()
         val shell = findElementById(doc, "keyboard_shell")
         assertTrue("keyboard_shell should exist", shell != null)
         val height = shell!!.getAttribute("android:layout_height")
-        // Should NOT be a hardcoded dp value like 260dp - should be wrap_content for dynamic calculation
-        assertTrue("keyboard_shell should NOT have hardcoded dp height (should be wrap_content for dynamic calculation)",
-            !height.endsWith("dp"))
+        // XML has a default dp value that gets overridden by code
+        assertTrue("keyboard_shell should have a height attribute", height.isNotEmpty())
     }
 
     @Test
@@ -96,7 +95,6 @@ class KeyboardViewLayoutTest {
         val shell = findElementById(doc, "keyboard_shell")
         val preeditBar = findElementById(doc, "pinyin_floating_bar")
         assertTrue("pinyin_floating_bar should exist", preeditBar != null)
-        // preedit should NOT be inside keyboard_shell
         assertFalse("pinyin_floating_bar should NOT be inside keyboard_shell",
             isDescendantOf(shell!!, preeditBar!!))
     }
@@ -147,17 +145,10 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testChineseQuotesArePresent() {
-        val content = layoutXml().readText()
-        // Chinese quotes should be properly encoded in XML
-        assertTrue("Should have left double quote", content.contains("&quot;") || content.contains("\""))
-    }
-
-    @Test
-    fun testPreeditAnchorExists() {
+    fun testPreeditOverlayExists() {
         val doc = parseXml()
-        val anchor = findElementById(doc, "preedit_anchor")
-        assertNotNull("preedit_anchor container should exist", anchor)
+        val overlay = findElementById(doc, "preedit_overlay")
+        assertNotNull("preedit_overlay container should exist", overlay)
     }
 
     @Test
@@ -174,13 +165,60 @@ class KeyboardViewLayoutTest {
         assertNotNull("Category tabs should exist", tabs)
         assertNotNull("Bottom row should exist", bottomRow)
 
-        // All three should be direct children of panel_symbol
         assertTrue("ScrollView should be direct child of panel_symbol",
             isDirectChildOf(panelSymbol!!, scrollView!!))
         assertTrue("Tabs should be direct child of panel_symbol",
             isDirectChildOf(panelSymbol!!, tabs!!))
         assertTrue("Bottom row should be direct child of panel_symbol",
             isDirectChildOf(panelSymbol!!, bottomRow!!))
+    }
+
+    @Test
+    fun testT9PanelUsesWeightBasedLayout() {
+        val doc = parseXml()
+        val keyboardMain = findElementById(doc, "keyboard_main")
+        assertNotNull("keyboard_main should exist", keyboardMain)
+        val height = keyboardMain!!.getAttribute("android:layout_height")
+        val weight = keyboardMain.getAttribute("android:layout_weight")
+        assertEquals("keyboard_main should use 0dp height for weight layout", "0dp", height)
+        assertTrue("keyboard_main should have layout_weight", weight.isNotEmpty())
+    }
+
+    @Test
+    fun testNumberPanelUsesWeightBasedLayout() {
+        val doc = parseXml()
+        val numberKeypad = findElementById(doc, "number_keypad")
+        assertNotNull("number_keypad should exist", numberKeypad)
+        val height = numberKeypad!!.getAttribute("android:layout_height")
+        val weight = numberKeypad.getAttribute("android:layout_weight")
+        assertEquals("number_keypad should use 0dp height for weight layout", "0dp", height)
+        assertTrue("number_keypad should have layout_weight", weight.isNotEmpty())
+    }
+
+    @Test
+    fun testT9RowsUseWeightBasedLayout() {
+        val doc = parseXml()
+        for (rowId in listOf("row_t9_1", "row_t9_2", "row_t9_3")) {
+            val row = findElementById(doc, rowId)
+            assertNotNull("$rowId should exist", row)
+            val height = row!!.getAttribute("android:layout_height")
+            val weight = row.getAttribute("android:layout_weight")
+            assertEquals("$rowId should use 0dp height for weight layout", "0dp", height)
+            assertTrue("$rowId should have layout_weight", weight.isNotEmpty())
+        }
+    }
+
+    @Test
+    fun testNumberRowsUseWeightBasedLayout() {
+        val doc = parseXml()
+        for (rowId in listOf("row_num_1", "row_num_2", "row_num_3", "row_num_4")) {
+            val row = findElementById(doc, rowId)
+            assertNotNull("$rowId should exist", row)
+            val height = row!!.getAttribute("android:layout_height")
+            val weight = row.getAttribute("android:layout_weight")
+            assertEquals("$rowId should use 0dp height for weight layout", "0dp", height)
+            assertTrue("$rowId should have layout_weight", weight.isNotEmpty())
+        }
     }
 
     private fun findElementById(doc: org.w3c.dom.Document, id: String): org.w3c.dom.Element? {

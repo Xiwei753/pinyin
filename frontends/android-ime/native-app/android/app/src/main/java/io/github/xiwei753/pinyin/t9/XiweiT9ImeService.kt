@@ -276,42 +276,47 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
         val heightSetting = settingsRepository.getKeyboardHeight()
         val density = resources.displayMetrics.density
-        val rowHeightPx = when (heightSetting) {
-            "low" -> (44 * density).toInt()
-            "high" -> (56 * density).toInt()
-            else -> (48 * density).toInt()
-        }
         val bottomRowHeightPx = when (heightSetting) {
             "low" -> (40 * density).toInt()
             "high" -> (48 * density).toInt()
             else -> (44 * density).toInt()
         }
 
-        val interRowMarginPx = (4 * density).toInt()
         val panelPaddingPx = (4 * density).toInt()
-
-        // Calculate shell height: use number mode (tallest) as baseline
-        // Number mode: 4 rows + 3 margins + bottom row + panel padding
-        val numberModeHeight = 4 * rowHeightPx + 3 * interRowMarginPx + bottomRowHeightPx + 2 * panelPaddingPx
-        // T9 mode: 3 rows + 2 margins + bottom row + panel padding
-        val t9ModeHeight = 3 * rowHeightPx + 2 * interRowMarginPx + bottomRowHeightPx + 2 * panelPaddingPx
-        // Symbol mode: tabs + scroll content + bottom row + panel padding
         val tabsHeightPx = (36 * density).toInt()
-        val symbolScrollMinPx = 2 * rowHeightPx // at least 2 rows of scroll content
-        val symbolModeHeight = tabsHeightPx + symbolScrollMinPx + bottomRowHeightPx + 2 * panelPaddingPx
 
-        val shellHeight = maxOf(numberModeHeight, t9ModeHeight, symbolModeHeight)
+        // Calculate shell height based on number mode (tallest: 4 rows + 3 margins + bottom + padding)
+        val rowHeightPx = when (heightSetting) {
+            "low" -> (44 * density).toInt()
+            "high" -> (56 * density).toInt()
+            else -> (48 * density).toInt()
+        }
+        val interRowMarginPx = (4 * density).toInt()
+        val numberModeHeight = 4 * rowHeightPx + 3 * interRowMarginPx + bottomRowHeightPx + 2 * panelPaddingPx
+        val symbolModeHeight = tabsHeightPx + 2 * rowHeightPx + bottomRowHeightPx + 2 * panelPaddingPx
+        val shellHeight = maxOf(numberModeHeight, symbolModeHeight)
         rootView.findViewById<View>(R.id.keyboard_shell)?.layoutParams?.height = shellHeight
 
-        val t9RowIds = listOf(R.id.row_t9_1, R.id.row_t9_2, R.id.row_t9_3)
-        for (id in t9RowIds) {
-            rootView.findViewById<View>(id)?.layoutParams?.height = rowHeightPx
+        // Update bottom row child heights
+        val bottomRowChildren = listOf(
+            R.id.key_toggle_symbol, R.id.key_toggle_number, R.id.key_space,
+            R.id.key_toggle_english, R.id.key_enter
+        )
+        for (id in bottomRowChildren) {
+            rootView.findViewById<View>(id)?.layoutParams?.height = bottomRowHeightPx
         }
-        // Fix keyboard_main height so left/right match_parent columns render correctly.
-        val keyboardMainHeight = 3 * rowHeightPx + 2 * interRowMarginPx
-        rootView.findViewById<View>(R.id.keyboard_main)?.layoutParams?.height = keyboardMainHeight
-        rootView.findViewById<View>(R.id.row_bottom)?.layoutParams?.height = bottomRowHeightPx
 
+        // Symbol/number bottom row children
+        val symBottomChildren = listOf(R.id.sym_back, R.id.sym_number, R.id.sym_del, R.id.sym_enter, R.id.sym_hide)
+        for (id in symBottomChildren) {
+            rootView.findViewById<View>(id)?.layoutParams?.height = bottomRowHeightPx
+        }
+        val numBottomChildren = listOf(R.id.num_back, R.id.num_symbol, R.id.num_hide, R.id.num_enter)
+        for (id in numBottomChildren) {
+            rootView.findViewById<View>(id)?.layoutParams?.height = bottomRowHeightPx
+        }
+
+        // Symbol page row heights
         val symPageIds = listOf(R.id.sym_page_punct, R.id.sym_page_math, R.id.sym_page_bracket, R.id.sym_page_other)
         for (id in symPageIds) {
             val page = rootView.findViewById<LinearLayout>(id) ?: continue
@@ -319,19 +324,15 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 page.getChildAt(i)?.layoutParams?.height = rowHeightPx
             }
         }
-        rootView.findViewById<View>(R.id.row_sym_bottom)?.layoutParams?.height = bottomRowHeightPx
 
-        // Set ScrollView height to fill remaining space in shell
+        // ScrollView fills remaining space in symbol panel
         val scrollHeight = shellHeight - tabsHeightPx - bottomRowHeightPx - 2 * panelPaddingPx
         if (scrollHeight > 0) {
             symScrollContent.layoutParams.height = scrollHeight
         }
 
-        val numRowIds = listOf(R.id.row_num_1, R.id.row_num_2, R.id.row_num_3, R.id.row_num_4)
-        for (id in numRowIds) {
-            rootView.findViewById<View>(id)?.layoutParams?.height = rowHeightPx
-        }
-        rootView.findViewById<View>(R.id.row_num_bottom)?.layoutParams?.height = bottomRowHeightPx
+        // Trigger re-layout
+        rootView.requestLayout()
     }
 
 
