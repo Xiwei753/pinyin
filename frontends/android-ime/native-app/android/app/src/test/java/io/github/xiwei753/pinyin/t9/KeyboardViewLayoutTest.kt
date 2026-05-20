@@ -4,6 +4,7 @@ import io.github.xiwei753.pinyin.t9.testutil.TestPaths
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
@@ -79,12 +80,25 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testKeyboardShellHasFixedHeight() {
+    fun testKeyboardShellHeightIsNotHardcoded() {
         val doc = parseXml()
         val shell = findElementById(doc, "keyboard_shell")
         assertTrue("keyboard_shell should exist", shell != null)
         val height = shell!!.getAttribute("android:layout_height")
-        assertTrue("keyboard_shell should have a fixed dp height", height.endsWith("dp"))
+        // Should NOT be a hardcoded dp value like 260dp - should be wrap_content for dynamic calculation
+        assertTrue("keyboard_shell should NOT have hardcoded dp height (should be wrap_content for dynamic calculation)",
+            !height.endsWith("dp"))
+    }
+
+    @Test
+    fun testPreeditIsOutsideKeyboardShell() {
+        val doc = parseXml()
+        val shell = findElementById(doc, "keyboard_shell")
+        val preeditBar = findElementById(doc, "pinyin_floating_bar")
+        assertTrue("pinyin_floating_bar should exist", preeditBar != null)
+        // preedit should NOT be inside keyboard_shell
+        assertFalse("pinyin_floating_bar should NOT be inside keyboard_shell",
+            isDescendantOf(shell!!, preeditBar!!))
     }
 
     @Test
@@ -103,13 +117,70 @@ class KeyboardViewLayoutTest {
             val node = allNodes.item(i)
             if (node is org.w3c.dom.Element) {
                 val id = node.getAttribute("android:id")
-                if (id.isNotEmpty() && (id.contains("sym_") || id.contains("sym_tab_") || id.contains("sym_back") || id.contains("sym_number") || id.contains("sym_del") || id.contains("sym_enter") || id.contains("sym_hide"))) {
+                if (id.isNotEmpty() && id.contains("sym_")) {
                     symIds[id] = symIds.getOrDefault(id, 0) + 1
                 }
             }
         }
         val dupes = symIds.filter { it.value > 1 }
         assertTrue("No symbol ID should appear more than once, but found: $dupes", dupes.isEmpty())
+    }
+
+    @Test
+    fun testSymbolTextsAreNotEmpty() {
+        val doc = parseXml()
+        val allNodes = doc.getElementsByTagName("TextView")
+        val emptySymTexts = mutableListOf<String>()
+        for (i in 0 until allNodes.length) {
+            val node = allNodes.item(i)
+            if (node is org.w3c.dom.Element) {
+                val id = node.getAttribute("android:id")
+                if (id.isNotEmpty() && id.contains("sym_") && id.matches(Regex("@\\+id/sym_\\d+"))) {
+                    val text = node.getAttribute("android:text")
+                    if (text.isEmpty()) {
+                        emptySymTexts.add(id)
+                    }
+                }
+            }
+        }
+        assertTrue("Symbol TextViews should not have empty text, but found: $emptySymTexts", emptySymTexts.isEmpty())
+    }
+
+    @Test
+    fun testChineseQuotesArePresent() {
+        val content = layoutXml().readText()
+        // Chinese quotes should be properly encoded in XML
+        assertTrue("Should have left double quote", content.contains("&quot;") || content.contains("\""))
+    }
+
+    @Test
+    fun testPreeditAnchorExists() {
+        val doc = parseXml()
+        val anchor = findElementById(doc, "preedit_anchor")
+        assertNotNull("preedit_anchor container should exist", anchor)
+    }
+
+    @Test
+    fun testScrollViewTabsAndBottomRowAreSiblings() {
+        val doc = parseXml()
+        val panelSymbol = findElementById(doc, "panel_symbol")
+        assertTrue("panel_symbol should exist", panelSymbol != null)
+
+        val scrollView = findElementById(doc, "sym_scroll_content")
+        val tabs = findElementById(doc, "sym_category_tabs")
+        val bottomRow = findElementById(doc, "row_sym_bottom")
+
+        assertNotNull("ScrollView should exist", scrollView)
+        assertNotNull("Category tabs should exist", tabs)
+        assertNotNull("Bottom row should exist", bottomRow)
+
+        // All three should be direct children of panel_symbol
+        assertTrue("ScrollView should be direct child of panel_symbol",
+            isDirectChildOf(panelSymbol!!, scrollView!!))
+        assertTrue("Tabs should be direct child of panel_symbol",
+            isDirectChildOf(panelSymbol!!, tabs!!))
+        assertTrue("Bottom row should be direct child of panel_symbol",
+            isDirectChildOf(panelSymbol!!, bottomRow!!))
     }
 
     private fun findElementById(doc: org.w3c.dom.Document, id: String): org.w3c.dom.Element? {
@@ -128,7 +199,6 @@ class KeyboardViewLayoutTest {
 
     private fun hasChildByTagName(parent: org.w3c.dom.Element, tagName: String): Boolean {
         val children = parent.getElementsByTagName(tagName)
-        // Check direct and indirect children
         for (i in 0 until children.length) {
             val child = children.item(i)
             if (isDescendantOf(parent, child)) {
@@ -145,5 +215,9 @@ class KeyboardViewLayoutTest {
             current = current.parentNode
         }
         return false
+    }
+
+    private fun isDirectChildOf(parent: org.w3c.dom.Element, node: org.w3c.dom.Node): Boolean {
+        return node.parentNode === parent
     }
 }

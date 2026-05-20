@@ -287,12 +287,27 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             else -> (44 * density).toInt()
         }
 
+        val interRowMarginPx = (4 * density).toInt()
+        val panelPaddingPx = (4 * density).toInt()
+
+        // Calculate shell height: use number mode (tallest) as baseline
+        // Number mode: 4 rows + 3 margins + bottom row + panel padding
+        val numberModeHeight = 4 * rowHeightPx + 3 * interRowMarginPx + bottomRowHeightPx + 2 * panelPaddingPx
+        // T9 mode: 3 rows + 2 margins + bottom row + panel padding
+        val t9ModeHeight = 3 * rowHeightPx + 2 * interRowMarginPx + bottomRowHeightPx + 2 * panelPaddingPx
+        // Symbol mode: tabs + scroll content + bottom row + panel padding
+        val tabsHeightPx = (36 * density).toInt()
+        val symbolScrollMinPx = 2 * rowHeightPx // at least 2 rows of scroll content
+        val symbolModeHeight = tabsHeightPx + symbolScrollMinPx + bottomRowHeightPx + 2 * panelPaddingPx
+
+        val shellHeight = maxOf(numberModeHeight, t9ModeHeight, symbolModeHeight)
+        rootView.findViewById<View>(R.id.keyboard_shell)?.layoutParams?.height = shellHeight
+
         val t9RowIds = listOf(R.id.row_t9_1, R.id.row_t9_2, R.id.row_t9_3)
         for (id in t9RowIds) {
             rootView.findViewById<View>(id)?.layoutParams?.height = rowHeightPx
         }
         // Fix keyboard_main height so left/right match_parent columns render correctly.
-        val interRowMarginPx = (4 * density).toInt()
         val keyboardMainHeight = 3 * rowHeightPx + 2 * interRowMarginPx
         rootView.findViewById<View>(R.id.keyboard_main)?.layoutParams?.height = keyboardMainHeight
         rootView.findViewById<View>(R.id.row_bottom)?.layoutParams?.height = bottomRowHeightPx
@@ -307,10 +322,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         rootView.findViewById<View>(R.id.row_sym_bottom)?.layoutParams?.height = bottomRowHeightPx
 
         // Set ScrollView height to fill remaining space in shell
-        val shellHeight = rootView.findViewById<View>(R.id.keyboard_shell)?.layoutParams?.height ?: 0
-        val symPadding = 4 * density.toInt()
-        val tabsHeight = (36 * density).toInt()
-        val scrollHeight = shellHeight - tabsHeight - bottomRowHeightPx - 2 * symPadding
+        val scrollHeight = shellHeight - tabsHeightPx - bottomRowHeightPx - 2 * panelPaddingPx
         if (scrollHeight > 0) {
             symScrollContent.layoutParams.height = scrollHeight
         }
@@ -504,12 +516,12 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             R.id.sym_13 to "…", R.id.sym_14 to "·", R.id.sym_15 to "～", R.id.sym_16 to "+",
             R.id.sym_17 to "-", R.id.sym_18 to "×", R.id.sym_19 to "÷", R.id.sym_20 to "=",
             R.id.sym_21 to "%", R.id.sym_22 to "&", R.id.sym_23 to "|", R.id.sym_24 to "√",
-            R.id.sym_25 to "≈", R.id.sym_26 to "", R.id.sym_27 to "≤", R.id.sym_28 to "≥",
-            R.id.sym_29 to "±", R.id.sym_30 to "", R.id.sym_31 to "（", R.id.sym_32 to "）",
+            R.id.sym_25 to "≈", R.id.sym_26 to "≠", R.id.sym_27 to "≤", R.id.sym_28 to "≥",
+            R.id.sym_29 to "±", R.id.sym_30 to "∞", R.id.sym_31 to "（", R.id.sym_32 to "）",
             R.id.sym_33 to "【", R.id.sym_34 to "】", R.id.sym_35 to "{", R.id.sym_36 to "}",
             R.id.sym_37 to "《", R.id.sym_38 to "》", R.id.sym_39 to "[", R.id.sym_40 to "]",
             R.id.sym_41 to "<", R.id.sym_42 to ">", R.id.sym_43 to "/", R.id.sym_44 to "\\",
-            R.id.sym_45 to "\\", R.id.sym_46 to "@", R.id.sym_47 to "#", R.id.sym_48 to "￥",
+            R.id.sym_45 to "§", R.id.sym_46 to "@", R.id.sym_47 to "#", R.id.sym_48 to "￥",
             R.id.sym_49 to "$", R.id.sym_50 to "*", R.id.sym_51 to "^", R.id.sym_52 to "_",
             R.id.sym_53 to "~", R.id.sym_54 to "`", R.id.sym_55 to "€", R.id.sym_56 to "£",
             R.id.sym_57 to "¥", R.id.sym_58 to "©", R.id.sym_59 to "®", R.id.sym_60 to "™"
