@@ -334,8 +334,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             R.id.sym_tab_other to "other"
         )
         for ((id, category) in tabs) {
-            view.findViewById<View>(id)?.setOnClickListener { v ->
-                hapticFeedbackManager.performTap(v)
+            setupKey(view.findViewById<View>(id), false) {
                 switchSymbolCategory(category)
             }
         }
@@ -382,33 +381,32 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             R.id.key_8 to "8", R.id.key_9 to "9"
         )
         for ((id, digit) in numberKeys) {
-            view.findViewById<View>(id)?.setOnClickListener { v ->
-                hapticFeedbackManager.performTap(v)
+            setupKey(view.findViewById<View>(id), false) {
                 handler.onDigitPressed(digit)
                 logAction("DIGIT", digit)
             }
         }
 
         // Key 1 - separator/分词
-        view.findViewById<View>(R.id.key_1_text)?.setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            handler.onSeparator()
+        setupKey(view.findViewById<View>(R.id.key_1_text), false) {
+                handler.onSeparator()
             logAction("KEY_1", "separation")
-        }
+            }
 
         // Delete key
         val delKey = view.findViewById<View>(R.id.key_del)
-        delKey?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
+        delKey?.setOnClickListener {
             handler.onDelete()
         }
         delKey?.setOnLongClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
             startDeleteLongPress()
             true
         }
-        delKey?.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
+        delKey?.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                hapticFeedbackManager.performSpecialKey(v)
+            }
+            if (event.action == android.view.MotionEvent.ACTION_UP || event.action == android.view.MotionEvent.ACTION_CANCEL) {
                 stopDeleteLongPress()
             }
             false
@@ -417,11 +415,10 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         // Key 0 removed - merged into Enter
 
         // Retype key
-        view.findViewById<View>(R.id.key_retype)?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
-            handler.onClearComposingForRetype()
+        setupKey(view.findViewById<View>(R.id.key_retype), true) {
+                handler.onClearComposingForRetype()
             logAction("RETYPE", "clear")
-        }
+            }
 
         // Punct keys - commit directly
         val punctKeys = mapOf(
@@ -429,8 +426,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             R.id.punct_3 to "？", R.id.punct_4 to "！"
         )
         for ((id, text) in punctKeys) {
-            view.findViewById<View>(id)?.setOnClickListener { v ->
-                hapticFeedbackManager.performTap(v)
+            setupKey(view.findViewById<View>(id), false) {
                 handler.onPunctCommit(text)
                 logAction("PUNCT", text)
             }
@@ -439,11 +435,10 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         // Reading keys - select pinyin reading
         val readingIds = listOf(R.id.reading_1, R.id.reading_2, R.id.reading_3, R.id.reading_4)
         for (rid in readingIds) {
-            view.findViewById<View>(rid)?.setOnClickListener { v ->
-                val tv = v as? TextView ?: return@setOnClickListener
+            setupKey(view.findViewById<View>(rid), false) {
+                val tv = view.findViewById<TextView>(rid) ?: return@setupKey
                 val reading = tv.text.toString()
                 if (reading.isNotEmpty()) {
-                    hapticFeedbackManager.performTap(v)
                     handler.setActiveReading(reading)
                     logAction("READING", reading)
                     refreshUi()
@@ -452,16 +447,14 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         }
 
         // Toggle symbol panel
-        view.findViewById<View>(R.id.key_toggle_symbol)?.setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            handler.switchKeyboardMode(KeyboardMode.Symbol)
+        setupKey(view.findViewById<View>(R.id.key_toggle_symbol), false) {
+                handler.switchKeyboardMode(KeyboardMode.Symbol)
             updateKeyboardPanel()
-        }
+            }
 
         // Toggle English/Chinese
-        view.findViewById<View>(R.id.key_toggle_english)?.setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            if (handler.keyboardMode == KeyboardMode.EnglishT9) {
+        setupKey(view.findViewById<View>(R.id.key_toggle_english), false) {
+                if (handler.keyboardMode == KeyboardMode.EnglishT9) {
                 handler.switchKeyboardMode(KeyboardMode.ChineseT9)
             } else {
                 handler.switchKeyboardMode(KeyboardMode.EnglishT9)
@@ -470,24 +463,21 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         }
 
         // Toggle number panel
-        view.findViewById<View>(R.id.key_toggle_number)?.setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            handler.switchKeyboardMode(KeyboardMode.Number)
+        setupKey(view.findViewById<View>(R.id.key_toggle_number), false) {
+                handler.switchKeyboardMode(KeyboardMode.Number)
             updateKeyboardPanel()
-        }
+            }
 
         // Space key
-        view.findViewById<View>(R.id.key_space)?.setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            handler.onSpace()
+        setupKey(view.findViewById<View>(R.id.key_space), false) {
+                handler.onSpace()
             logAction("SPACE", "space")
-        }
+            }
 
         // Enter key
-        view.findViewById<View>(R.id.key_enter)?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
-            handler.onEnter()
-        }
+        setupKey(view.findViewById<View>(R.id.key_enter), true) {
+                handler.onEnter()
+            }
 
         val symbolTexts = listOf(
             R.id.sym_1 to "，", R.id.sym_2 to "。", R.id.sym_3 to "？", R.id.sym_4 to "！",
@@ -507,38 +497,32 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             R.id.sym_57 to "¥", R.id.sym_58 to "©", R.id.sym_59 to "®", R.id.sym_60 to "™"
         )
         for ((id, text) in symbolTexts) {
-            view.findViewById<TextView>(id)?.setOnClickListener { v ->
-                hapticFeedbackManager.performTap(v)
+            setupKey(view.findViewById<TextView>(id), false) {
                 handler.onDigitPressed(text)
                 handler.switchKeyboardMode(KeyboardMode.ChineseT9)
                 updateKeyboardPanel()
             }
         }
 
-        view.findViewById<TextView>(R.id.sym_back)?.setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+        setupKey(view.findViewById<TextView>(R.id.sym_back), false) {
+                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
             updateKeyboardPanel()
-        }
-        view.findViewById<TextView>(R.id.sym_number)?.setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            handler.switchKeyboardMode(KeyboardMode.Number)
+            }
+        setupKey(view.findViewById<TextView>(R.id.sym_number), false) {
+                handler.switchKeyboardMode(KeyboardMode.Number)
             updateKeyboardPanel()
-        }
-        view.findViewById<TextView>(R.id.sym_del)?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
-            handler.onDelete()
-        }
-        view.findViewById<TextView>(R.id.sym_enter)?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
-            handler.onEnter()
-        }
-        view.findViewById<TextView>(R.id.sym_hide)?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
-            handler.onHideKey()
+            }
+        setupKey(view.findViewById<TextView>(R.id.sym_del), true) {
+                handler.onDelete()
+            }
+        setupKey(view.findViewById<TextView>(R.id.sym_enter), true) {
+                handler.onEnter()
+            }
+        setupKey(view.findViewById<TextView>(R.id.sym_hide), true) {
+                handler.onHideKey()
             updateKeyboardPanel()
             requestHideSelf(0)
-        }
+            }
         val numKeys = listOf(
             R.id.num_1 to "1", R.id.num_2 to "2", R.id.num_3 to "3",
             R.id.num_4 to "4", R.id.num_5 to "5", R.id.num_6 to "6",
@@ -546,41 +530,50 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             R.id.num_0 to "0", R.id.num_dot to "."
         )
         for ((id, text) in numKeys) {
-            view.findViewById<TextView>(id)?.setOnClickListener { v ->
-                hapticFeedbackManager.performTap(v)
+            setupKey(view.findViewById<TextView>(id), false) {
                 handler.onDigitPressed(text)
             }
         }
 
-        view.findViewById<TextView>(R.id.num_del)?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
-            handler.onDelete()
-        }
-        view.findViewById<TextView>(R.id.num_back)?.setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+        setupKey(view.findViewById<TextView>(R.id.num_del), true) {
+                handler.onDelete()
+            }
+        setupKey(view.findViewById<TextView>(R.id.num_back), false) {
+                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
             updateKeyboardPanel()
-        }
-        view.findViewById<TextView>(R.id.num_symbol)?.setOnClickListener { v ->
-            hapticFeedbackManager.performTap(v)
-            handler.switchKeyboardMode(KeyboardMode.Symbol)
+            }
+        setupKey(view.findViewById<TextView>(R.id.num_symbol), false) {
+                handler.switchKeyboardMode(KeyboardMode.Symbol)
             updateKeyboardPanel()
-        }
-        view.findViewById<TextView>(R.id.num_hide)?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
-            handler.onHideKey()
+            }
+        setupKey(view.findViewById<TextView>(R.id.num_hide), true) {
+                handler.onHideKey()
             updateKeyboardPanel()
             requestHideSelf(0)
-        }
-        view.findViewById<TextView>(R.id.num_enter)?.setOnClickListener { v ->
-            hapticFeedbackManager.performSpecialKey(v)
-            handler.onEnter()
-        }
+            }
+        setupKey(view.findViewById<TextView>(R.id.num_enter), true) {
+                handler.onEnter()
+            }
     }
 
 
 
 
+
+
+    private fun setupKey(view: View?, isSpecial: Boolean, action: () -> Unit) {
+        if (view == null) return
+        view.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                if (isSpecial) hapticFeedbackManager.performSpecialKey(v)
+                else hapticFeedbackManager.performTap(v)
+            }
+            false
+        }
+        view.setOnClickListener {
+            action()
+        }
+    }
 
     private fun startDeleteLongPress() {
         deleteLongPressRunning = true
@@ -692,10 +685,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             btn.visibility = View.VISIBLE
             btn.text = candidate.text
             val ci = index
-            btn.setOnClickListener { v ->
-                hapticFeedbackManager.performTap(v)
-                handler.onCandidateClick(ci)
-            }
+            setupKey(btn, false) { handler.onCandidateClick(ci) }
         }
         for (i in candidates.size until candidateContainer.childCount) {
             candidateContainer.getChildAt(i).visibility = View.GONE
