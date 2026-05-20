@@ -43,10 +43,7 @@ class KeyboardActionHandler(
     fun setActiveReading(reading: String): Boolean {
         val success = engine?.setActiveReading(reading) ?: false
         if (success) {
-            val committedText = engine?.commitReadingAndKeepBuffer(reading)
-            if (committedText != null) {
-                actionSink.commitText(committedText)
-            }
+            actionSink.refreshUi()
         }
         return success
     }
