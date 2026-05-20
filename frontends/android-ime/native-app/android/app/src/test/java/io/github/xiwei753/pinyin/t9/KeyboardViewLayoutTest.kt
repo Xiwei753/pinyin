@@ -185,6 +185,75 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
+    fun testT9PanelHasThreeColumnSkeleton() {
+        val doc = parseXml()
+        val colLeft = findElementById(doc, "col_left")
+        val colMiddle = findElementById(doc, "col_middle")
+        val colRight = findElementById(doc, "col_right")
+        assertNotNull("col_left should exist", colLeft)
+        assertNotNull("col_middle should exist", colMiddle)
+        assertNotNull("col_right should exist", colRight)
+    }
+
+    @Test
+    fun testEnterKeyNotInBottomRow() {
+        val doc = parseXml()
+        val rowBottom = findElementById(doc, "row_bottom")
+        assertNotNull("row_bottom should exist", rowBottom)
+        val enterInBottom = findElementByIdInside(rowBottom!!, "key_enter")
+        assertTrue("key_enter should NOT be in row_bottom", enterInBottom == null)
+    }
+
+    @Test
+    fun testEnterKeyInRightColumn() {
+        val doc = parseXml()
+        val colRight = findElementById(doc, "col_right")
+        assertNotNull("col_right should exist", colRight)
+        val enterInRight = findElementByIdInside(colRight!!, "key_enter")
+        assertNotNull("key_enter should be in col_right", enterInRight)
+    }
+
+    @Test
+    fun testMiddleColumnWiderThanSideColumns() {
+        val doc = parseXml()
+        val colLeft = findElementById(doc, "col_left")
+        val colMiddle = findElementById(doc, "col_middle")
+        val colRight = findElementById(doc, "col_right")
+        assertNotNull("col_left should exist", colLeft)
+        assertNotNull("col_middle should exist", colMiddle)
+        assertNotNull("col_right should exist", colRight)
+        val leftWeight = colLeft!!.getAttribute("android:layout_weight")
+        val middleWeight = colMiddle!!.getAttribute("android:layout_weight")
+        val rightWeight = colRight!!.getAttribute("android:layout_weight")
+        assertTrue("col_left should have weight", leftWeight.isNotEmpty())
+        assertTrue("col_middle should have weight", middleWeight.isNotEmpty())
+        assertTrue("col_right should have weight", rightWeight.isNotEmpty())
+        val lw = leftWeight.toDouble()
+        val mw = middleWeight.toDouble()
+        val rw = rightWeight.toDouble()
+        assertTrue("col_middle weight ($mw) should be greater than col_left weight ($lw)", mw > lw)
+        assertTrue("col_middle weight ($mw) should be greater than col_right weight ($rw)", mw > rw)
+    }
+
+    @Test
+    fun testBottomRowHasFourKeys() {
+        val doc = parseXml()
+        val rowBottom = findElementById(doc, "row_bottom")
+        assertNotNull("row_bottom should exist", rowBottom)
+        val weightSum = rowBottom!!.getAttribute("android:weightSum")
+        assertEquals("row_bottom weightSum should be 5", "5", weightSum)
+        val frameLayouts = rowBottom.getElementsByTagName("FrameLayout")
+        var directChildren = 0
+        for (i in 0 until frameLayouts.length) {
+            val fl = frameLayouts.item(i)
+            if (fl.parentNode === rowBottom) {
+                directChildren++
+            }
+        }
+        assertEquals("row_bottom should have 4 FrameLayout children", 4, directChildren)
+    }
+
+    @Test
     fun testNumberPanelUsesWeightBasedLayout() {
         val doc = parseXml()
         val numberKeypad = findElementById(doc, "number_keypad")
@@ -228,6 +297,20 @@ class KeyboardViewLayoutTest {
             if (node is org.w3c.dom.Element) {
                 val nodeId = node.getAttribute("android:id")
                 if (nodeId == "@+id/$id") {
+                    return node
+                }
+            }
+        }
+        return null
+    }
+
+    private fun findElementByIdInside(parent: org.w3c.dom.Element, id: String): org.w3c.dom.Element? {
+        val allNodes = parent.getElementsByTagName("*")
+        for (i in 0 until allNodes.length) {
+            val node = allNodes.item(i)
+            if (node is org.w3c.dom.Element) {
+                val nodeId = node.getAttribute("android:id")
+                if (nodeId == "@+id/$id" && isDescendantOf(parent, node)) {
                     return node
                 }
             }

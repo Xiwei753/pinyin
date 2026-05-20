@@ -33,7 +33,7 @@
         </HorizontalScrollView>
     </LinearLayout>
 
-    <!-- Preedit overlay: between candidate bar and keyboard shell -->
+    <!-- Preedit overlay: floating above candidate bar, not in flow -->
     <FrameLayout
         android:id="@+id/preedit_overlay"
         android:layout_width="match_parent"
@@ -67,13 +67,13 @@
         </LinearLayout>
     </FrameLayout>
 
-    <!-- Keyboard Shell: height set dynamically -->
+    <!-- Keyboard Shell: height set dynamically by code -->
     <FrameLayout
         android:id="@+id/keyboard_shell"
         android:layout_width="match_parent"
         android:layout_height="260dp">
 
-        <!-- Chinese/English T9 Panel -->
+        <!-- Chinese/English T9 Panel: 3-column skeleton -->
         <LinearLayout
             android:id="@+id/panel_t9"
             android:layout_width="match_parent"
@@ -84,7 +84,7 @@
             android:paddingEnd="4dp"
             android:visibility="visible">
 
-            <!-- Main keyboard area: fills remaining space above bottom row -->
+            <!-- Main area: 3 columns (left narrow + middle wide + right narrow) -->
             <LinearLayout
                 android:id="@+id/keyboard_main"
                 android:layout_width="match_parent"
@@ -93,8 +93,9 @@
                 android:orientation="horizontal"
                 android:layout_marginBottom="4dp">
 
-                <!-- Left: punctuation column (4 keys) -->
+                <!-- Left column: narrow assist (punct / reading) -->
                 <LinearLayout
+                    android:id="@+id/col_left"
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
@@ -142,10 +143,11 @@
                     </FrameLayout>
                 </LinearLayout>
 
-                <!-- Center: 3x3 T9 grid -->
+                <!-- Center column: wide主体 (3x3 T9 grid) -->
                 <LinearLayout
+                    android:id="@+id/col_middle"
                     android:layout_width="0dp"
-                    android:layout_weight="3.0"
+                    android:layout_weight="5"
                     android:layout_height="match_parent"
                     android:orientation="vertical">
 
@@ -272,8 +274,9 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Right: function column (del, retype) -->
+                <!-- Right column: narrow function column (del / retype / tall enter) -->
                 <LinearLayout
+                    android:id="@+id/col_right"
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
@@ -292,19 +295,23 @@
                             android:background="@drawable/key_bg_special" android:text="重输" android:gravity="center"
                             android:textSize="14sp" android:textColor="#555555" android:clickable="true" android:focusable="true" />
                     </FrameLayout>
+                    <!-- Enter: tall vertical key, occupies下半区 -->
                     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp"
-                        android:layout_weight="1" android:padding="2dp" android:visibility="gone">
+                        android:layout_weight="2" android:padding="2dp">
+                        <TextView android:id="@+id/key_enter" android:layout_width="match_parent" android:layout_height="match_parent"
+                            android:background="@drawable/key_bg_special" android:text="回车" android:gravity="center"
+                            android:textSize="16sp" android:textColor="#555555" android:clickable="true" android:focusable="true" />
                     </FrameLayout>
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Bottom row: 符 | 123 | 空格 | 中/英 | 回车 -->
+            <!-- Bottom row: 符 | 123 | 空格 | 中/英 (NO enter) -->
             <LinearLayout
                 android:id="@+id/row_bottom"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:weightSum="7">
+                android:weightSum="5">
 
                 <FrameLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="44dp" android:paddingEnd="2dp">
                     <TextView android:id="@+id/key_toggle_symbol" android:layout_width="match_parent" android:layout_height="match_parent"
@@ -321,15 +328,10 @@
                         android:background="@drawable/key_bg" android:text="空格" android:gravity="center"
                         android:textSize="14sp" android:textColor="#333333" android:clickable="true" android:focusable="true" />
                 </FrameLayout>
-                <FrameLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="44dp" android:paddingHorizontal="2dp">
+                <FrameLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="44dp" android:paddingStart="2dp">
                     <TextView android:id="@+id/key_toggle_english" android:layout_width="match_parent" android:layout_height="match_parent"
                         android:background="@drawable/key_bg_special" android:text="中/英" android:gravity="center"
                         android:textSize="14sp" android:textColor="#555555" android:clickable="true" android:focusable="true" />
-                </FrameLayout>
-                <FrameLayout android:layout_width="0dp" android:layout_weight="2" android:layout_height="44dp" android:paddingStart="2dp">
-                    <TextView android:id="@+id/key_enter" android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:background="@drawable/key_bg_special" android:text="回车" android:gravity="center"
-                        android:textSize="16sp" android:textColor="#555555" android:clickable="true" android:focusable="true" />
                 </FrameLayout>
             </LinearLayout>
         </LinearLayout>

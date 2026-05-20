@@ -297,10 +297,10 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         val shellHeight = maxOf(numberModeHeight, symbolModeHeight)
         rootView.findViewById<View>(R.id.keyboard_shell)?.layoutParams?.height = shellHeight
 
-        // Update bottom row child heights
+        // Update bottom row child heights (符, 123, space, 中/英 - no enter in bottom row)
         val bottomRowChildren = listOf(
             R.id.key_toggle_symbol, R.id.key_toggle_number, R.id.key_space,
-            R.id.key_toggle_english, R.id.key_enter
+            R.id.key_toggle_english
         )
         for (id in bottomRowChildren) {
             rootView.findViewById<View>(id)?.layoutParams?.height = bottomRowHeightPx
