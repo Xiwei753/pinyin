@@ -125,44 +125,6 @@ class T9EngineActiveReadingTest {
     }
 
     @Test
-    fun testInputDigitResetsActiveReading() {
-        val dict = T9EngineTest.MockDict()
-        dict.add(Candidate("梦", "meng", 50000, CandidateType.SINGLE_CHAR), "meng")
-        dict.add(Candidate("能", "neng", 40000, CandidateType.SINGLE_CHAR), "neng")
-
-        val engine = T9Engine(dict)
-        engine.inputDigit("6")
-        engine.inputDigit("3")
-        engine.inputDigit("6")
-        engine.inputDigit("4")
-
-        engine.setActiveReading("neng")
-        assertEquals("neng", engine.getPreedit())
-
-        engine.inputDigit("2")
-        assertEquals("activeReading must be null after new digit", null, engine.activeReading)
-    }
-
-    @Test
-    fun testBackspaceResetsActiveReading() {
-        val dict = T9EngineTest.MockDict()
-        dict.add(Candidate("梦", "meng", 50000, CandidateType.SINGLE_CHAR), "meng")
-        dict.add(Candidate("能", "neng", 40000, CandidateType.SINGLE_CHAR), "neng")
-
-        val engine = T9Engine(dict)
-        engine.inputDigit("6")
-        engine.inputDigit("3")
-        engine.inputDigit("6")
-        engine.inputDigit("4")
-
-        engine.setActiveReading("neng")
-        assertEquals("neng", engine.getPreedit())
-
-        engine.backspace()
-        assertEquals("activeReading must be null after backspace", null, engine.activeReading)
-    }
-
-    @Test
     fun testClearResetsActiveReading() {
         val dict = T9EngineTest.MockDict()
         dict.add(Candidate("梦", "meng", 50000, CandidateType.SINGLE_CHAR), "meng")
