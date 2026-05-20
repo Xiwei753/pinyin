@@ -1,7 +1,6 @@
 package io.github.xiwei753.pinyin.t9
 
 import android.content.Context
-import android.graphics.Color
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -114,37 +113,46 @@ class CandidateViewController(
                 ).apply { setMargins(0, 0, 16, 0) })
             }
         }
-        btn.text = "词库准备中..."
+        btn.text = "\u8BCD\u5E93\u51C6\u5907\u4E2D..."
         btn.setOnClickListener(null)
     }
 
     private fun updateReadingRail(handler: KeyboardActionHandler) {
         val readings = handler.readings
         val rawBuffer = handler.rawBuffer
-        if (readings.isNotEmpty() && rawBuffer.isNotEmpty()) {
-            for (tv in v.punctTextViews) tv.visibility = View.GONE
-            var i = 0
-            while (i < v.readingTextViews.size && i < readings.size) {
-                val tv = v.readingTextViews[i]
-                val reading = readings[i]
-                tv.text = reading
-                tv.visibility = View.VISIBLE
-                if (reading == handler.activeReading) {
-                    tv.setBackgroundResource(R.drawable.key_bg)
-                    tv.alpha = 1.0f
+        val hasReadings = readings.isNotEmpty() && rawBuffer.isNotEmpty()
+        val railSlotCount = v.readingTextViews.size
+
+        // Show readings or punct
+        // Readings first, then punct fill remaining visible slots
+        if (hasReadings) {
+            // Show readings in reading TextViews
+            for (i in 0 until railSlotCount) {
+                val readingTv = v.readingTextViews[i]
+                if (i < readings.size) {
+                    val reading = readings[i]
+                    readingTv.text = reading
+                    readingTv.visibility = View.VISIBLE
+                    if (reading == handler.activeReading) {
+                        readingTv.setBackgroundResource(R.drawable.key_bg)
+                        readingTv.alpha = 1.0f
+                    } else {
+                        readingTv.setBackgroundResource(R.drawable.key_bg_special)
+                        readingTv.alpha = 0.85f
+                    }
                 } else {
-                    tv.setBackgroundResource(R.drawable.key_bg_special)
-                    tv.alpha = 0.85f
+                    readingTv.visibility = View.GONE
                 }
-                i++
             }
-            while (i < v.readingTextViews.size) {
-                v.readingTextViews[i].visibility = View.GONE
-                i++
-            }
+            // Hide all punct
+            for (tv in v.punctTextViews) tv.visibility = View.GONE
         } else {
+            // Show punct
             for (tv in v.punctTextViews) tv.visibility = View.VISIBLE
-            for (tv in v.readingTextViews) tv.visibility = View.GONE
+            // Hide all readings
+            for (i in 0 until railSlotCount) {
+                v.readingTextViews[i].visibility = View.GONE
+            }
         }
     }
 

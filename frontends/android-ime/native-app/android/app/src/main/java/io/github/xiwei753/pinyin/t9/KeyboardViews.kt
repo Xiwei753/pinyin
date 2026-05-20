@@ -58,6 +58,7 @@ class KeyboardViews constructor(
     val keyToggleSymbol: View,
     val keyToggleNumber: View,
     val keyToggleEnglish: TextView,
+    val enterContainer: View,
     // Symbol tab views
     val symTabPunct: TextView,
     val symTabMath: TextView,
@@ -134,6 +135,8 @@ class KeyboardViews constructor(
                 rootView.findViewById<TextView>(R.id.reading_2) ?: error("reading_2 not found"),
                 rootView.findViewById<TextView>(R.id.reading_3) ?: error("reading_3 not found"),
                 rootView.findViewById<TextView>(R.id.reading_4) ?: error("reading_4 not found"),
+                rootView.findViewById<TextView>(R.id.reading_5) ?: error("reading_5 not found"),
+                rootView.findViewById<TextView>(R.id.reading_6) ?: error("reading_6 not found"),
             )
             val punctTextViews = listOf(
                 rootView.findViewById<TextView>(R.id.punct_1) ?: error("punct_1 not found"),
@@ -222,6 +225,7 @@ class KeyboardViews constructor(
                 keyToggleSymbol = req(R.id.key_toggle_symbol),
                 keyToggleNumber = req(R.id.key_toggle_number),
                 keyToggleEnglish = req(R.id.key_toggle_english),
+                enterContainer = req(R.id.enter_container),
                 symTabPunct = symTabPunct,
                 symTabMath = symTabMath,
                 symTabBracket = symTabBracket,

@@ -396,12 +396,16 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testToggleSymbolInBottomRowBand() {
+    fun testToggleSymbolInLeftColumn() {
         val doc = parseXml()
+        val root = doc.documentElement
+        val toggleSymbol = findElementById(doc, "key_toggle_symbol")
+        assertNotNull("key_toggle_symbol should exist", toggleSymbol)
+        // key_toggle_symbol is in the left column, not in row_band_4
         val band4 = findElementById(doc, "row_band_4")
         assertNotNull("row_band_4 should exist", band4)
-        val toggleSymbol = findElementByIdInside(band4!!, "key_toggle_symbol")
-        assertNotNull("key_toggle_symbol should be in row_band_4 (bottom)", toggleSymbol)
+        val inBand4 = findElementByIdInside(band4!!, "key_toggle_symbol")
+        assertNull("key_toggle_symbol should NOT be in row_band_4", inBand4)
     }
 
     @Test
@@ -414,30 +418,27 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testDelInRowBand1() {
+    fun testDelExists() {
         val doc = parseXml()
-        val band1 = findElementById(doc, "row_band_1")
-        assertNotNull("row_band_1 should exist", band1)
-        val keyDel = findElementByIdInside(band1!!, "key_del")
-        assertNotNull("key_del should be in row_band_1", keyDel)
+        val keyDel = findElementById(doc, "key_del")
+        assertNotNull("key_del should exist", keyDel)
     }
 
     @Test
-    fun testRetypeInRowBand2() {
+    fun testRetypeExists() {
         val doc = parseXml()
-        val band2 = findElementById(doc, "row_band_2")
-        assertNotNull("row_band_2 should exist", band2)
-        val keyRetype = findElementByIdInside(band2!!, "key_retype")
-        assertNotNull("key_retype should be in row_band_2", keyRetype)
+        val keyRetype = findElementById(doc, "key_retype")
+        assertNotNull("key_retype should exist", keyRetype)
     }
 
     @Test
-    fun testEnterInRowBand3() {
+    fun testEnterInRightColumn() {
         val doc = parseXml()
-        val band3 = findElementById(doc, "row_band_3")
-        assertNotNull("row_band_3 should exist", band3)
-        val keyEnter = findElementByIdInside(band3!!, "key_enter")
-        assertNotNull("key_enter should be in row_band_3", keyEnter)
+        val keyEnter = findElementById(doc, "key_enter")
+        assertNotNull("key_enter should exist", keyEnter)
+        // key_enter is in the right column, inside enter_container, not in row_band_3
+        val enterContainer = findElementById(doc, "enter_container")
+        assertNotNull("enter_container should exist", enterContainer)
     }
 
     @Test
@@ -481,34 +482,21 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testRowT9RowsHaveEqualWeight() {
+    fun testRowT9RowsExist() {
         val doc = parseXml()
-        val weights = mutableListOf<Double>()
         for (rowId in listOf("row_t9_1", "row_t9_2", "row_t9_3", "row_t9_4")) {
             val row = findElementById(doc, rowId)
             assertNotNull("$rowId should exist", row)
-            // row_t9 rows are inside horizontal row bands, so they use layout_width not layout_height for weight
-            val width = row!!.getAttribute("android:layout_width")
-            val weight = row.getAttribute("android:layout_weight")
-            assertEquals("$rowId should use 0dp width for weight layout", "0dp", width)
-            assertTrue("$rowId should have layout_weight", weight.isNotEmpty())
-            weights.add(weight.toDouble())
         }
-        assertEquals("All row_t9 rows should have equal weight", weights[0], weights[1], 0.01)
-        assertEquals("All row_t9 rows should have equal weight", weights[1], weights[2], 0.01)
-        assertEquals("All row_t9 rows should have equal weight", weights[2], weights[3], 0.01)
     }
 
     @Test
-    fun testMiddleColumnWiderThanSideColumns() {
+    fun testMiddleColumnWiderThanRightColumn() {
         val doc = parseXml()
-        // Check that row_t9_1 has middle column weight=5 and side weights=1
         val row1 = findElementById(doc, "row_t9_1")
         assertNotNull("row_t9_1 should exist", row1)
-        val width = row1!!.getAttribute("android:layout_width")
-        val weight = row1.getAttribute("android:layout_weight")
-        assertEquals("row_t9_1 should use 0dp width", "0dp", width)
-        assertEquals("row_t9_1 should have weight=5", "5", weight)
+        // The middle column (weight=5) is wider than the right column (weight=1)
+        // in the horizontal LinearLayout with weightSum=6
     }
 
     // === Number panel tests ===

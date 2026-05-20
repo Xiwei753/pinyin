@@ -82,6 +82,7 @@ class XiweiT9ImeServiceUiBehaviorTest {
             keyToggleSymbol = mock(android.view.View::class.java),
             keyToggleNumber = mock(android.view.View::class.java),
             keyToggleEnglish = mock(android.widget.TextView::class.java),
+            enterContainer = mock(),
             symTabPunct = mock(android.widget.TextView::class.java),
             symTabMath = mock(android.widget.TextView::class.java),
             symTabBracket = mock(android.widget.TextView::class.java),

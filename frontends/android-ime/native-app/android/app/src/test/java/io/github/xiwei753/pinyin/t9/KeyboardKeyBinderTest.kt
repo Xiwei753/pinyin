@@ -46,6 +46,7 @@ class KeyboardKeyBinderTest {
             keyDel = mock(), keyRetype = mock(), keyEnter = mock(), keySpace = mock(),
             keyToggleSymbol = mock(), keyToggleNumber = mock(),
             keyToggleEnglish = mock(),
+            enterContainer = mock(),
             symTabPunct = mock(), symTabMath = mock(), symTabBracket = mock(), symTabOther = mock(),
             symTextViews = emptyMap(),
             symBack = mock(), symNumber = mock(), symDel = mock(), symEnter = mock(), symHide = mock(),

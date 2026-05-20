@@ -108,11 +108,7 @@ class KeyboardKeyBinder(
     }
 
     private fun setupReadingKeys(handler: KeyboardActionHandler) {
-        val readingIds = listOf(
-            v.readingTextViews[0], v.readingTextViews[1],
-            v.readingTextViews[2], v.readingTextViews[3],
-        )
-        for (ridView in readingIds) {
+        for (ridView in v.readingTextViews) {
             setupKey(ridView, false) {
                 val reading = ridView.text.toString()
                 if (reading.isNotEmpty()) {

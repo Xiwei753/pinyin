@@ -83,8 +83,9 @@ class KeyboardThemeController(
     }
 
     fun setTextColorOnAllKeys(v: KeyboardViews, textColor: Int, subColor: Int) {
-        val allKeyTextIds = listOf(
-            v.key1Text,
+        val allKeyTextIds = mutableListOf<TextView>()
+        allKeyTextIds.add(v.key1Text)
+        allKeyTextIds.addAll(listOf(
             v.key2Number, v.key2Letters,
             v.key3Number, v.key3Letters,
             v.key4Number, v.key4Letters,
@@ -93,9 +94,9 @@ class KeyboardThemeController(
             v.key7Number, v.key7Letters,
             v.key8Number, v.key8Letters,
             v.key9Number, v.key9Letters,
-            v.punctTextViews[0], v.punctTextViews[1], v.punctTextViews[2], v.punctTextViews[3],
-            v.readingTextViews[0], v.readingTextViews[1], v.readingTextViews[2], v.readingTextViews[3],
-        )
+        ))
+        allKeyTextIds.addAll(v.punctTextViews)
+        allKeyTextIds.addAll(v.readingTextViews)
         val subKeyIds = listOf(
             v.key2Number, v.key3Number, v.key4Number, v.key5Number,
             v.key6Number, v.key7Number, v.key8Number, v.key9Number,

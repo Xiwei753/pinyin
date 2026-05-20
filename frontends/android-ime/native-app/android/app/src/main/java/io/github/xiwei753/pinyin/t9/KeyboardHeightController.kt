@@ -1,7 +1,6 @@
 package io.github.xiwei753.pinyin.t9
 
 import android.content.res.Resources
-import android.view.View
 import android.widget.LinearLayout
 
 class KeyboardHeightController(
@@ -51,8 +50,12 @@ class KeyboardHeightController(
     fun applyHeight(v: KeyboardViews, metrics: HeightMetrics) {
         v.keyboardShell.layoutParams?.height = metrics.shellHeight
 
+        // Bottom row height for left-column 符 button
+        v.keyToggleSymbol.layoutParams?.height = metrics.bottomRowHeightPx
+
+        // Bottom row heights for function buttons
         val bottomRowChildren = listOf(
-            v.keyToggleSymbol, v.keyToggleNumber, v.keySpace, v.keyToggleEnglish
+            v.keyToggleNumber, v.keySpace, v.keyToggleEnglish
         )
         for (child in bottomRowChildren) {
             child.layoutParams?.height = metrics.bottomRowHeightPx
