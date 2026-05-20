@@ -1,10 +1,7 @@
 package io.github.xiwei753.pinyin.t9
 
 import io.github.xiwei753.pinyin.t9.testutil.TestPaths
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
@@ -17,6 +14,108 @@ class KeyboardViewLayoutTest {
     }
 
     private fun parseXml() = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(layoutXml())
+
+    private fun findElementById(doc: org.w3c.dom.Document, id: String): org.w3c.dom.Element? {
+        val allNodes = doc.getElementsByTagName("*")
+        for (i in 0 until allNodes.length) {
+            val node = allNodes.item(i)
+            if (node is org.w3c.dom.Element) {
+                val nodeId = node.getAttribute("android:id")
+                if (nodeId == "@+id/$id") {
+                    return node
+                }
+            }
+        }
+        return null
+    }
+
+    private fun findElementByIdInside(parent: org.w3c.dom.Element, id: String): org.w3c.dom.Element? {
+        val allNodes = parent.getElementsByTagName("*")
+        for (i in 0 until allNodes.length) {
+            val node = allNodes.item(i)
+            if (node is org.w3c.dom.Element) {
+                val nodeId = node.getAttribute("android:id")
+                if (nodeId == "@+id/$id" && isDescendantOf(parent, node)) {
+                    return node
+                }
+            }
+        }
+        return null
+    }
+
+    private fun isDescendantOf(ancestor: org.w3c.dom.Element, node: org.w3c.dom.Node): Boolean {
+        var current: org.w3c.dom.Node? = node.parentNode
+        while (current != null) {
+            if (current === ancestor) return true
+            current = current.parentNode
+        }
+        return false
+    }
+
+    private fun isDirectChildOf(parent: org.w3c.dom.Element, node: org.w3c.dom.Node): Boolean {
+        return node.parentNode === parent
+    }
+
+    private fun getAllElements(doc: org.w3c.dom.Document): List<org.w3c.dom.Element> {
+        val allNodes = doc.getElementsByTagName("*")
+        val result = mutableListOf<org.w3c.dom.Element>()
+        for (i in 0 until allNodes.length) {
+            val node = allNodes.item(i)
+            if (node is org.w3c.dom.Element) {
+                result.add(node)
+            }
+        }
+        return result
+    }
+
+    // === Root layout structure tests ===
+
+    @Test
+    fun testRootIsLinearLayout() {
+        val doc = parseXml()
+        val root = doc.documentElement
+        assertEquals("Root element should be LinearLayout", "LinearLayout", root.tagName)
+    }
+
+    @Test
+    fun testRootHasVerticalOrientation() {
+        val doc = parseXml()
+        val root = doc.documentElement
+        val orientation = root.getAttribute("android:orientation")
+        assertEquals("Root LinearLayout should have vertical orientation", "vertical", orientation)
+    }
+
+    @Test
+    fun testRootHasWrapContentHeight() {
+        val doc = parseXml()
+        val root = doc.documentElement
+        val height = root.getAttribute("android:layout_height")
+        assertEquals("Root should have wrap_content height", "wrap_content", height)
+    }
+
+    @Test
+    fun testNoRelativeLayoutAtRoot() {
+        val content = layoutXml().readText()
+        assertFalse("Root should not use RelativeLayout", content.contains("<RelativeLayout"))
+    }
+
+    @Test
+    fun testNoRootLevelPreeditOverlay() {
+        val doc = parseXml()
+        val overlay = findElementById(doc, "preedit_overlay")
+        assertNull("preedit_overlay should NOT exist at any level", overlay)
+    }
+
+    @Test
+    fun testNoMagicMarginBottom() {
+        val content = layoutXml().readText()
+        assertFalse("Should not use marginBottom=310dp", content.contains("marginBottom=\"310dp\""))
+        assertFalse("Should not use marginBottom=300dp", content.contains("marginBottom=\"300dp\""))
+        assertFalse("Should not use marginBottom=260dp", content.contains("marginBottom=\"260dp\""))
+        assertFalse("Should not use layout_marginBottom=310dp", content.contains("layout_marginBottom=\"310dp\""))
+        assertFalse("Should not use layout_marginBottom=300dp", content.contains("layout_marginBottom=\"300dp\""))
+        assertFalse("Should not use layout_marginBottom=260dp", content.contains("layout_marginBottom=\"260dp\""))
+    }
 
     @Test
     fun testNoDuplicateIds() {
@@ -38,6 +137,93 @@ class KeyboardViewLayoutTest {
         }
         assertTrue("No duplicate IDs should exist, but found: $duplicates", duplicates.isEmpty())
     }
+
+    // === Preedit inside candidate_bar tests ===
+
+    @Test
+    fun testPreeditInsideCandidateBar() {
+        val doc = parseXml()
+        val candidateBar = findElementById(doc, "candidate_bar")
+        assertNotNull("candidate_bar should exist", candidateBar)
+        val floatingBar = findElementByIdInside(candidateBar!!, "pinyin_floating_bar")
+        assertNotNull("pinyin_floating_bar should be inside candidate_bar", floatingBar)
+    }
+
+    @Test
+    fun testPreeditNotInKeyboardShell() {
+        val doc = parseXml()
+        val shell = findElementById(doc, "keyboard_shell")
+        val preeditBar = findElementById(doc, "pinyin_floating_bar")
+        assertNotNull("pinyin_floating_bar should exist", preeditBar)
+        assertFalse("pinyin_floating_bar should NOT be inside keyboard_shell",
+            isDescendantOf(shell!!, preeditBar!!))
+    }
+
+    @Test
+    fun testPreeditHasNoMagicMarginStart() {
+        val content = layoutXml().readText()
+        assertFalse("Preedit bar should not use magic marginStart=40dp", content.contains("marginStart=\"40dp\""))
+        assertFalse("Preedit bar should not use magic layout_marginStart=40dp", content.contains("layout_marginStart=\"40dp\""))
+    }
+
+    // === LinearLayout orientation tests ===
+
+    @Test
+    fun testAllLinearLayoutsHaveExplicitOrientation() {
+        val doc = parseXml()
+        val allElements = getAllElements(doc)
+        val missingOrientation = mutableListOf<String>()
+        for (element in allElements) {
+            if (element.tagName == "LinearLayout") {
+                val orientation = element.getAttribute("android:orientation")
+                if (orientation.isEmpty()) {
+                    val id = element.getAttribute("android:id")
+                    missingOrientation.add(if (id.isNotEmpty()) id else "unnamed LinearLayout")
+                }
+            }
+        }
+        assertTrue("All LinearLayouts must have explicit orientation, but missing in: $missingOrientation",
+            missingOrientation.isEmpty())
+    }
+
+    @Test
+    fun testWeightBasedLayoutParentOrientationCorrect() {
+        val doc = parseXml()
+        val allElements = getAllElements(doc)
+        val errors = mutableListOf<String>()
+
+        for (element in allElements) {
+            val height = element.getAttribute("android:layout_height")
+            val width = element.getAttribute("android:layout_width")
+            val weight = element.getAttribute("android:layout_weight")
+
+            if (weight.isNotEmpty() && weight != "0") {
+                val parent = element.parentNode
+                if (parent is org.w3c.dom.Element) {
+                    if (height == "0dp") {
+                        // Using height=0dp + weight -> parent must be vertical
+                        val parentOrientation = parent.getAttribute("android:orientation")
+                        if (parent.tagName == "LinearLayout" && parentOrientation != "vertical") {
+                            val id = element.getAttribute("android:id")
+                            errors.add("$id has height=0dp+weight but parent is not vertical (is: $parentOrientation)")
+                        }
+                    }
+                    if (width == "0dp") {
+                        // Using width=0dp + weight -> parent must be horizontal
+                        val parentOrientation = parent.getAttribute("android:orientation")
+                        if (parent.tagName == "LinearLayout" && parentOrientation != "horizontal") {
+                            val id = element.getAttribute("android:id")
+                            errors.add("$id has width=0dp+weight but parent is not horizontal (is: $parentOrientation)")
+                        }
+                    }
+                }
+            }
+        }
+        assertTrue("All 0dp+weight layouts must have correct parent orientation, but found: $errors",
+            errors.isEmpty())
+    }
+
+    // === Panel structure tests ===
 
     @Test
     fun testPanelsAreMatchParentHeight() {
@@ -85,25 +271,7 @@ class KeyboardViewLayoutTest {
         val shell = findElementById(doc, "keyboard_shell")
         assertTrue("keyboard_shell should exist", shell != null)
         val height = shell!!.getAttribute("android:layout_height")
-        // XML has a default dp value that gets overridden by code
         assertTrue("keyboard_shell should have a height attribute", height.isNotEmpty())
-    }
-
-    @Test
-    fun testPreeditIsOutsideKeyboardShell() {
-        val doc = parseXml()
-        val shell = findElementById(doc, "keyboard_shell")
-        val preeditBar = findElementById(doc, "pinyin_floating_bar")
-        assertTrue("pinyin_floating_bar should exist", preeditBar != null)
-        assertFalse("pinyin_floating_bar should NOT be inside keyboard_shell",
-            isDescendantOf(shell!!, preeditBar!!))
-    }
-
-    @Test
-    fun testPreeditHasNoMagicMarginStart() {
-        val content = layoutXml().readText()
-        assertFalse("Preedit bar should not use magic marginStart=40dp", content.contains("marginStart=\"40dp\""))
-        assertFalse("Preedit bar should not use magic layout_marginStart=40dp", content.contains("layout_marginStart=\"40dp\""))
     }
 
     @Test
@@ -133,7 +301,7 @@ class KeyboardViewLayoutTest {
             val node = allNodes.item(i)
             if (node is org.w3c.dom.Element) {
                 val id = node.getAttribute("android:id")
-                if (id.isNotEmpty() && id.contains("sym_") && id.matches(Regex("@\\+id/sym_\\d+"))) {
+                if (id.isNotEmpty() && id.matches(Regex("@\\+id/sym_\\d+"))) {
                     val text = node.getAttribute("android:text")
                     if (text.isEmpty()) {
                         emptySymTexts.add(id)
@@ -142,13 +310,6 @@ class KeyboardViewLayoutTest {
             }
         }
         assertTrue("Symbol TextViews should not have empty text, but found: $emptySymTexts", emptySymTexts.isEmpty())
-    }
-
-    @Test
-    fun testPreeditOverlayExists() {
-        val doc = parseXml()
-        val overlay = findElementById(doc, "preedit_overlay")
-        assertNotNull("preedit_overlay container should exist", overlay)
     }
 
     @Test
@@ -173,6 +334,8 @@ class KeyboardViewLayoutTest {
             isDirectChildOf(panelSymbol!!, bottomRow!!))
     }
 
+    // === T9 panel structure tests ===
+
     @Test
     fun testT9PanelUsesWeightBasedLayout() {
         val doc = parseXml()
@@ -194,7 +357,6 @@ class KeyboardViewLayoutTest {
         assertNotNull("col_middle should exist", colMiddle)
         assertNotNull("col_right should exist", colRight)
     }
-
 
     @Test
     fun testEnterKeyInRightColumn() {
@@ -227,18 +389,6 @@ class KeyboardViewLayoutTest {
         assertTrue("col_middle weight ($mw) should be greater than col_right weight ($rw)", mw > rw)
     }
 
-
-    @Test
-    fun testNumberPanelUsesWeightBasedLayout() {
-        val doc = parseXml()
-        val numberKeypad = findElementById(doc, "number_keypad")
-        assertNotNull("number_keypad should exist", numberKeypad)
-        val height = numberKeypad!!.getAttribute("android:layout_height")
-        val weight = numberKeypad.getAttribute("android:layout_weight")
-        assertEquals("number_keypad should use 0dp height for weight layout", "0dp", height)
-        assertTrue("number_keypad should have layout_weight", weight.isNotEmpty())
-    }
-
     @Test
     fun testT9RowsUseWeightBasedLayout() {
         val doc = parseXml()
@@ -250,6 +400,19 @@ class KeyboardViewLayoutTest {
             assertEquals("$rowId should use 0dp height for weight layout", "0dp", height)
             assertTrue("$rowId should have layout_weight", weight.isNotEmpty())
         }
+    }
+
+    // === Number panel tests ===
+
+    @Test
+    fun testNumberPanelUsesWeightBasedLayout() {
+        val doc = parseXml()
+        val numberKeypad = findElementById(doc, "number_keypad")
+        assertNotNull("number_keypad should exist", numberKeypad)
+        val height = numberKeypad!!.getAttribute("android:layout_height")
+        val weight = numberKeypad.getAttribute("android:layout_weight")
+        assertEquals("number_keypad should use 0dp height for weight layout", "0dp", height)
+        assertTrue("number_keypad should have layout_weight", weight.isNotEmpty())
     }
 
     @Test
@@ -265,57 +428,16 @@ class KeyboardViewLayoutTest {
         }
     }
 
-    private fun findElementById(doc: org.w3c.dom.Document, id: String): org.w3c.dom.Element? {
-        val allNodes = doc.getElementsByTagName("*")
-        for (i in 0 until allNodes.length) {
-            val node = allNodes.item(i)
-            if (node is org.w3c.dom.Element) {
-                val nodeId = node.getAttribute("android:id")
-                if (nodeId == "@+id/$id") {
-                    return node
-                }
-            }
-        }
-        return null
+    @Test
+    fun testNumberPanelHasZeroKey() {
+        val doc = parseXml()
+        val panelNumber = findElementById(doc, "panel_number")
+        assertNotNull("panel_number should exist", panelNumber)
+        val num0 = findElementByIdInside(panelNumber!!, "num_0")
+        assertNotNull("num_0 should be in panel_number", num0)
     }
 
-    private fun findElementByIdInside(parent: org.w3c.dom.Element, id: String): org.w3c.dom.Element? {
-        val allNodes = parent.getElementsByTagName("*")
-        for (i in 0 until allNodes.length) {
-            val node = allNodes.item(i)
-            if (node is org.w3c.dom.Element) {
-                val nodeId = node.getAttribute("android:id")
-                if (nodeId == "@+id/$id" && isDescendantOf(parent, node)) {
-                    return node
-                }
-            }
-        }
-        return null
-    }
-
-    private fun hasChildByTagName(parent: org.w3c.dom.Element, tagName: String): Boolean {
-        val children = parent.getElementsByTagName(tagName)
-        for (i in 0 until children.length) {
-            val child = children.item(i)
-            if (isDescendantOf(parent, child)) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun isDescendantOf(ancestor: org.w3c.dom.Element, node: org.w3c.dom.Node): Boolean {
-        var current: org.w3c.dom.Node? = node.parentNode
-        while (current != null) {
-            if (current === ancestor) return true
-            current = current.parentNode
-        }
-        return false
-    }
-
-    private fun isDirectChildOf(parent: org.w3c.dom.Element, node: org.w3c.dom.Node): Boolean {
-        return node.parentNode === parent
-    }
+    // === Visibility / layout regression tests ===
 
     @Test
     fun testMainT9DoesNotHaveZeroKey() {
@@ -327,11 +449,49 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testPreeditIsFloatingOverlay() {
+    fun testToggleEnglishInBottomRow() {
         val doc = parseXml()
-        val overlay = findElementById(doc, "preedit_overlay")
-        assertNotNull("preedit_overlay container should exist", overlay)
-        val gravity = overlay!!.getAttribute("android:layout_gravity")
-        assertEquals("preedit_overlay should have bottom|start gravity", "bottom|start", gravity)
+        val rowT9_4 = findElementById(doc, "row_t9_4")
+        assertNotNull("row_t9_4 should exist", rowT9_4)
+        val toggleEnglish = findElementByIdInside(rowT9_4!!, "key_toggle_english")
+        assertNotNull("key_toggle_english should be in row_t9_4 (bottom row)", toggleEnglish)
+    }
+
+    @Test
+    fun testCandidateBarIsFrameLayout() {
+        val doc = parseXml()
+        val candidateBar = findElementById(doc, "candidate_bar")
+        assertNotNull("candidate_bar should exist", candidateBar)
+        assertEquals("candidate_bar should be a FrameLayout", "FrameLayout", candidateBar!!.tagName)
+    }
+
+    @Test
+    fun testRootDirectChildrenAreCandidateBarAndKeyboardShell() {
+        val doc = parseXml()
+        val root = doc.documentElement
+        val directChildren = mutableListOf<String>()
+        for (i in 0 until root.childNodes.length) {
+            val child = root.childNodes.item(i)
+            if (child is org.w3c.dom.Element) {
+                val id = child.getAttribute("android:id")
+                if (id.isNotEmpty()) {
+                    directChildren.add(id.removePrefix("@+id/"))
+                }
+            }
+        }
+        assertTrue("Root should have candidate_bar as direct child", directChildren.contains("candidate_bar"))
+        assertTrue("Root should have keyboard_shell as direct child", directChildren.contains("keyboard_shell"))
+        assertEquals("Root should only have 2 direct children with IDs", 2, directChildren.size)
+    }
+
+    private fun hasChildByTagName(parent: org.w3c.dom.Element, tagName: String): Boolean {
+        val children = parent.getElementsByTagName(tagName)
+        for (i in 0 until children.length) {
+            val child = children.item(i)
+            if (isDescendantOf(parent, child)) {
+                return true
+            }
+        }
+        return false
     }
 }

@@ -1,83 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/ime_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:orientation="vertical"
     android:background="#F0F0F0"
     android:paddingBottom="6dp">
 
-    <LinearLayout
-        android:id="@+id/main_content"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-    <!-- Candidate Bar Wrapper for Preedit -->
+    <!-- Candidate Bar: FrameLayout containing candidates + preedit -->
     <FrameLayout
+        android:id="@+id/candidate_bar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="48dp"
+        android:background="#FFFFFF"
+        android:elevation="2dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
 
-        <!-- Original Candidate Bar -->
-        <LinearLayout
-            android:id="@+id/candidate_bar"
+        <!-- Candidate container: Chinese candidates -->
+        <HorizontalScrollView
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="#FFFFFF"
-            android:elevation="2dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp">
-
-            <HorizontalScrollView
-                android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="none"
+            android:fillViewport="true">
+            <LinearLayout
+                android:id="@+id/candidate_container"
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:scrollbars="none"
-                android:fillViewport="true">
-                <LinearLayout
-                    android:id="@+id/candidate_container"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical" />
-            </HorizontalScrollView>
-        </LinearLayout>
+                android:orientation="horizontal"
+                android:gravity="center_vertical" />
+        </HorizontalScrollView>
 
-        <!-- Preedit overlay placed directly inside the candidate bar container -->
-        <FrameLayout
-            android:id="@+id/preedit_overlay"
-            android:layout_width="match_parent"
+        <!-- Preedit bar: inside candidate_bar, NOT cross-root -->
+        <LinearLayout
+            android:id="@+id/pinyin_floating_bar"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom|start"
+            android:layout_gravity="start|center_vertical"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/pinyin_bg"
+            android:visibility="gone"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
-            android:paddingBottom="2dp">
-            <LinearLayout
-                android:id="@+id/pinyin_floating_bar"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:elevation="4dp">
+            <TextView
+                android:id="@+id/pinyin_floating_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="start|center_vertical"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:background="@drawable/pinyin_bg"
-                android:visibility="gone"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
-                android:elevation="4dp">
-                <TextView
-                    android:id="@+id/pinyin_floating_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="14sp"
-                    android:textColor="#333333"
-                    android:gravity="center_vertical"
-                    android:singleLine="true" />
-            </LinearLayout>
-        </FrameLayout>
+                android:textSize="14sp"
+                android:textColor="#333333"
+                android:gravity="center_vertical"
+                android:singleLine="true" />
+        </LinearLayout>
     </FrameLayout>
-
 
     <!-- Keyboard Shell: height set dynamically by code -->
     <FrameLayout
@@ -85,12 +63,13 @@
         android:layout_width="match_parent"
         android:layout_height="260dp">
 
-        <!-- Chinese/English T9 Panel: 3-column skeleton -->
+        <!-- Chinese/English T9 Panel -->
         <LinearLayout
             android:id="@+id/panel_t9"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-                    android:paddingTop="0dp"
+            android:orientation="vertical"
+            android:paddingTop="0dp"
             android:paddingStart="4dp"
             android:paddingEnd="4dp"
             android:visibility="visible">
@@ -350,7 +329,8 @@
             android:id="@+id/panel_symbol"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-                    android:padding="4dp"
+            android:orientation="vertical"
+            android:padding="4dp"
             android:visibility="gone">
 
             <!-- Symbol category tabs (fixed) -->
@@ -661,7 +641,8 @@
             android:id="@+id/panel_number"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-                    android:padding="4dp"
+            android:orientation="vertical"
+            android:padding="4dp"
             android:visibility="gone">
 
             <!-- Number keypad area: fills remaining space -->
@@ -758,7 +739,5 @@
         </LinearLayout>
 
     </FrameLayout>
-    </LinearLayout>
 
-
-</FrameLayout>
+</LinearLayout>

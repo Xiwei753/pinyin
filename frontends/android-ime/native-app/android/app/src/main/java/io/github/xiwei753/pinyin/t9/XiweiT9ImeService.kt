@@ -268,7 +268,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         val subColor = if (isDark) android.graphics.Color.parseColor("#888888") else android.graphics.Color.parseColor("#999999")
 
         rootView.setBackgroundColor(bgColor)
-        rootView.findViewById<LinearLayout>(R.id.candidate_bar).setBackgroundColor(candidateBarColor)
+        rootView.findViewById<android.widget.FrameLayout>(R.id.candidate_bar).setBackgroundColor(candidateBarColor)
         pinyinFloatingBar.setBackgroundColor(if (isDark) android.graphics.Color.parseColor("#2A2A2A") else android.graphics.Color.parseColor("#E8E8E8"))
         pinyinFloatingText.setTextColor(textColor)
 
