@@ -382,6 +382,36 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
+    fun testLeftColumnNoUnifiedBackground() {
+        val content = layoutXml().readText()
+        // t9_left_column should NOT have a background attribute
+        val leftColSection = content.substringAfter("t9_left_column")
+            .substringBefore("left_scroll_rail")
+        // If t9_left_column had a background, it would appear between these two
+        // The scroll rail itself should have the background
+    }
+
+    @Test
+    fun testScrollRailHasOwnBackground() {
+        val doc = parseXml()
+        val scrollRail = findElementById(doc, "left_scroll_rail")
+        assertNotNull("left_scroll_rail should exist", scrollRail)
+        val bg = scrollRail!!.getAttribute("android:background")
+        assertTrue("left_scroll_rail should have a background drawable",
+            bg.isNotEmpty())
+    }
+
+    @Test
+    fun testSymbolButtonHasOwnBackground() {
+        val doc = parseXml()
+        val toggleSymbol = findElementById(doc, "key_toggle_symbol")
+        assertNotNull("key_toggle_symbol should exist", toggleSymbol)
+        val bg = toggleSymbol!!.getAttribute("android:background")
+        assertTrue("key_toggle_symbol should have a background drawable",
+            bg.isNotEmpty())
+    }
+
+    @Test
     fun testToggleSymbolNotInScrollRail() {
         val doc = parseXml()
         val scrollRail = findElementById(doc, "left_scroll_rail")

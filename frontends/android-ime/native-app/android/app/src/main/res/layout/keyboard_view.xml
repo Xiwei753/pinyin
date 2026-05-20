@@ -72,20 +72,20 @@
             android:layout_height="match_parent"
             android:visibility="visible">
 
-            <!-- Left rail: scrollable punct/reading rail + fixed 符 button (positioned by T9KeyboardGeometry) -->
+            <!-- Left column: scrollable rail (upper) + fixed 符 button (lower) -->
             <LinearLayout
                 android:id="@+id/t9_left_column"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:background="@drawable/key_bg_special">
+                android:orientation="vertical">
                 <ScrollView
                     android:id="@+id/left_scroll_rail"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
                     android:scrollbars="none"
-                    android:fillViewport="true">
+                    android:fillViewport="true"
+                    android:background="@drawable/key_bg_special">
                     <LinearLayout
                         android:id="@+id/left_scroll_content"
                         android:layout_width="match_parent"
@@ -130,8 +130,9 @@
                             android:visibility="gone" />
                     </LinearLayout>
                 </ScrollView>
-                <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                    <TextView android:id="@+id/key_toggle_symbol" android:layout_width="match_parent" android:layout_height="44dp"
+                <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:padding="2dp">
+                    <TextView android:id="@+id/key_toggle_symbol" android:layout_width="match_parent" android:layout_height="match_parent"
                         android:background="@drawable/key_bg_special" android:text="符" android:gravity="center"
                         android:textSize="15sp" android:textColor="#555555" android:clickable="true" android:focusable="true" />
                 </FrameLayout>
