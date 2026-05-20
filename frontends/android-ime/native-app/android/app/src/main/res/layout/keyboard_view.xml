@@ -86,6 +86,7 @@
                 android:layout_marginBottom="4dp">
 
                 <!-- Left column: narrow assist (punct / reading) -->
+                <!-- Total weight=4 to match middle column's 4 rows -->
                 <LinearLayout
                     android:id="@+id/col_left"
                     android:layout_width="0dp"
@@ -93,6 +94,7 @@
                     android:layout_height="match_parent"
                     android:orientation="vertical">
 
+                    <!-- Layer 1: aligns with row_t9_1 -->
                     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp"
                         android:layout_weight="1" android:padding="2dp">
                         <TextView android:id="@+id/punct_1" android:layout_width="match_parent" android:layout_height="match_parent"
@@ -103,6 +105,7 @@
                             android:textSize="11sp" android:textColor="#333333" android:clickable="true" android:focusable="true"
                             android:visibility="gone" />
                     </FrameLayout>
+                    <!-- Layer 2: aligns with row_t9_2 -->
                     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp"
                         android:layout_weight="1" android:padding="2dp">
                         <TextView android:id="@+id/punct_2" android:layout_width="match_parent" android:layout_height="match_parent"
@@ -113,6 +116,7 @@
                             android:textSize="11sp" android:textColor="#333333" android:clickable="true" android:focusable="true"
                             android:visibility="gone" />
                     </FrameLayout>
+                    <!-- Layer 3: aligns with row_t9_3 -->
                     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp"
                         android:layout_weight="1" android:padding="2dp">
                         <TextView android:id="@+id/punct_3" android:layout_width="match_parent" android:layout_height="match_parent"
@@ -123,8 +127,9 @@
                             android:textSize="11sp" android:textColor="#333333" android:clickable="true" android:focusable="true"
                             android:visibility="gone" />
                     </FrameLayout>
+                    <!-- Layer 4 (upper half): shares bottom layer with 符 -->
                     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp"
-                        android:layout_weight="1" android:padding="2dp">
+                        android:layout_weight="0.5" android:padding="2dp">
                         <TextView android:id="@+id/punct_4" android:layout_width="match_parent" android:layout_height="match_parent"
                             android:background="@drawable/key_bg_special" android:text="！" android:gravity="center"
                             android:textSize="16sp" android:textColor="#555555" android:clickable="true" android:focusable="true" />
@@ -133,8 +138,9 @@
                             android:textSize="11sp" android:textColor="#333333" android:clickable="true" android:focusable="true"
                             android:visibility="gone" />
                     </FrameLayout>
+                    <!-- Layer 4 (lower half): aligns with row_t9_4 bottom function layer -->
                     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp"
-                        android:layout_weight="1" android:padding="2dp">
+                        android:layout_weight="0.5" android:padding="2dp">
                         <TextView android:id="@+id/key_toggle_symbol" android:layout_width="match_parent" android:layout_height="match_parent"
                             android:background="@drawable/key_bg_special" android:text="符" android:gravity="center"
                             android:textSize="15sp" android:textColor="#555555" android:clickable="true" android:focusable="true" />
@@ -142,6 +148,7 @@
                 </LinearLayout>
 
                 <!-- Center column: wide主体 (3x3 T9 grid) -->
+                <!-- Total weight=4, defines the 4-layer grid基准 -->
                 <LinearLayout
                     android:id="@+id/col_middle"
                     android:layout_width="0dp"
@@ -149,7 +156,7 @@
                     android:layout_height="match_parent"
                     android:orientation="vertical">
 
-                    <!-- T9 Row 1: 1 2 3 -->
+                    <!-- Layer 1: T9 Row 1 (1/2/3) -->
                     <LinearLayout android:id="@+id/row_t9_1"
                         android:layout_width="match_parent" android:layout_height="0dp"
                         android:layout_weight="1"
@@ -185,7 +192,7 @@
                         </FrameLayout>
                     </LinearLayout>
 
-                    <!-- T9 Row 2: 4 5 6 -->
+                    <!-- Layer 2: T9 Row 2 (4/5/6) -->
                     <LinearLayout android:id="@+id/row_t9_2"
                         android:layout_width="match_parent" android:layout_height="0dp"
                         android:layout_weight="1"
@@ -228,7 +235,7 @@
                         </FrameLayout>
                     </LinearLayout>
 
-                    <!-- T9 Row 3: 7 8 9 -->
+                    <!-- Layer 3: T9 Row 3 (7/8/9) -->
                     <LinearLayout android:id="@+id/row_t9_3"
                         android:layout_width="match_parent" android:layout_height="0dp"
                         android:layout_weight="1"
@@ -270,7 +277,7 @@
                             </LinearLayout>
                         </FrameLayout>
                     </LinearLayout>
-                    <!-- T9 Row 4: 123 | 空格 | 中/英 -->
+                    <!-- Layer 4: bottom function row (123 / 空格 / 中/英) -->
                     <LinearLayout android:id="@+id/row_t9_4"
                         android:layout_width="match_parent" android:layout_height="0dp"
                         android:layout_weight="1"
@@ -294,6 +301,7 @@
                 </LinearLayout>
 
                 <!-- Right column: narrow function column (del / retype / tall enter) -->
+                <!-- Total weight=4 to match middle column's 4 layers -->
                 <LinearLayout
                     android:id="@+id/col_right"
                     android:layout_width="0dp"
@@ -301,6 +309,7 @@
                     android:layout_height="match_parent"
                     android:orientation="vertical">
 
+                    <!-- Layer 1: aligns with row_t9_1 -->
                     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp"
                         android:layout_weight="1" android:padding="2dp">
                         <TextView android:id="@+id/key_del" android:layout_width="match_parent" android:layout_height="match_parent"
@@ -308,13 +317,14 @@
                             android:textSize="20sp" android:textColor="#555555" android:clickable="true" android:focusable="true"
                             android:longClickable="true" />
                     </FrameLayout>
+                    <!-- Layer 2: aligns with row_t9_2 (middle) -->
                     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp"
                         android:layout_weight="1" android:padding="2dp">
                         <TextView android:id="@+id/key_retype" android:layout_width="match_parent" android:layout_height="match_parent"
                             android:background="@drawable/key_bg_special" android:text="重输" android:gravity="center"
                             android:textSize="14sp" android:textColor="#555555" android:clickable="true" android:focusable="true" />
                     </FrameLayout>
-                    <!-- Enter: tall vertical key, occupies下半区 -->
+                    <!-- Layers 3+4: spans bottom half, aligns with row_t9_3 + row_t9_4 -->
                     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp"
                         android:layout_weight="2" android:padding="2dp">
                         <TextView android:id="@+id/key_enter" android:layout_width="match_parent" android:layout_height="match_parent"

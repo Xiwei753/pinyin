@@ -425,6 +425,126 @@ class KeyboardViewLayoutTest {
         }
     }
 
+    // === Grid alignment tests ===
+
+    @Test
+    fun testMiddleColumnRowsHaveEqualWeight() {
+        val doc = parseXml()
+        val weights = mutableListOf<Double>()
+        for (rowId in listOf("row_t9_1", "row_t9_2", "row_t9_3", "row_t9_4")) {
+            val row = findElementById(doc, rowId)
+            assertNotNull("$rowId should exist", row)
+            val weight = row!!.getAttribute("android:layout_weight")
+            assertTrue("$rowId should have layout_weight", weight.isNotEmpty())
+            weights.add(weight.toDouble())
+        }
+        assertEquals("row_t9_1 weight should be 1", 1.0, weights[0], 0.01)
+        assertEquals("row_t9_2 weight should be 1", 1.0, weights[1], 0.01)
+        assertEquals("row_t9_3 weight should be 1", 1.0, weights[2], 0.01)
+        assertEquals("row_t9_4 weight should be 1", 1.0, weights[3], 0.01)
+    }
+
+    @Test
+    fun testLeftColumnTotalWeightEqualsFour() {
+        val doc = parseXml()
+        val colLeft = findElementById(doc, "col_left")
+        assertNotNull("col_left should exist", colLeft)
+        var totalWeight = 0.0
+        for (i in 0 until colLeft!!.childNodes.length) {
+            val child = colLeft.childNodes.item(i)
+            if (child is org.w3c.dom.Element) {
+                val weight = child.getAttribute("android:layout_weight")
+                if (weight.isNotEmpty()) {
+                    totalWeight += weight.toDouble()
+                }
+            }
+        }
+        assertEquals("col_left total weight should be 4 to match middle column", 4.0, totalWeight, 0.01)
+    }
+
+    @Test
+    fun testRightColumnTotalWeightEqualsFour() {
+        val doc = parseXml()
+        val colRight = findElementById(doc, "col_right")
+        assertNotNull("col_right should exist", colRight)
+        var totalWeight = 0.0
+        for (i in 0 until colRight!!.childNodes.length) {
+            val child = colRight.childNodes.item(i)
+            if (child is org.w3c.dom.Element) {
+                val weight = child.getAttribute("android:layout_weight")
+                if (weight.isNotEmpty()) {
+                    totalWeight += weight.toDouble()
+                }
+            }
+        }
+        assertEquals("col_right total weight should be 4 to match middle column", 4.0, totalWeight, 0.01)
+    }
+
+    @Test
+    fun testLeftColumnBottomItemsShareLayer() {
+        val doc = parseXml()
+        val colLeft = findElementById(doc, "col_left")
+        assertNotNull("col_left should exist", colLeft)
+        // Find the FrameLayout wrappers that contain punct_4 and key_toggle_symbol
+        val punct4Wrapper = findParentWithId(colLeft!!, "punct_4")
+        val symbolWrapper = findParentWithId(colLeft, "key_toggle_symbol")
+        assertNotNull("punct_4 wrapper should exist", punct4Wrapper)
+        assertNotNull("key_toggle_symbol wrapper should exist", symbolWrapper)
+        val punct4Weight = punct4Wrapper!!.getAttribute("android:layout_weight")
+        val symbolWeight = symbolWrapper!!.getAttribute("android:layout_weight")
+        assertEquals("punct_4 should have weight=0.5", "0.5", punct4Weight)
+        assertEquals("key_toggle_symbol should have weight=0.5", "0.5", symbolWeight)
+    }
+
+    @Test
+    fun testRetypeAlignsWithMiddleLayer() {
+        val doc = parseXml()
+        val colRight = findElementById(doc, "col_right")
+        assertNotNull("col_right should exist", colRight)
+        val retypeWrapper = findParentWithId(colRight!!, "key_retype")
+        assertNotNull("key_retype wrapper should exist", retypeWrapper)
+        val weight = retypeWrapper!!.getAttribute("android:layout_weight")
+        assertEquals("key_retype should have weight=1 to align with middle layer", "1", weight)
+    }
+
+    @Test
+    fun testEnterSpansBottomHalf() {
+        val doc = parseXml()
+        val colRight = findElementById(doc, "col_right")
+        assertNotNull("col_right should exist", colRight)
+        val enterWrapper = findParentWithId(colRight!!, "key_enter")
+        assertNotNull("key_enter wrapper should exist", enterWrapper)
+        val weight = enterWrapper!!.getAttribute("android:layout_weight")
+        assertEquals("key_enter should have weight=2 to span layers 3+4", "2", weight)
+    }
+
+    @Test
+    fun testToggleSymbolAlignsWithBottomFunctionLayer() {
+        val doc = parseXml()
+        val colLeft = findElementById(doc, "col_left")
+        assertNotNull("col_left should exist", colLeft)
+        val symbolWrapper = findParentWithId(colLeft!!, "key_toggle_symbol")
+        assertNotNull("key_toggle_symbol wrapper should exist", symbolWrapper)
+        val weight = symbolWrapper!!.getAttribute("android:layout_weight")
+        assertEquals("key_toggle_symbol should have weight=0.5 to share bottom layer with punct_4", "0.5", weight)
+    }
+
+    private fun findParentWithId(parent: org.w3c.dom.Element, childId: String): org.w3c.dom.Element? {
+        val allNodes = parent.getElementsByTagName("*")
+        for (i in 0 until allNodes.length) {
+            val node = allNodes.item(i)
+            if (node is org.w3c.dom.Element) {
+                val id = node.getAttribute("android:id")
+                if (id == "@+id/$childId") {
+                    // Return the parent of this element
+                    val p = node.parentNode
+                    if (p is org.w3c.dom.Element) return p
+                }
+            }
+        }
+        return null
+    }
+
     // === Number panel tests ===
 
     @Test
