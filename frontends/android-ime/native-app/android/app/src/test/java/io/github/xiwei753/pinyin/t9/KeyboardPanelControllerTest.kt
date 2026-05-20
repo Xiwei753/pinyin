@@ -61,7 +61,22 @@ class KeyboardPanelControllerTest {
             num0 = mock(), num1 = mock(), num2 = mock(), num3 = mock(), num4 = mock(),
             num5 = mock(), num6 = mock(), num7 = mock(), num8 = mock(), num9 = mock(), numDot = mock(),
             numDel = mock(), numBack = mock(), numSymbol = mock(), numHide = mock(), numEnter = mock(),
-            rowBand1 = mock(), rowBand2 = mock(), rowBand3 = mock(), rowBand4 = mock(),
+            
+            t9LeftColumn = mock(),
+            t9Key1Frame = mock(),
+            t9Key2Frame = mock(),
+            t9Key3Frame = mock(),
+            t9Key4Frame = mock(),
+            t9Key5Frame = mock(),
+            t9Key6Frame = mock(),
+            t9Key7Frame = mock(),
+            t9Key8Frame = mock(),
+            t9Key9Frame = mock(),
+            t9DelFrame = mock(),
+            t9RetypeFrame = mock(),
+            t9NumberFrame = mock(),
+            t9SpaceFrame = mock(),
+            t9EnglishFrame = mock(),
         )
         controller = KeyboardPanelController(kv)
     }

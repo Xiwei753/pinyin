@@ -2,6 +2,7 @@ package io.github.xiwei753.pinyin.t9
 
 import android.content.res.Resources
 import android.util.DisplayMetrics
+import android.view.View
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -72,32 +73,56 @@ class KeyboardHeightControllerTest {
         `when`(mockRepo.getKeyboardHeight()).thenReturn("normal")
         val metrics = controller.calculateHeight()
 
+        val mockView = mock(android.view.View::class.java)
+        val mockFlp = mock(android.widget.FrameLayout.LayoutParams::class.java)
+        val mockVglp = mock(android.view.ViewGroup.LayoutParams::class.java)
+
         val mockKv = mock(KeyboardViews::class.java)
-        `when`(mockKv.keyboardShell).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.keyToggleSymbol).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.keyToggleNumber).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.keySpace).thenReturn(mock(android.view.View::class.java))
+
+        // Stub all views used by applyHeight
+        fun stub(id: String): View = mockView
+        `when`(mockKv.keyboardShell).thenReturn(mockView)
+        `when`(mockKv.keyToggleSymbol).thenReturn(mockView)
+        `when`(mockKv.keyToggleNumber).thenReturn(mockView)
+        `when`(mockKv.keySpace).thenReturn(mockView)
         `when`(mockKv.keyToggleEnglish).thenReturn(mock(android.widget.TextView::class.java))
+        `when`(mockKv.imeRoot).thenReturn(mockView)
         `when`(mockKv.symBack).thenReturn(mock(android.widget.TextView::class.java))
         `when`(mockKv.symNumber).thenReturn(mock(android.widget.TextView::class.java))
-        `when`(mockKv.symDel).thenReturn(mock(android.view.View::class.java))
+        `when`(mockKv.symDel).thenReturn(mockView)
         `when`(mockKv.symEnter).thenReturn(mock(android.widget.TextView::class.java))
-        `when`(mockKv.symHide).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.numBack).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.numSymbol).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.numHide).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.numEnter).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.symPagePunct).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.symPageMath).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.symPageBracket).thenReturn(mock(android.view.View::class.java))
-        `when`(mockKv.symPageOther).thenReturn(mock(android.view.View::class.java))
+        `when`(mockKv.symHide).thenReturn(mockView)
+        `when`(mockKv.numBack).thenReturn(mockView)
+        `when`(mockKv.numSymbol).thenReturn(mockView)
+        `when`(mockKv.numHide).thenReturn(mockView)
+        `when`(mockKv.numEnter).thenReturn(mockView)
+        `when`(mockKv.symPagePunct).thenReturn(mockView)
+        `when`(mockKv.symPageMath).thenReturn(mockView)
+        `when`(mockKv.symPageBracket).thenReturn(mockView)
+        `when`(mockKv.symPageOther).thenReturn(mockView)
         `when`(mockKv.symScrollContent).thenReturn(mock(android.widget.ScrollView::class.java))
-        `when`(mockKv.imeRoot).thenReturn(mock(android.view.View::class.java))
 
-        val shellParams = mock(android.view.ViewGroup.LayoutParams::class.java)
-        `when`(mockKv.keyboardShell.layoutParams).thenReturn(shellParams)
-        val scrollParams = mock(android.view.ViewGroup.LayoutParams::class.java)
-        `when`(mockKv.symScrollContent.layoutParams).thenReturn(scrollParams)
+        // Stub T9 geometry views
+        `when`(mockKv.panelT9).thenReturn(mockView)
+        `when`(mockKv.t9LeftColumn).thenReturn(mockView)
+        `when`(mockKv.t9Key1Frame).thenReturn(mockView)
+        `when`(mockKv.t9Key2Frame).thenReturn(mockView)
+        `when`(mockKv.t9Key3Frame).thenReturn(mockView)
+        `when`(mockKv.t9Key4Frame).thenReturn(mockView)
+        `when`(mockKv.t9Key5Frame).thenReturn(mockView)
+        `when`(mockKv.t9Key6Frame).thenReturn(mockView)
+        `when`(mockKv.t9Key7Frame).thenReturn(mockView)
+        `when`(mockKv.t9Key8Frame).thenReturn(mockView)
+        `when`(mockKv.t9Key9Frame).thenReturn(mockView)
+        `when`(mockKv.t9DelFrame).thenReturn(mockView)
+        `when`(mockKv.t9RetypeFrame).thenReturn(mockView)
+        `when`(mockKv.enterContainer).thenReturn(mockView)
+        `when`(mockKv.t9NumberFrame).thenReturn(mockView)
+        `when`(mockKv.t9SpaceFrame).thenReturn(mockView)
+        `when`(mockKv.t9EnglishFrame).thenReturn(mockView)
+
+        `when`(mockKv.keyboardShell.layoutParams).thenReturn(mockVglp)
+        `when`(mockKv.symScrollContent.layoutParams).thenReturn(mockVglp)
 
         try {
             controller.applyHeight(mockKv, metrics)

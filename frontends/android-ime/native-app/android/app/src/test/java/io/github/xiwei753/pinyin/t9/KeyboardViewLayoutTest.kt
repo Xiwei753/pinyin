@@ -357,35 +357,21 @@ class KeyboardViewLayoutTest {
             isDirectChildOf(panelSymbol!!, bottomRow!!))
     }
 
-    // === T9 panel row band structure tests ===
+    // === T9 panel geometry-driven layout tests ===
 
     @Test
-    fun testPanelT9HasFourRowBands() {
+    fun testPanelT9IsFrameLayout() {
         val doc = parseXml()
-        for (bandId in listOf("row_band_1", "row_band_2", "row_band_3", "row_band_4")) {
-            val band = findElementById(doc, bandId)
-            assertNotNull("$bandId should exist", band)
-            val height = band!!.getAttribute("android:layout_height")
-            val weight = band.getAttribute("android:layout_weight")
-            assertEquals("$bandId should use 0dp height for weight layout", "0dp", height)
-            assertTrue("$bandId should have layout_weight", weight.isNotEmpty())
-        }
+        val panelT9 = findElementById(doc, "panel_t9")
+        assertNotNull("panel_t9 should exist", panelT9)
+        assertEquals("panel_t9 should be FrameLayout", "FrameLayout", panelT9!!.tagName)
     }
 
     @Test
-    fun testRowBandsHaveEqualWeight() {
+    fun testT9LeftColumnExists() {
         val doc = parseXml()
-        val weights = mutableListOf<Double>()
-        for (bandId in listOf("row_band_1", "row_band_2", "row_band_3", "row_band_4")) {
-            val band = findElementById(doc, bandId)
-            assertNotNull("$bandId should exist", band)
-            val weight = band!!.getAttribute("android:layout_weight")
-            assertTrue("$bandId should have layout_weight", weight.isNotEmpty())
-            weights.add(weight.toDouble())
-        }
-        assertEquals("All row bands should have equal weight", weights[0], weights[1], 0.01)
-        assertEquals("All row bands should have equal weight", weights[1], weights[2], 0.01)
-        assertEquals("All row bands should have equal weight", weights[2], weights[3], 0.01)
+        val leftCol = findElementById(doc, "t9_left_column")
+        assertNotNull("t9_left_column should exist", leftCol)
     }
 
     @Test
@@ -396,25 +382,19 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testToggleSymbolInLeftColumn() {
-        val doc = parseXml()
-        val root = doc.documentElement
-        val toggleSymbol = findElementById(doc, "key_toggle_symbol")
-        assertNotNull("key_toggle_symbol should exist", toggleSymbol)
-        // key_toggle_symbol is in the left column, not in row_band_4
-        val band4 = findElementById(doc, "row_band_4")
-        assertNotNull("row_band_4 should exist", band4)
-        val inBand4 = findElementByIdInside(band4!!, "key_toggle_symbol")
-        assertNull("key_toggle_symbol should NOT be in row_band_4", inBand4)
-    }
-
-    @Test
     fun testToggleSymbolNotInScrollRail() {
         val doc = parseXml()
         val scrollRail = findElementById(doc, "left_scroll_rail")
         assertNotNull("left_scroll_rail should exist", scrollRail)
         val toggleSymbol = findElementByIdInside(scrollRail!!, "key_toggle_symbol")
         assertNull("key_toggle_symbol should NOT be inside left_scroll_rail", toggleSymbol)
+    }
+
+    @Test
+    fun testToggleSymbolExists() {
+        val doc = parseXml()
+        val toggleSymbol = findElementById(doc, "key_toggle_symbol")
+        assertNotNull("key_toggle_symbol should exist", toggleSymbol)
     }
 
     @Test
@@ -432,13 +412,10 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testEnterInRightColumn() {
+    fun testEnterExists() {
         val doc = parseXml()
         val keyEnter = findElementById(doc, "key_enter")
         assertNotNull("key_enter should exist", keyEnter)
-        // key_enter is in the right column, inside enter_container, not in row_band_3
-        val enterContainer = findElementById(doc, "enter_container")
-        assertNotNull("enter_container should exist", enterContainer)
     }
 
     @Test
@@ -449,54 +426,32 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testToggleEnglishInBottomRowBand() {
+    fun testT9DigitKeyFramesExist() {
         val doc = parseXml()
-        val band4 = findElementById(doc, "row_band_4")
-        assertNotNull("row_band_4 should exist", band4)
-        val rowT9_4 = findElementByIdInside(band4!!, "row_t9_4")
-        assertNotNull("row_t9_4 should be in row_band_4", rowT9_4)
-        val toggleEnglish = findElementByIdInside(rowT9_4!!, "key_toggle_english")
-        assertNotNull("key_toggle_english should be in row_t9_4 (bottom function row)", toggleEnglish)
-    }
-
-    @Test
-    fun testRowT9RowsInsideTheirBands() {
-        val doc = parseXml()
-        val band1 = findElementById(doc, "row_band_1")
-        val band2 = findElementById(doc, "row_band_2")
-        val band3 = findElementById(doc, "row_band_3")
-        val band4 = findElementById(doc, "row_band_4")
-        assertNotNull("row_band_1 should exist", band1)
-        assertNotNull("row_band_2 should exist", band2)
-        assertNotNull("row_band_3 should exist", band3)
-        assertNotNull("row_band_4 should exist", band4)
-
-        val row1 = findElementByIdInside(band1!!, "row_t9_1")
-        val row2 = findElementByIdInside(band2!!, "row_t9_2")
-        val row3 = findElementByIdInside(band3!!, "row_t9_3")
-        val row4 = findElementByIdInside(band4!!, "row_t9_4")
-        assertNotNull("row_t9_1 should be in row_band_1", row1)
-        assertNotNull("row_t9_2 should be in row_band_2", row2)
-        assertNotNull("row_t9_3 should be in row_band_3", row3)
-        assertNotNull("row_t9_4 should be in row_band_4", row4)
-    }
-
-    @Test
-    fun testRowT9RowsExist() {
-        val doc = parseXml()
-        for (rowId in listOf("row_t9_1", "row_t9_2", "row_t9_3", "row_t9_4")) {
-            val row = findElementById(doc, rowId)
-            assertNotNull("$rowId should exist", row)
+        for (frameId in listOf("t9_key_1_frame", "t9_key_2_frame", "t9_key_3_frame",
+                "t9_key_4_frame", "t9_key_5_frame", "t9_key_6_frame",
+                "t9_key_7_frame", "t9_key_8_frame", "t9_key_9_frame")) {
+            val frame = findElementById(doc, frameId)
+            assertNotNull("$frameId should exist", frame)
         }
     }
 
     @Test
-    fun testMiddleColumnWiderThanRightColumn() {
+    fun testBottomRowFramesExist() {
         val doc = parseXml()
-        val row1 = findElementById(doc, "row_t9_1")
-        assertNotNull("row_t9_1 should exist", row1)
-        // The middle column (weight=5) is wider than the right column (weight=1)
-        // in the horizontal LinearLayout with weightSum=6
+        for (frameId in listOf("t9_number_frame", "t9_space_frame", "t9_english_frame")) {
+            val frame = findElementById(doc, frameId)
+            assertNotNull("$frameId should exist", frame)
+        }
+    }
+
+    @Test
+    fun testMainT9DoesNotHaveZeroKey() {
+        val doc = parseXml()
+        val panelT9 = findElementById(doc, "panel_t9")
+        assertNotNull("panel_t9 should exist", panelT9)
+        val num0InT9 = findElementByIdInside(panelT9!!, "num_0")
+        assertNull("num_0 should NOT be in panel_t9", num0InT9)
     }
 
     // === Number panel tests ===
@@ -537,21 +492,10 @@ class KeyboardViewLayoutTest {
     // === Visibility / layout regression tests ===
 
     @Test
-    fun testMainT9DoesNotHaveZeroKey() {
+    fun testToggleEnglishExists() {
         val doc = parseXml()
-        val panelT9 = findElementById(doc, "panel_t9")
-        assertNotNull("panel_t9 should exist", panelT9)
-        val num0InT9 = findElementByIdInside(panelT9!!, "num_0")
-        assertTrue("num_0 should NOT be in panel_t9", num0InT9 == null)
-    }
-
-    @Test
-    fun testToggleEnglishInBottomRow() {
-        val doc = parseXml()
-        val rowT9_4 = findElementById(doc, "row_t9_4")
-        assertNotNull("row_t9_4 should exist", rowT9_4)
-        val toggleEnglish = findElementByIdInside(rowT9_4!!, "key_toggle_english")
-        assertNotNull("key_toggle_english should be in row_t9_4 (bottom row)", toggleEnglish)
+        val toggleEnglish = findElementById(doc, "key_toggle_english")
+        assertNotNull("key_toggle_english should exist", toggleEnglish)
     }
 
     @Test
