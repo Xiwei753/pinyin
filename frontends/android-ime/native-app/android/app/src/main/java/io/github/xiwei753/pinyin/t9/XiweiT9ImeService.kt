@@ -38,6 +38,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     private lateinit var symPageMath: View
     private lateinit var symPageBracket: View
     private lateinit var symPageOther: View
+    private lateinit var symScrollContent: android.widget.ScrollView
     private var currentSymCategory: String = "punct"
 
     private lateinit var handler: KeyboardActionHandler
@@ -135,6 +136,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         symPageMath = view.findViewById(R.id.sym_page_math)
         symPageBracket = view.findViewById(R.id.sym_page_bracket)
         symPageOther = view.findViewById(R.id.sym_page_other)
+        symScrollContent = view.findViewById(R.id.sym_scroll_content)
         readingTextViews = listOf(
             view.findViewById(R.id.reading_1),
             view.findViewById(R.id.reading_2),
@@ -304,6 +306,15 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         }
         rootView.findViewById<View>(R.id.row_sym_bottom)?.layoutParams?.height = bottomRowHeightPx
 
+        // Set ScrollView height to fill remaining space in shell
+        val shellHeight = rootView.findViewById<View>(R.id.keyboard_shell)?.layoutParams?.height ?: 0
+        val symPadding = 4 * density.toInt()
+        val tabsHeight = (36 * density).toInt()
+        val scrollHeight = shellHeight - tabsHeight - bottomRowHeightPx - 2 * symPadding
+        if (scrollHeight > 0) {
+            symScrollContent.layoutParams.height = scrollHeight
+        }
+
         val numRowIds = listOf(R.id.row_num_1, R.id.row_num_2, R.id.row_num_3, R.id.row_num_4)
         for (id in numRowIds) {
             rootView.findViewById<View>(id)?.layoutParams?.height = rowHeightPx
@@ -319,6 +330,13 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         panelT9.visibility = if (keyboardMode == KeyboardMode.ChineseT9 || handler.keyboardMode == KeyboardMode.EnglishT9) View.VISIBLE else View.GONE
         panelSymbol.visibility = if (handler.keyboardMode == KeyboardMode.Symbol) View.VISIBLE else View.GONE
         panelNumber.visibility = if (handler.keyboardMode == KeyboardMode.Number) View.VISIBLE else View.GONE
+
+        // Hide preedit on symbol/number modes
+        if (this::pinyinFloatingBar.isInitialized) {
+            if (keyboardMode == KeyboardMode.Symbol || keyboardMode == KeyboardMode.Number) {
+                pinyinFloatingBar.visibility = View.GONE
+            }
+        }
 
         val toggleEnglish = view?.findViewById<TextView>(R.id.key_toggle_english)
         if (toggleEnglish != null) {
@@ -630,8 +648,9 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         if (!this::pinyinFloatingBar.isInitialized || !this::handler.isInitialized) return
         val preedit = handler.preedit
         val hasInput = handler.rawBuffer.isNotEmpty()
+        val isT9Mode = handler.keyboardMode == KeyboardMode.ChineseT9 || handler.keyboardMode == KeyboardMode.EnglishT9
 
-        pinyinFloatingBar.visibility = if (hasInput && preedit.isNotEmpty()) View.VISIBLE else View.GONE
+        pinyinFloatingBar.visibility = if (isT9Mode && hasInput && preedit.isNotEmpty()) View.VISIBLE else View.GONE
         pinyinFloatingText.text = preedit
 
         val limit = settingsRepository.getCandidateCount()
