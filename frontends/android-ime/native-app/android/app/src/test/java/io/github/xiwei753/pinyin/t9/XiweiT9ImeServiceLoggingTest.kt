@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.*
-import java.lang.reflect.Method
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 import io.github.xiwei753.pinyin.t9.data.DictionaryProvider
 
@@ -35,19 +34,117 @@ class XiweiT9ImeServiceLoggingTest {
         ctrlField.set(service, handler)
 
         val mockContainer = mock(android.widget.LinearLayout::class.java)
-        val containerField = XiweiT9ImeService::class.java.getDeclaredField("candidateContainer")
-        containerField.isAccessible = true
-        containerField.set(service, mockContainer)
+        val mockFloatingBar = mock(android.view.View::class.java)
+        val mockFloatingText = mock(android.widget.TextView::class.java)
+        val mockCandidateBar = mock(android.widget.LinearLayout::class.java)
+        val mockImeRoot = mock(android.view.View::class.java)
+        val mockShell = mock(android.view.View::class.java)
+        val mockPanelT9 = mock(android.view.View::class.java)
+        val mockPanelSymbol = mock(android.view.View::class.java)
+        val mockPanelNumber = mock(android.view.View::class.java)
+        val mockSymPagePunct = mock(android.view.View::class.java)
+        val mockSymPageMath = mock(android.view.View::class.java)
+        val mockSymPageBracket = mock(android.view.View::class.java)
+        val mockSymPageOther = mock(android.view.View::class.java)
+        val mockSymScroll = mock(android.widget.ScrollView::class.java)
+        val mockLeftScrollRail = mock(android.view.View::class.java)
+        val mockLeftScrollContent = mock(android.widget.LinearLayout::class.java)
 
-        val mockPinyinFloatingBar = mock(android.view.View::class.java)
-        val floatingBarField = XiweiT9ImeService::class.java.getDeclaredField("pinyinFloatingBar")
-        floatingBarField.isAccessible = true
-        floatingBarField.set(service, mockPinyinFloatingBar)
-
-        val mockPinyinFloatingText = mock(android.widget.TextView::class.java)
-        val floatingTextField = XiweiT9ImeService::class.java.getDeclaredField("pinyinFloatingText")
-        floatingTextField.isAccessible = true
-        floatingTextField.set(service, mockPinyinFloatingText)
+        val keyboardViews = KeyboardViews(
+            imeRoot = mockImeRoot,
+            candidateBar = mockCandidateBar,
+            candidateContainer = mockContainer,
+            pinyinFloatingBar = mockFloatingBar,
+            pinyinFloatingText = mockFloatingText,
+            keyboardShell = mockShell,
+            panelT9 = mockPanelT9,
+            panelSymbol = mockPanelSymbol,
+            panelNumber = mockPanelNumber,
+            readingTextViews = listOf(
+                mock(android.widget.TextView::class.java),
+                mock(android.widget.TextView::class.java),
+                mock(android.widget.TextView::class.java),
+                mock(android.widget.TextView::class.java),
+            ),
+            punctTextViews = listOf(
+                mock(android.widget.TextView::class.java),
+                mock(android.widget.TextView::class.java),
+                mock(android.widget.TextView::class.java),
+                mock(android.widget.TextView::class.java),
+            ),
+            symPagePunct = mockSymPagePunct,
+            symPageMath = mockSymPageMath,
+            symPageBracket = mockSymPageBracket,
+            symPageOther = mockSymPageOther,
+            symScrollContent = mockSymScroll,
+            leftScrollRail = mockLeftScrollRail,
+            leftScrollContent = mockLeftScrollContent,
+            key1Text = mock(android.widget.TextView::class.java),
+            key2 = mock(android.view.View::class.java),
+            key3 = mock(android.view.View::class.java),
+            key4 = mock(android.view.View::class.java),
+            key5 = mock(android.view.View::class.java),
+            key6 = mock(android.view.View::class.java),
+            key7 = mock(android.view.View::class.java),
+            key8 = mock(android.view.View::class.java),
+            key9 = mock(android.view.View::class.java),
+            key2Number = mock(android.widget.TextView::class.java),
+            key3Number = mock(android.widget.TextView::class.java),
+            key4Number = mock(android.widget.TextView::class.java),
+            key5Number = mock(android.widget.TextView::class.java),
+            key6Number = mock(android.widget.TextView::class.java),
+            key7Number = mock(android.widget.TextView::class.java),
+            key8Number = mock(android.widget.TextView::class.java),
+            key9Number = mock(android.widget.TextView::class.java),
+            key2Letters = mock(android.widget.TextView::class.java),
+            key3Letters = mock(android.widget.TextView::class.java),
+            key4Letters = mock(android.widget.TextView::class.java),
+            key5Letters = mock(android.widget.TextView::class.java),
+            key6Letters = mock(android.widget.TextView::class.java),
+            key7Letters = mock(android.widget.TextView::class.java),
+            key8Letters = mock(android.widget.TextView::class.java),
+            key9Letters = mock(android.widget.TextView::class.java),
+            keyDel = mock(android.view.View::class.java),
+            keyRetype = mock(android.view.View::class.java),
+            keyEnter = mock(android.view.View::class.java),
+            keySpace = mock(android.view.View::class.java),
+            keyToggleSymbol = mock(android.view.View::class.java),
+            keyToggleNumber = mock(android.view.View::class.java),
+            keyToggleEnglish = mock(android.widget.TextView::class.java),
+            symTabPunct = mock(android.widget.TextView::class.java),
+            symTabMath = mock(android.widget.TextView::class.java),
+            symTabBracket = mock(android.widget.TextView::class.java),
+            symTabOther = mock(android.widget.TextView::class.java),
+            symTextViews = emptyMap(),
+            symBack = mock(android.widget.TextView::class.java),
+            symNumber = mock(android.widget.TextView::class.java),
+            symDel = mock(android.view.View::class.java),
+            symEnter = mock(android.view.View::class.java),
+            symHide = mock(android.view.View::class.java),
+            num0 = mock(android.widget.TextView::class.java),
+            num1 = mock(android.widget.TextView::class.java),
+            num2 = mock(android.widget.TextView::class.java),
+            num3 = mock(android.widget.TextView::class.java),
+            num4 = mock(android.widget.TextView::class.java),
+            num5 = mock(android.widget.TextView::class.java),
+            num6 = mock(android.widget.TextView::class.java),
+            num7 = mock(android.widget.TextView::class.java),
+            num8 = mock(android.widget.TextView::class.java),
+            num9 = mock(android.widget.TextView::class.java),
+            numDot = mock(android.widget.TextView::class.java),
+            numDel = mock(android.view.View::class.java),
+            numBack = mock(android.view.View::class.java),
+            numSymbol = mock(android.view.View::class.java),
+            numHide = mock(android.view.View::class.java),
+            numEnter = mock(android.view.View::class.java),
+            rowBand1 = mock(android.view.View::class.java),
+            rowBand2 = mock(android.view.View::class.java),
+            rowBand3 = mock(android.view.View::class.java),
+            rowBand4 = mock(android.view.View::class.java),
+        )
+        val viewsField = XiweiT9ImeService::class.java.getDeclaredField("keyboardViews")
+        viewsField.isAccessible = true
+        viewsField.set(service, keyboardViews)
     }
 
     private fun triggerLogDebugInfo() {
