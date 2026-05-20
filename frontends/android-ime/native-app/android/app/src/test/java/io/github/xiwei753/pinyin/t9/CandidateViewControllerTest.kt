@@ -75,6 +75,8 @@ class CandidateViewControllerTest {
             numDel = mock(), numBack = mock(), numSymbol = mock(), numHide = mock(), numEnter = mock(),
             
             t9LeftColumn = mock(),
+            t9LeftScrollFrame = mock(),
+            t9SymbolButtonFrame = mock(),
             t9Key1Frame = mock(),
             t9Key2Frame = mock(),
             t9Key3Frame = mock(),

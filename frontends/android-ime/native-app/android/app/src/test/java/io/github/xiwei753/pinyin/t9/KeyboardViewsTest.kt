@@ -39,6 +39,8 @@ class KeyboardViewsTest {
             "sym_scroll_content",
             "left_scroll_rail", "left_scroll_content",
             "t9_left_column",
+            "t9_left_scroll_frame",
+            "t9_symbol_button_frame",
             "key_1_text",
             "t9_key_2_frame", "t9_key_3_frame", "t9_key_4_frame", "t9_key_5_frame",
             "t9_key_6_frame", "t9_key_7_frame", "t9_key_8_frame", "t9_key_9_frame",

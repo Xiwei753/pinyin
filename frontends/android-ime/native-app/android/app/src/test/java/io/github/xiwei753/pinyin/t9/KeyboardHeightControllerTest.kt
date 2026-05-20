@@ -105,6 +105,8 @@ class KeyboardHeightControllerTest {
         // Stub T9 geometry views
         `when`(mockKv.panelT9).thenReturn(mockView)
         `when`(mockKv.t9LeftColumn).thenReturn(mockView)
+        `when`(mockKv.t9LeftScrollFrame).thenReturn(mockView)
+        `when`(mockKv.t9SymbolButtonFrame).thenReturn(mockView)
         `when`(mockKv.t9Key1Frame).thenReturn(mockView)
         `when`(mockKv.t9Key2Frame).thenReturn(mockView)
         `when`(mockKv.t9Key3Frame).thenReturn(mockView)

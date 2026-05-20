@@ -25,6 +25,8 @@ class KeyboardViews constructor(
     val leftScrollRail: View,
     val leftScrollContent: LinearLayout,
     val t9LeftColumn: View,
+    val t9LeftScrollFrame: View,
+    val t9SymbolButtonFrame: View,
     // T9 digit keys
     val key1Text: TextView,
     val key2: View,
@@ -205,6 +207,8 @@ class KeyboardViews constructor(
                 leftScrollRail = leftScrollRail,
                 leftScrollContent = leftScrollContent,
                 t9LeftColumn = req(R.id.t9_left_column),
+                t9LeftScrollFrame = req(R.id.t9_left_scroll_frame),
+                t9SymbolButtonFrame = req(R.id.t9_symbol_button_frame),
                 key1Text = req(R.id.key_1_text),
                 key2 = req(R.id.t9_key_2_frame),
                 key3 = req(R.id.t9_key_3_frame),

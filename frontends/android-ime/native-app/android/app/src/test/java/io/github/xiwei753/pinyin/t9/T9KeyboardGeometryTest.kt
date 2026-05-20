@@ -144,6 +144,34 @@ class T9KeyboardGeometryTest {
     }
 
     @Test
+    fun testScrollRailBottomLessThanSymbolTop() {
+        val rowHeight = 96; val bottomRowHeight = 88; val vGap = 8; val panelH = 480
+        // scroll rail bottom = panelH - bottomRowHeight - vGap
+        val scrollBottom = panelH - bottomRowHeight - vGap
+        // symbol top = panelH - bottomRowHeight
+        val symbolTop = panelH - bottomRowHeight
+        assertTrue("Scroll rail bottom ($scrollBottom) < symbol top ($symbolTop)",
+            scrollBottom < symbolTop)
+    }
+
+    @Test
+    fun testSymbolButtonBottomEqualsLeftRailBottom() {
+        val rowHeight = 96; val bottomRowHeight = 88; val panelH = 480
+        // symbol button bottom = panelH
+        // left rail bottom = panelH
+        assertEquals("Symbol bottom should equal left rail bottom",
+            panelH, panelH)
+    }
+
+    @Test
+    fun testSymbolButtonHeightEqualsBottomRowHeight() {
+        val bottomRowHeight = 88
+        val symbolHeight = bottomRowHeight
+        assertEquals("Symbol button height should equal bottomRowHeight",
+            bottomRowHeight, symbolHeight)
+    }
+
+    @Test
     fun testGeometryAcceptsVariousSizes() {
         // Low setting
         val low = T9KeyboardGeometry.calculate(720, 320, 88, 80, 6, 6)

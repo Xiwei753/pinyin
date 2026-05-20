@@ -1,6 +1,8 @@
 package io.github.xiwei753.pinyin.t9
 
 import android.content.res.Resources
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -47,14 +49,28 @@ class KeyboardHeightController(
     fun applyHeight(v: KeyboardViews, metrics: HeightMetrics) {
         v.keyboardShell.layoutParams?.height = metrics.shellHeight
 
-        applyT9Geometry(v, metrics)
+        val reused = applyT9Geometry(v, metrics)
         applySymbolPanelHeights(v, metrics)
         applyNumberPanelHeights(v, metrics)
 
         v.imeRoot.requestLayout()
+
+        // If panelT9 width was 0 (not yet laid out), re-apply once real width is available
+        if (!reused) {
+            v.panelT9.post {
+                val w = v.panelT9.width
+                if (w > 0) {
+                    applyT9Geometry(v, metrics)
+                    v.imeRoot.requestLayout()
+                }
+            }
+        }
     }
 
-    private fun applyT9Geometry(v: KeyboardViews, metrics: HeightMetrics) {
+    /**
+     * @return true if real panel dimensions were used, false if fallback was used
+     */
+    private fun applyT9Geometry(v: KeyboardViews, metrics: HeightMetrics): Boolean {
         val density = resources.displayMetrics.density
         val hGap = (4 * density).toInt()
         val vGap = (4 * density).toInt()
@@ -62,8 +78,19 @@ class KeyboardHeightController(
         val panelWidth = v.panelT9.width
         val panelHeight = v.panelT9.height
 
-        val width = if (panelWidth > 0) panelWidth else resources.displayMetrics.widthPixels
-        val height = if (panelHeight > 0) panelHeight else metrics.shellHeight
+        val width: Int
+        val height: Int
+        val usedRealDimensions: Boolean
+
+        if (panelWidth > 0 && panelHeight > 0) {
+            width = panelWidth
+            height = panelHeight
+            usedRealDimensions = true
+        } else {
+            width = resources.displayMetrics.widthPixels
+            height = metrics.shellHeight
+            usedRealDimensions = false
+        }
 
         val geo = T9KeyboardGeometry.calculate(
             panelWidth = width,
@@ -86,6 +113,8 @@ class KeyboardHeightController(
         }
 
         v.t9LeftColumn.setFrame(geo.leftRailRect)
+        v.t9LeftScrollFrame.setFrame(geo.leftRailScrollRect)
+        v.t9SymbolButtonFrame.setFrame(geo.symbolButtonRect)
         v.t9Key1Frame.setFrame(geo.key1Rect)
         v.t9Key2Frame.setFrame(geo.key2Rect)
         v.t9Key3Frame.setFrame(geo.key3Rect)
@@ -102,8 +131,7 @@ class KeyboardHeightController(
         v.t9SpaceFrame.setFrame(geo.keySpaceRect)
         v.t9EnglishFrame.setFrame(geo.keyEnglishToggleRect)
 
-        // Bottom row heights for function buttons (used when visible)
-        v.keyToggleSymbol.layoutParams?.height = metrics.bottomRowHeightPx
+        return usedRealDimensions
     }
 
     private fun applySymbolPanelHeights(v: KeyboardViews, metrics: HeightMetrics) {
