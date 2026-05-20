@@ -21,3 +21,4 @@ third_party/rime-ice/base.dict.yaml
 # Generated T9 dictionary assets (built by Gradle generateT9DictionaryAssets task)
 frontends/android-ime/native-app/android/app/src/main/assets/t9_source_dict.tsv
 frontends/android-ime/native-app/android/app/src/main/assets/t9_dict.db
+SDK
