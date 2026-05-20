@@ -331,7 +331,7 @@ class KeyboardViewLayoutTest {
         val doc = parseXml()
         val overlay = findElementById(doc, "preedit_overlay")
         assertNotNull("preedit_overlay container should exist", overlay)
-        val alignAbove = overlay!!.getAttribute("android:layout_above")
-        assertEquals("preedit_overlay should align above main_content", "@id/main_content", alignAbove)
+        val gravity = overlay!!.getAttribute("android:layout_gravity")
+        assertEquals("preedit_overlay should have bottom|start gravity", "bottom|start", gravity)
     }
 }
