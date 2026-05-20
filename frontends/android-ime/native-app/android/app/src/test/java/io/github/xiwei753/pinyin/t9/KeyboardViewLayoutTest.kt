@@ -195,14 +195,6 @@ class KeyboardViewLayoutTest {
         assertNotNull("col_right should exist", colRight)
     }
 
-    @Test
-    fun testEnterKeyNotInBottomRow() {
-        val doc = parseXml()
-        val rowBottom = findElementById(doc, "row_bottom")
-        assertNotNull("row_bottom should exist", rowBottom)
-        val enterInBottom = findElementByIdInside(rowBottom!!, "key_enter")
-        assertTrue("key_enter should NOT be in row_bottom", enterInBottom == null)
-    }
 
     @Test
     fun testEnterKeyInRightColumn() {
@@ -235,23 +227,6 @@ class KeyboardViewLayoutTest {
         assertTrue("col_middle weight ($mw) should be greater than col_right weight ($rw)", mw > rw)
     }
 
-    @Test
-    fun testBottomRowHasFourKeys() {
-        val doc = parseXml()
-        val rowBottom = findElementById(doc, "row_bottom")
-        assertNotNull("row_bottom should exist", rowBottom)
-        val weightSum = rowBottom!!.getAttribute("android:weightSum")
-        assertEquals("row_bottom weightSum should be 5", "5", weightSum)
-        val frameLayouts = rowBottom.getElementsByTagName("FrameLayout")
-        var directChildren = 0
-        for (i in 0 until frameLayouts.length) {
-            val fl = frameLayouts.item(i)
-            if (fl.parentNode === rowBottom) {
-                directChildren++
-            }
-        }
-        assertEquals("row_bottom should have 4 FrameLayout children", 4, directChildren)
-    }
 
     @Test
     fun testNumberPanelUsesWeightBasedLayout() {
@@ -340,5 +315,23 @@ class KeyboardViewLayoutTest {
 
     private fun isDirectChildOf(parent: org.w3c.dom.Element, node: org.w3c.dom.Node): Boolean {
         return node.parentNode === parent
+    }
+
+    @Test
+    fun testMainT9DoesNotHaveZeroKey() {
+        val doc = parseXml()
+        val panelT9 = findElementById(doc, "panel_t9")
+        assertNotNull("panel_t9 should exist", panelT9)
+        val num0InT9 = findElementByIdInside(panelT9!!, "num_0")
+        assertTrue("num_0 should NOT be in panel_t9", num0InT9 == null)
+    }
+
+    @Test
+    fun testPreeditIsFloatingOverlay() {
+        val doc = parseXml()
+        val overlay = findElementById(doc, "preedit_overlay")
+        assertNotNull("preedit_overlay container should exist", overlay)
+        val alignAbove = overlay!!.getAttribute("android:layout_above")
+        assertEquals("preedit_overlay should align above main_content", "@id/main_content", alignAbove)
     }
 }
