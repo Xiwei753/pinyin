@@ -357,192 +357,158 @@ class KeyboardViewLayoutTest {
             isDirectChildOf(panelSymbol!!, bottomRow!!))
     }
 
-    // === T9 panel structure tests ===
+    // === T9 panel row band structure tests ===
 
     @Test
-    fun testT9PanelUsesWeightBasedLayout() {
+    fun testPanelT9HasFourRowBands() {
         val doc = parseXml()
-        val keyboardMain = findElementById(doc, "keyboard_main")
-        assertNotNull("keyboard_main should exist", keyboardMain)
-        val height = keyboardMain!!.getAttribute("android:layout_height")
-        val weight = keyboardMain.getAttribute("android:layout_weight")
-        assertEquals("keyboard_main should use 0dp height for weight layout", "0dp", height)
-        assertTrue("keyboard_main should have layout_weight", weight.isNotEmpty())
-    }
-
-    @Test
-    fun testT9PanelHasThreeColumnSkeleton() {
-        val doc = parseXml()
-        val colLeft = findElementById(doc, "col_left")
-        val colMiddle = findElementById(doc, "col_middle")
-        val colRight = findElementById(doc, "col_right")
-        assertNotNull("col_left should exist", colLeft)
-        assertNotNull("col_middle should exist", colMiddle)
-        assertNotNull("col_right should exist", colRight)
-    }
-
-    @Test
-    fun testEnterKeyInRightColumn() {
-        val doc = parseXml()
-        val colRight = findElementById(doc, "col_right")
-        assertNotNull("col_right should exist", colRight)
-        val enterInRight = findElementByIdInside(colRight!!, "key_enter")
-        assertNotNull("key_enter should be in col_right", enterInRight)
-    }
-
-    @Test
-    fun testMiddleColumnWiderThanSideColumns() {
-        val doc = parseXml()
-        val colLeft = findElementById(doc, "col_left")
-        val colMiddle = findElementById(doc, "col_middle")
-        val colRight = findElementById(doc, "col_right")
-        assertNotNull("col_left should exist", colLeft)
-        assertNotNull("col_middle should exist", colMiddle)
-        assertNotNull("col_right should exist", colRight)
-        val leftWeight = colLeft!!.getAttribute("android:layout_weight")
-        val middleWeight = colMiddle!!.getAttribute("android:layout_weight")
-        val rightWeight = colRight!!.getAttribute("android:layout_weight")
-        assertTrue("col_left should have weight", leftWeight.isNotEmpty())
-        assertTrue("col_middle should have weight", middleWeight.isNotEmpty())
-        assertTrue("col_right should have weight", rightWeight.isNotEmpty())
-        val lw = leftWeight.toDouble()
-        val mw = middleWeight.toDouble()
-        val rw = rightWeight.toDouble()
-        assertTrue("col_middle weight ($mw) should be greater than col_left weight ($lw)", mw > lw)
-        assertTrue("col_middle weight ($mw) should be greater than col_right weight ($rw)", mw > rw)
-    }
-
-    @Test
-    fun testT9RowsUseWeightBasedLayout() {
-        val doc = parseXml()
-        for (rowId in listOf("row_t9_1", "row_t9_2", "row_t9_3")) {
-            val row = findElementById(doc, rowId)
-            assertNotNull("$rowId should exist", row)
-            val height = row!!.getAttribute("android:layout_height")
-            val weight = row.getAttribute("android:layout_weight")
-            assertEquals("$rowId should use 0dp height for weight layout", "0dp", height)
-            assertTrue("$rowId should have layout_weight", weight.isNotEmpty())
+        for (bandId in listOf("row_band_1", "row_band_2", "row_band_3", "row_band_4")) {
+            val band = findElementById(doc, bandId)
+            assertNotNull("$bandId should exist", band)
+            val height = band!!.getAttribute("android:layout_height")
+            val weight = band.getAttribute("android:layout_weight")
+            assertEquals("$bandId should use 0dp height for weight layout", "0dp", height)
+            assertTrue("$bandId should have layout_weight", weight.isNotEmpty())
         }
     }
 
-    // === Grid alignment tests ===
+    @Test
+    fun testRowBandsHaveEqualWeight() {
+        val doc = parseXml()
+        val weights = mutableListOf<Double>()
+        for (bandId in listOf("row_band_1", "row_band_2", "row_band_3", "row_band_4")) {
+            val band = findElementById(doc, bandId)
+            assertNotNull("$bandId should exist", band)
+            val weight = band!!.getAttribute("android:layout_weight")
+            assertTrue("$bandId should have layout_weight", weight.isNotEmpty())
+            weights.add(weight.toDouble())
+        }
+        assertEquals("All row bands should have equal weight", weights[0], weights[1], 0.01)
+        assertEquals("All row bands should have equal weight", weights[1], weights[2], 0.01)
+        assertEquals("All row bands should have equal weight", weights[2], weights[3], 0.01)
+    }
 
     @Test
-    fun testMiddleColumnRowsHaveEqualWeight() {
+    fun testLeftScrollRailExists() {
+        val doc = parseXml()
+        val scrollRail = findElementById(doc, "left_scroll_rail")
+        assertNotNull("left_scroll_rail should exist", scrollRail)
+    }
+
+    @Test
+    fun testToggleSymbolInBottomRowBand() {
+        val doc = parseXml()
+        val band4 = findElementById(doc, "row_band_4")
+        assertNotNull("row_band_4 should exist", band4)
+        val toggleSymbol = findElementByIdInside(band4!!, "key_toggle_symbol")
+        assertNotNull("key_toggle_symbol should be in row_band_4 (bottom)", toggleSymbol)
+    }
+
+    @Test
+    fun testToggleSymbolNotInScrollRail() {
+        val doc = parseXml()
+        val scrollRail = findElementById(doc, "left_scroll_rail")
+        assertNotNull("left_scroll_rail should exist", scrollRail)
+        val toggleSymbol = findElementByIdInside(scrollRail!!, "key_toggle_symbol")
+        assertNull("key_toggle_symbol should NOT be inside left_scroll_rail", toggleSymbol)
+    }
+
+    @Test
+    fun testDelInRowBand1() {
+        val doc = parseXml()
+        val band1 = findElementById(doc, "row_band_1")
+        assertNotNull("row_band_1 should exist", band1)
+        val keyDel = findElementByIdInside(band1!!, "key_del")
+        assertNotNull("key_del should be in row_band_1", keyDel)
+    }
+
+    @Test
+    fun testRetypeInRowBand2() {
+        val doc = parseXml()
+        val band2 = findElementById(doc, "row_band_2")
+        assertNotNull("row_band_2 should exist", band2)
+        val keyRetype = findElementByIdInside(band2!!, "key_retype")
+        assertNotNull("key_retype should be in row_band_2", keyRetype)
+    }
+
+    @Test
+    fun testEnterInRowBand3() {
+        val doc = parseXml()
+        val band3 = findElementById(doc, "row_band_3")
+        assertNotNull("row_band_3 should exist", band3)
+        val keyEnter = findElementByIdInside(band3!!, "key_enter")
+        assertNotNull("key_enter should be in row_band_3", keyEnter)
+    }
+
+    @Test
+    fun testEnterContainerExists() {
+        val doc = parseXml()
+        val enterContainer = findElementById(doc, "enter_container")
+        assertNotNull("enter_container should exist", enterContainer)
+    }
+
+    @Test
+    fun testToggleEnglishInBottomRowBand() {
+        val doc = parseXml()
+        val band4 = findElementById(doc, "row_band_4")
+        assertNotNull("row_band_4 should exist", band4)
+        val rowT9_4 = findElementByIdInside(band4!!, "row_t9_4")
+        assertNotNull("row_t9_4 should be in row_band_4", rowT9_4)
+        val toggleEnglish = findElementByIdInside(rowT9_4!!, "key_toggle_english")
+        assertNotNull("key_toggle_english should be in row_t9_4 (bottom function row)", toggleEnglish)
+    }
+
+    @Test
+    fun testRowT9RowsInsideTheirBands() {
+        val doc = parseXml()
+        val band1 = findElementById(doc, "row_band_1")
+        val band2 = findElementById(doc, "row_band_2")
+        val band3 = findElementById(doc, "row_band_3")
+        val band4 = findElementById(doc, "row_band_4")
+        assertNotNull("row_band_1 should exist", band1)
+        assertNotNull("row_band_2 should exist", band2)
+        assertNotNull("row_band_3 should exist", band3)
+        assertNotNull("row_band_4 should exist", band4)
+
+        val row1 = findElementByIdInside(band1!!, "row_t9_1")
+        val row2 = findElementByIdInside(band2!!, "row_t9_2")
+        val row3 = findElementByIdInside(band3!!, "row_t9_3")
+        val row4 = findElementByIdInside(band4!!, "row_t9_4")
+        assertNotNull("row_t9_1 should be in row_band_1", row1)
+        assertNotNull("row_t9_2 should be in row_band_2", row2)
+        assertNotNull("row_t9_3 should be in row_band_3", row3)
+        assertNotNull("row_t9_4 should be in row_band_4", row4)
+    }
+
+    @Test
+    fun testRowT9RowsHaveEqualWeight() {
         val doc = parseXml()
         val weights = mutableListOf<Double>()
         for (rowId in listOf("row_t9_1", "row_t9_2", "row_t9_3", "row_t9_4")) {
             val row = findElementById(doc, rowId)
             assertNotNull("$rowId should exist", row)
-            val weight = row!!.getAttribute("android:layout_weight")
+            // row_t9 rows are inside horizontal row bands, so they use layout_width not layout_height for weight
+            val width = row!!.getAttribute("android:layout_width")
+            val weight = row.getAttribute("android:layout_weight")
+            assertEquals("$rowId should use 0dp width for weight layout", "0dp", width)
             assertTrue("$rowId should have layout_weight", weight.isNotEmpty())
             weights.add(weight.toDouble())
         }
-        assertEquals("row_t9_1 weight should be 1", 1.0, weights[0], 0.01)
-        assertEquals("row_t9_2 weight should be 1", 1.0, weights[1], 0.01)
-        assertEquals("row_t9_3 weight should be 1", 1.0, weights[2], 0.01)
-        assertEquals("row_t9_4 weight should be 1", 1.0, weights[3], 0.01)
+        assertEquals("All row_t9 rows should have equal weight", weights[0], weights[1], 0.01)
+        assertEquals("All row_t9 rows should have equal weight", weights[1], weights[2], 0.01)
+        assertEquals("All row_t9 rows should have equal weight", weights[2], weights[3], 0.01)
     }
 
     @Test
-    fun testLeftColumnTotalWeightEqualsFour() {
+    fun testMiddleColumnWiderThanSideColumns() {
         val doc = parseXml()
-        val colLeft = findElementById(doc, "col_left")
-        assertNotNull("col_left should exist", colLeft)
-        var totalWeight = 0.0
-        for (i in 0 until colLeft!!.childNodes.length) {
-            val child = colLeft.childNodes.item(i)
-            if (child is org.w3c.dom.Element) {
-                val weight = child.getAttribute("android:layout_weight")
-                if (weight.isNotEmpty()) {
-                    totalWeight += weight.toDouble()
-                }
-            }
-        }
-        assertEquals("col_left total weight should be 4 to match middle column", 4.0, totalWeight, 0.01)
-    }
-
-    @Test
-    fun testRightColumnTotalWeightEqualsFour() {
-        val doc = parseXml()
-        val colRight = findElementById(doc, "col_right")
-        assertNotNull("col_right should exist", colRight)
-        var totalWeight = 0.0
-        for (i in 0 until colRight!!.childNodes.length) {
-            val child = colRight.childNodes.item(i)
-            if (child is org.w3c.dom.Element) {
-                val weight = child.getAttribute("android:layout_weight")
-                if (weight.isNotEmpty()) {
-                    totalWeight += weight.toDouble()
-                }
-            }
-        }
-        assertEquals("col_right total weight should be 4 to match middle column", 4.0, totalWeight, 0.01)
-    }
-
-    @Test
-    fun testLeftColumnBottomItemsShareLayer() {
-        val doc = parseXml()
-        val colLeft = findElementById(doc, "col_left")
-        assertNotNull("col_left should exist", colLeft)
-        // Find the FrameLayout wrappers that contain punct_4 and key_toggle_symbol
-        val punct4Wrapper = findParentWithId(colLeft!!, "punct_4")
-        val symbolWrapper = findParentWithId(colLeft, "key_toggle_symbol")
-        assertNotNull("punct_4 wrapper should exist", punct4Wrapper)
-        assertNotNull("key_toggle_symbol wrapper should exist", symbolWrapper)
-        val punct4Weight = punct4Wrapper!!.getAttribute("android:layout_weight")
-        val symbolWeight = symbolWrapper!!.getAttribute("android:layout_weight")
-        assertEquals("punct_4 should have weight=0.5", "0.5", punct4Weight)
-        assertEquals("key_toggle_symbol should have weight=0.5", "0.5", symbolWeight)
-    }
-
-    @Test
-    fun testRetypeAlignsWithMiddleLayer() {
-        val doc = parseXml()
-        val colRight = findElementById(doc, "col_right")
-        assertNotNull("col_right should exist", colRight)
-        val retypeWrapper = findParentWithId(colRight!!, "key_retype")
-        assertNotNull("key_retype wrapper should exist", retypeWrapper)
-        val weight = retypeWrapper!!.getAttribute("android:layout_weight")
-        assertEquals("key_retype should have weight=1 to align with middle layer", "1", weight)
-    }
-
-    @Test
-    fun testEnterSpansBottomHalf() {
-        val doc = parseXml()
-        val colRight = findElementById(doc, "col_right")
-        assertNotNull("col_right should exist", colRight)
-        val enterWrapper = findParentWithId(colRight!!, "key_enter")
-        assertNotNull("key_enter wrapper should exist", enterWrapper)
-        val weight = enterWrapper!!.getAttribute("android:layout_weight")
-        assertEquals("key_enter should have weight=2 to span layers 3+4", "2", weight)
-    }
-
-    @Test
-    fun testToggleSymbolAlignsWithBottomFunctionLayer() {
-        val doc = parseXml()
-        val colLeft = findElementById(doc, "col_left")
-        assertNotNull("col_left should exist", colLeft)
-        val symbolWrapper = findParentWithId(colLeft!!, "key_toggle_symbol")
-        assertNotNull("key_toggle_symbol wrapper should exist", symbolWrapper)
-        val weight = symbolWrapper!!.getAttribute("android:layout_weight")
-        assertEquals("key_toggle_symbol should have weight=0.5 to share bottom layer with punct_4", "0.5", weight)
-    }
-
-    private fun findParentWithId(parent: org.w3c.dom.Element, childId: String): org.w3c.dom.Element? {
-        val allNodes = parent.getElementsByTagName("*")
-        for (i in 0 until allNodes.length) {
-            val node = allNodes.item(i)
-            if (node is org.w3c.dom.Element) {
-                val id = node.getAttribute("android:id")
-                if (id == "@+id/$childId") {
-                    // Return the parent of this element
-                    val p = node.parentNode
-                    if (p is org.w3c.dom.Element) return p
-                }
-            }
-        }
-        return null
+        // Check that row_t9_1 has middle column weight=5 and side weights=1
+        val row1 = findElementById(doc, "row_t9_1")
+        assertNotNull("row_t9_1 should exist", row1)
+        val width = row1!!.getAttribute("android:layout_width")
+        val weight = row1.getAttribute("android:layout_weight")
+        assertEquals("row_t9_1 should use 0dp width", "0dp", width)
+        assertEquals("row_t9_1 should have weight=5", "5", weight)
     }
 
     // === Number panel tests ===
