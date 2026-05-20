@@ -150,6 +150,29 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
+    fun testCandidateContainerUsesWeightToAvoidPreedit() {
+        val doc = parseXml()
+        val candidateBar = findElementById(doc, "candidate_bar")
+        assertNotNull("candidate_bar should exist", candidateBar)
+        // Find the HorizontalScrollView that is a direct child of candidate_bar
+        val allElements = getAllElements(doc)
+        var foundWeightedScrollView = false
+        for (element in allElements) {
+            if (element.tagName == "HorizontalScrollView") {
+                val parent = element.parentNode
+                if (parent is org.w3c.dom.Element && parent.getAttribute("android:id") == "@+id/candidate_bar") {
+                    val width = element.getAttribute("android:layout_width")
+                    val weight = element.getAttribute("android:layout_weight")
+                    assertEquals("Candidate ScrollView should use 0dp width", "0dp", width)
+                    assertEquals("Candidate ScrollView should have weight=1", "1", weight)
+                    foundWeightedScrollView = true
+                }
+            }
+        }
+        assertTrue("Candidate ScrollView inside candidate_bar should have weight", foundWeightedScrollView)
+    }
+
+    @Test
     fun testPreeditNotInKeyboardShell() {
         val doc = parseXml()
         val shell = findElementById(doc, "keyboard_shell")
@@ -458,11 +481,11 @@ class KeyboardViewLayoutTest {
     }
 
     @Test
-    fun testCandidateBarIsFrameLayout() {
+    fun testCandidateBarIsLinearLayout() {
         val doc = parseXml()
         val candidateBar = findElementById(doc, "candidate_bar")
         assertNotNull("candidate_bar should exist", candidateBar)
-        assertEquals("candidate_bar should be a FrameLayout", "FrameLayout", candidateBar!!.tagName)
+        assertEquals("candidate_bar should be a LinearLayout", "LinearLayout", candidateBar!!.tagName)
     }
 
     @Test

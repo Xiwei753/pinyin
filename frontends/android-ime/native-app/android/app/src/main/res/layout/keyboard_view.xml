@@ -7,36 +7,23 @@
     android:background="#F0F0F0"
     android:paddingBottom="6dp">
 
-    <!-- Candidate Bar: FrameLayout containing candidates + preedit -->
-    <FrameLayout
+    <!-- Candidate Bar: preedit on left, candidates on right -->
+    <LinearLayout
         android:id="@+id/candidate_bar"
         android:layout_width="match_parent"
         android:layout_height="48dp"
+        android:orientation="horizontal"
         android:background="#FFFFFF"
         android:elevation="2dp"
         android:paddingStart="12dp"
-        android:paddingEnd="12dp">
+        android:paddingEnd="12dp"
+        android:gravity="center_vertical">
 
-        <!-- Candidate container: Chinese candidates -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scrollbars="none"
-            android:fillViewport="true">
-            <LinearLayout
-                android:id="@+id/candidate_container"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:orientation="horizontal"
-                android:gravity="center_vertical" />
-        </HorizontalScrollView>
-
-        <!-- Preedit bar: inside candidate_bar, NOT cross-root -->
+        <!-- Preedit area: left side, hidden when buffer empty -->
         <LinearLayout
             android:id="@+id/pinyin_floating_bar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="start|center_vertical"
             android:orientation="horizontal"
             android:gravity="center"
             android:background="@drawable/pinyin_bg"
@@ -45,7 +32,7 @@
             android:paddingEnd="8dp"
             android:paddingTop="2dp"
             android:paddingBottom="2dp"
-            android:elevation="4dp">
+            android:layout_marginEnd="8dp">
             <TextView
                 android:id="@+id/pinyin_floating_text"
                 android:layout_width="wrap_content"
@@ -55,7 +42,22 @@
                 android:gravity="center_vertical"
                 android:singleLine="true" />
         </LinearLayout>
-    </FrameLayout>
+
+        <!-- Candidate container: fills remaining space, right of preedit -->
+        <HorizontalScrollView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:scrollbars="none"
+            android:fillViewport="true">
+            <LinearLayout
+                android:id="@+id/candidate_container"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical" />
+        </HorizontalScrollView>
+    </LinearLayout>
 
     <!-- Keyboard Shell: height set dynamically by code -->
     <FrameLayout
