@@ -38,7 +38,7 @@ class KeyboardViewsTest {
             "sym_page_punct", "sym_page_math", "sym_page_bracket", "sym_page_other",
             "sym_scroll_content",
             "left_scroll_rail", "left_scroll_content",
-            "t9_left_column",
+
             "t9_left_scroll_frame",
             "t9_symbol_button_frame",
             "key_1_text",
@@ -54,10 +54,8 @@ class KeyboardViewsTest {
             "t9_del_frame", "t9_retype_frame",
             "t9_number_frame", "t9_space_frame", "t9_english_frame",
             "sym_tab_punct", "sym_tab_math", "sym_tab_bracket", "sym_tab_other",
-            "sym_back", "sym_number", "sym_del", "sym_enter", "sym_hide",
             "num_0", "num_1", "num_2", "num_3", "num_4", "num_5",
             "num_6", "num_7", "num_8", "num_9", "num_dot",
-            "num_del", "num_back", "num_symbol", "num_hide", "num_enter",
         )
 
         val missing = requiredViews.filterNot { hasId(it) }

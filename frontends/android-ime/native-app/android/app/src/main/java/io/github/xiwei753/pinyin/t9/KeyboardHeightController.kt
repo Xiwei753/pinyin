@@ -1,11 +1,8 @@
 package io.github.xiwei753.pinyin.t9
 
 import android.content.res.Resources
-import android.os.Handler
-import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 
 class KeyboardHeightController(
     private val settingsRepository: SettingsRepository,
@@ -50,12 +47,9 @@ class KeyboardHeightController(
         v.keyboardShell.layoutParams?.height = metrics.shellHeight
 
         val reused = applyT9Geometry(v, metrics)
-        applySymbolPanelHeights(v, metrics)
-        applyNumberPanelHeights(v, metrics)
 
         v.imeRoot.requestLayout()
 
-        // If panelT9 width was 0 (not yet laid out), re-apply once real width is available
         if (!reused) {
             v.panelT9.post {
                 val w = v.panelT9.width
@@ -67,9 +61,6 @@ class KeyboardHeightController(
         }
     }
 
-    /**
-     * @return true if real panel dimensions were used, false if fallback was used
-     */
     private fun applyT9Geometry(v: KeyboardViews, metrics: HeightMetrics): Boolean {
         val density = resources.displayMetrics.density
         val hGap = (4 * density).toInt()
@@ -112,7 +103,7 @@ class KeyboardHeightController(
             }
         }
 
-        v.t9LeftColumn.setFrame(geo.leftRailRect)
+        // T9 panel and shared keys
         v.t9LeftScrollFrame.setFrame(geo.leftRailScrollRect)
         v.t9SymbolButtonFrame.setFrame(geo.symbolButtonRect)
         v.t9Key1Frame.setFrame(geo.key1Rect)
@@ -131,30 +122,23 @@ class KeyboardHeightController(
         v.t9SpaceFrame.setFrame(geo.keySpaceRect)
         v.t9EnglishFrame.setFrame(geo.keyEnglishToggleRect)
 
+        // Number panel
+        v.numKey1Frame.setFrame(geo.key1Rect)
+        v.numKey2Frame.setFrame(geo.key2Rect)
+        v.numKey3Frame.setFrame(geo.key3Rect)
+        v.numKey4Frame.setFrame(geo.key4Rect)
+        v.numKey5Frame.setFrame(geo.key5Rect)
+        v.numKey6Frame.setFrame(geo.key6Rect)
+        v.numKey7Frame.setFrame(geo.key7Rect)
+        v.numKey8Frame.setFrame(geo.key8Rect)
+        v.numKey9Frame.setFrame(geo.key9Rect)
+        v.numDotFrame.setFrame(geo.numberLeftTopRect)
+        v.num0Frame.setFrame(geo.numberLeftBottomRect)
+
+        // Symbol panel
+        val symContentFrame = (v.panelSymbol as? android.view.ViewGroup)?.getChildAt(0)
+        symContentFrame?.setFrame(geo.symbolContentRect)
+
         return usedRealDimensions
-    }
-
-    private fun applySymbolPanelHeights(v: KeyboardViews, metrics: HeightMetrics) {
-        val symBottomChildren = listOf(v.symBack, v.symNumber, v.symDel, v.symEnter, v.symHide)
-        for (child in symBottomChildren) {
-            child.layoutParams?.height = metrics.bottomRowHeightPx
-        }
-        val symPages = listOf(v.symPagePunct, v.symPageMath, v.symPageBracket, v.symPageOther)
-        for (page in symPages) {
-            val ll = page as? LinearLayout ?: continue
-            for (i in 0 until ll.childCount) {
-                ll.getChildAt(i)?.layoutParams?.height = metrics.rowHeightPx
-            }
-        }
-        if (metrics.symbolScrollHeight > 0) {
-            v.symScrollContent.layoutParams?.height = metrics.symbolScrollHeight
-        }
-    }
-
-    private fun applyNumberPanelHeights(v: KeyboardViews, metrics: HeightMetrics) {
-        val numBottomChildren = listOf(v.numBack, v.numSymbol, v.numHide, v.numEnter)
-        for (child in numBottomChildren) {
-            child.layoutParams?.height = metrics.bottomRowHeightPx
-        }
     }
 }

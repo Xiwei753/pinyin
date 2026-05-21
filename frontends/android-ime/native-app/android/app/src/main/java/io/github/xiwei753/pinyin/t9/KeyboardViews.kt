@@ -24,8 +24,20 @@ class KeyboardViews constructor(
     val symScrollContent: ScrollView,
     val leftScrollRail: View,
     val leftScrollContent: LinearLayout,
-    val t9LeftColumn: View,
+
     val t9LeftScrollFrame: View,
+    val numKey1Frame: View,
+    val numKey2Frame: View,
+    val numKey3Frame: View,
+    val numKey4Frame: View,
+    val numKey5Frame: View,
+    val numKey6Frame: View,
+    val numKey7Frame: View,
+    val numKey8Frame: View,
+    val numKey9Frame: View,
+    val numDotFrame: View,
+    val num0Frame: View,
+
     val t9SymbolButtonFrame: View,
     // T9 digit keys
     val key1Text: TextView,
@@ -85,11 +97,9 @@ class KeyboardViews constructor(
     // Symbol grid text views
     val symTextViews: Map<Int, TextView>,
     // Symbol bottom row
-    val symBack: TextView,
-    val symNumber: TextView,
-    val symDel: View,
-    val symEnter: View,
-    val symHide: View,
+
+
+
     // Number pad
     val num0: TextView,
     val num1: TextView,
@@ -102,11 +112,11 @@ class KeyboardViews constructor(
     val num8: TextView,
     val num9: TextView,
     val numDot: TextView,
-    val numDel: View,
-    val numBack: View,
-    val numSymbol: View,
-    val numHide: View,
-    val numEnter: View,
+
+
+
+
+
 ) {
     companion object {
         fun bind(rootView: View): KeyboardViews {
@@ -206,8 +216,20 @@ class KeyboardViews constructor(
                 symScrollContent = symScrollContent,
                 leftScrollRail = leftScrollRail,
                 leftScrollContent = leftScrollContent,
-                t9LeftColumn = req(R.id.t9_left_column),
+
                 t9LeftScrollFrame = req(R.id.t9_left_scroll_frame),
+                numKey1Frame = req(R.id.num_key_1_frame),
+                numKey2Frame = req(R.id.num_key_2_frame),
+                numKey3Frame = req(R.id.num_key_3_frame),
+                numKey4Frame = req(R.id.num_key_4_frame),
+                numKey5Frame = req(R.id.num_key_5_frame),
+                numKey6Frame = req(R.id.num_key_6_frame),
+                numKey7Frame = req(R.id.num_key_7_frame),
+                numKey8Frame = req(R.id.num_key_8_frame),
+                numKey9Frame = req(R.id.num_key_9_frame),
+                numDotFrame = req(R.id.num_dot_frame),
+                num0Frame = req(R.id.num_0_frame),
+
                 t9SymbolButtonFrame = req(R.id.t9_symbol_button_frame),
                 key1Text = req(R.id.key_1_text),
                 key2 = req(R.id.t9_key_2_frame),
@@ -261,11 +283,11 @@ class KeyboardViews constructor(
                 symTabBracket = symTabBracket,
                 symTabOther = symTabOther,
                 symTextViews = symTextViews,
-                symBack = req(R.id.sym_back),
-                symNumber = req(R.id.sym_number),
-                symDel = req(R.id.sym_del),
-                symEnter = req(R.id.sym_enter),
-                symHide = req(R.id.sym_hide),
+
+
+
+
+
                 num0 = req(R.id.num_0),
                 num1 = req(R.id.num_1),
                 num2 = req(R.id.num_2),
@@ -277,11 +299,11 @@ class KeyboardViews constructor(
                 num8 = req(R.id.num_8),
                 num9 = req(R.id.num_9),
                 numDot = req(R.id.num_dot),
-                numDel = req(R.id.num_del),
-                numBack = req(R.id.num_back),
-                numSymbol = req(R.id.num_symbol),
-                numHide = req(R.id.num_hide),
-                numEnter = req(R.id.num_enter),
+
+
+
+
+
             )
         }
     }

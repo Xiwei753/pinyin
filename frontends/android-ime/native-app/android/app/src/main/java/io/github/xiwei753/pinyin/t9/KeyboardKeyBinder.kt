@@ -35,6 +35,7 @@ class KeyboardKeyBinder(
 
     fun setupAllKeys(handler: KeyboardActionHandler) {
         setupT9DigitKeys(handler)
+        setupNumberPadKeys(handler)
         setupSeparatorKey(handler)
         setupDeleteKey(handler)
         setupRetypeKey(handler)
@@ -44,9 +45,20 @@ class KeyboardKeyBinder(
         setupSpaceKey(handler)
         setupEnterKey(handler)
         setupSymbolGridKeys(handler)
-        setupSymbolBottomKeys(handler)
-        setupNumberPadKeys(handler)
-        setupNumberBottomKeys(handler)
+    }
+
+    private fun setupNumberPadKeys(handler: KeyboardActionHandler) {
+        val numKeys = listOf(
+            v.numKey1Frame to "1", v.numKey2Frame to "2", v.numKey3Frame to "3",
+            v.numKey4Frame to "4", v.numKey5Frame to "5", v.numKey6Frame to "6",
+            v.numKey7Frame to "7", v.numKey8Frame to "8", v.numKey9Frame to "9",
+            v.num0Frame to "0", v.numDotFrame to ".",
+        )
+        for ((keyView, text) in numKeys) {
+            setupKey(keyView, false) {
+                handler.onDigitPressed(text)
+            }
+        }
     }
 
     private fun setupT9DigitKeys(handler: KeyboardActionHandler) {
@@ -95,10 +107,10 @@ class KeyboardKeyBinder(
 
     private fun setupPunctKeys(handler: KeyboardActionHandler) {
         val punctKeys = mapOf(
-            v.punctTextViews[0] to "\uFF0C",
-            v.punctTextViews[1] to "\u3002",
-            v.punctTextViews[2] to "\uFF1F",
-            v.punctTextViews[3] to "\uFF01",
+            v.punctTextViews[0] to "，",
+            v.punctTextViews[1] to "。",
+            v.punctTextViews[2] to "？",
+            v.punctTextViews[3] to "！",
         )
         for ((keyView, text) in punctKeys) {
             setupKey(keyView, false) {
@@ -121,19 +133,29 @@ class KeyboardKeyBinder(
 
     private fun setupModeToggleKeys(handler: KeyboardActionHandler) {
         setupKey(v.keyToggleSymbol, false) {
-            handler.switchKeyboardMode(KeyboardMode.Symbol)
+            if (handler.keyboardMode == KeyboardMode.Symbol) {
+                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+            } else {
+                handler.switchKeyboardMode(KeyboardMode.Symbol)
+            }
             onModeChanged()
         }
         setupKey(v.keyToggleEnglish, false) {
             if (handler.keyboardMode == KeyboardMode.EnglishT9) {
                 handler.switchKeyboardMode(KeyboardMode.ChineseT9)
-            } else {
+            } else if (handler.keyboardMode == KeyboardMode.ChineseT9) {
                 handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+            } else {
+                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
             }
             onModeChanged()
         }
         setupKey(v.keyToggleNumber, false) {
-            handler.switchKeyboardMode(KeyboardMode.Number)
+            if (handler.keyboardMode == KeyboardMode.Number) {
+                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+            } else {
+                handler.switchKeyboardMode(KeyboardMode.Number)
+            }
             onModeChanged()
         }
     }
@@ -159,62 +181,6 @@ class KeyboardKeyBinder(
                 handler.switchKeyboardMode(KeyboardMode.ChineseT9)
                 onModeChanged()
             }
-        }
-    }
-
-    private fun setupSymbolBottomKeys(handler: KeyboardActionHandler) {
-        setupKey(v.symBack, false) {
-            handler.switchKeyboardMode(KeyboardMode.ChineseT9)
-            onModeChanged()
-        }
-        setupKey(v.symNumber, false) {
-            handler.switchKeyboardMode(KeyboardMode.Number)
-            onModeChanged()
-        }
-        setupKey(v.symDel, true) {
-            handler.onDelete()
-        }
-        setupKey(v.symEnter, true) {
-            handler.onEnter()
-        }
-        setupKey(v.symHide, true) {
-            handler.onHideKey()
-            onModeChanged()
-        }
-    }
-
-    private fun setupNumberPadKeys(handler: KeyboardActionHandler) {
-        val numKeys = listOf(
-            v.num1 to "1", v.num2 to "2", v.num3 to "3",
-            v.num4 to "4", v.num5 to "5", v.num6 to "6",
-            v.num7 to "7", v.num8 to "8", v.num9 to "9",
-            v.num0 to "0", v.numDot to ".",
-        )
-        for ((keyView, text) in numKeys) {
-            setupKey(keyView, false) {
-                handler.onDigitPressed(text)
-            }
-        }
-        setupKey(v.numDel, true) {
-            handler.onDelete()
-        }
-    }
-
-    private fun setupNumberBottomKeys(handler: KeyboardActionHandler) {
-        setupKey(v.numBack, false) {
-            handler.switchKeyboardMode(KeyboardMode.ChineseT9)
-            onModeChanged()
-        }
-        setupKey(v.numSymbol, false) {
-            handler.switchKeyboardMode(KeyboardMode.Symbol)
-            onModeChanged()
-        }
-        setupKey(v.numHide, true) {
-            handler.onHideKey()
-            onModeChanged()
-        }
-        setupKey(v.numEnter, true) {
-            handler.onEnter()
         }
     }
 }
