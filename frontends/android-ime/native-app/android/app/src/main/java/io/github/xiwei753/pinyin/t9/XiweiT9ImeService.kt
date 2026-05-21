@@ -325,6 +325,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         val model = when (handler.keyboardMode) {
             KeyboardMode.ChineseT9, KeyboardMode.EnglishT9 -> {
                 val readings = handler.readings
+                val isComposing = handler.engine?.buffer?.isNotEmpty() == true
                 layoutBuilder.buildT9(
                     panelWidth = panelWidth,
                     panelHeight = panelHeight,
@@ -333,6 +334,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                     horizontalGap = hGap,
                     verticalGap = vGap,
                     readings = readings,
+                    isComposing = isComposing,
                     keyboardMode = handler.keyboardMode,
                 )
             }

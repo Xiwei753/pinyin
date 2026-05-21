@@ -141,18 +141,18 @@ class KeyboardRenderer {
             KeyboardKeyRole.NORMAL -> {
                 if (key.subLabel != null) {
                     val centerX = rect.centerX().toFloat()
-                    val mainLabelSize = rect.height() * 0.35f
-                    val subLabelSize = rect.height() * 0.22f
-
-                    textPaint.color = textColor
-                    textPaint.textSize = mainLabelSize
-                    val textY = rect.centerY().toFloat() + mainLabelSize * 0.38f
-                    canvas.drawText(key.label, centerX, textY, textPaint)
+                    val digitSize = rect.height() * 0.22f
+                    val lettersSize = rect.height() * 0.35f
 
                     subTextPaint.color = subColor
-                    subTextPaint.textSize = subLabelSize
-                    val subY = rect.top + subLabelSize * 1.2f
-                    canvas.drawText(key.subLabel, centerX, subY, subTextPaint)
+                    subTextPaint.textSize = digitSize
+                    val digitY = rect.top + digitSize * 1.2f
+                    canvas.drawText(key.label, centerX, digitY, subTextPaint)
+
+                    textPaint.color = textColor
+                    textPaint.textSize = lettersSize
+                    val textY = rect.centerY().toFloat() + lettersSize * 0.38f
+                    canvas.drawText(key.subLabel, centerX, textY, textPaint)
                 } else {
                     textPaint.color = textColor
                     textPaint.textSize = rect.height() * 0.42f
@@ -172,7 +172,7 @@ class KeyboardRenderer {
             }
             KeyboardKeyRole.LEFT_RAIL_PUNCT -> {
                 textPaint.color = textColor
-                textPaint.textSize = minOf(rect.height() * 0.45f, rect.width() * 0.45f)
+                textPaint.textSize = minOf(rect.height() * 0.62f, rect.width() * 0.75f)
                 val centerX = rect.centerX().toFloat()
                 val textY = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
                 canvas.drawText(key.label, centerX, textY, textPaint)

@@ -1,0 +1,143 @@
+package io.github.xiwei753.pinyin.t9
+
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
+import org.junit.Assert.*
+import org.junit.Test
+import org.mockito.ArgumentCaptor
+import org.mockito.Mockito.*
+
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest=Config.NONE)
+class KeyboardRendererTest {
+
+    @Test
+    fun testPunctTextSizeIsLargeEnough() {
+        val renderer = KeyboardRenderer()
+        val mockCanvas = mock(Canvas::class.java)
+        val palette = ThemePalette(
+            bgColor = 0, candidateBarColor = 0, textColor = 0, subColor = 0,
+            preeditBgColor = 0, symTabActiveBg = 0, symTabInactiveBg = 0,
+            symTabActiveText = 0, symTabInactiveText = 0, isDark = false,
+            keyBgColor = 0, specialKeyBgColor = 0, keyPressedBgColor = 0, specialKeyPressedBgColor = 0
+        )
+        
+        val punctKey = KeyboardKey(
+            id = "punct_，",
+            role = KeyboardKeyRole.LEFT_RAIL_PUNCT,
+            rect = Rect(0, 0, 100, 100),
+            label = "，",
+            action = "punct:，",
+        )
+        val model = KeyboardLayoutModel(emptyList(), listOf(punctKey), null, 1000, 1000)
+
+        var capturedTextSize = 0f
+
+        doAnswer { invocation ->
+            val text = invocation.arguments[0] as String
+            if (text == "，") {
+                val paint = invocation.arguments[3] as Paint
+                capturedTextSize = paint.textSize
+                println("Punct text size: $capturedTextSize")
+            }
+            null
+        }.`when`(mockCanvas).drawText(anyString(), anyFloat(), anyFloat(), any(Paint::class.java))
+
+        renderer.drawKeyboard(mockCanvas, model, palette, 1f, KeyboardMode.ChineseT9, null)
+
+        assertTrue("Text size should be at least 0.61 * height. actual size: $capturedTextSize", capturedTextSize > 61f)
+    }
+
+    @Test
+    fun testT9KeyHasDigitOnTopAndLettersInMiddle() {
+        val renderer = KeyboardRenderer()
+        val mockCanvas = mock(Canvas::class.java)
+        val palette = ThemePalette(
+            bgColor = 0, candidateBarColor = 0, textColor = 0, subColor = 0,
+            preeditBgColor = 0, symTabActiveBg = 0, symTabInactiveBg = 0,
+            symTabActiveText = 0, symTabInactiveText = 0, isDark = false,
+            keyBgColor = 0, specialKeyBgColor = 0, keyPressedBgColor = 0, specialKeyPressedBgColor = 0
+        )
+        
+        val t9Key = KeyboardKey(
+            id = "key_2",
+            role = KeyboardKeyRole.NORMAL,
+            rect = Rect(0, 0, 100, 100),
+            label = "2",
+            subLabel = "ABC",
+            action = "digit:2",
+        )
+        val model = KeyboardLayoutModel(listOf(t9Key), emptyList(), null, 1000, 1000)
+
+        var digitY = 0f
+        var digitSize = 0f
+        var lettersY = 0f
+        var lettersSize = 0f
+
+        doAnswer { invocation ->
+            val text = invocation.arguments[0] as String
+            val y = invocation.arguments[2] as Float
+            val paint = invocation.arguments[3] as Paint
+            if (text == "2") {
+                digitY = y
+                digitSize = paint.textSize
+                println("Digit size: $digitSize, y: $digitY")
+            } else if (text == "ABC") {
+                lettersY = y
+                lettersSize = paint.textSize
+                println("Letters size: $lettersSize, y: $lettersY")
+            }
+            null
+        }.`when`(mockCanvas).drawText(anyString(), anyFloat(), anyFloat(), any(Paint::class.java))
+
+        renderer.drawKeyboard(mockCanvas, model, palette, 1f, KeyboardMode.ChineseT9, null)
+
+        assertTrue("Digit should be drawn", digitSize > 0f)
+        assertTrue("Letters should be drawn", lettersSize > 0f)
+        assertTrue("Digit should be drawn above letters (smaller Y coordinate). digitY=$digitY, lettersY=$lettersY", digitY < lettersY)
+        assertTrue("Letters text size should be larger than digit text size", lettersSize > digitSize)
+    }
+
+    @Test
+    fun testNumberKeyWithoutSubLabelIsDrawnCentered() {
+        val renderer = KeyboardRenderer()
+        val mockCanvas = mock(Canvas::class.java)
+        val palette = ThemePalette(
+            bgColor = 0, candidateBarColor = 0, textColor = 0, subColor = 0,
+            preeditBgColor = 0, symTabActiveBg = 0, symTabInactiveBg = 0,
+            symTabActiveText = 0, symTabInactiveText = 0, isDark = false,
+            keyBgColor = 0, specialKeyBgColor = 0, keyPressedBgColor = 0, specialKeyPressedBgColor = 0
+        )
+        
+        val numKey = KeyboardKey(
+            id = "num_1",
+            role = KeyboardKeyRole.NORMAL,
+            rect = Rect(0, 0, 100, 100),
+            label = "1",
+            subLabel = null,
+            action = "digit:1",
+        )
+        val model = KeyboardLayoutModel(listOf(numKey), emptyList(), null, 1000, 1000)
+
+        var drawnY = 0f
+
+        doAnswer { invocation ->
+            val text = invocation.arguments[0] as String
+            if (text == "1") {
+                drawnY = invocation.arguments[2] as Float
+                println("drawnY: $drawnY")
+            }
+            null
+        }.`when`(mockCanvas).drawText(anyString(), anyFloat(), anyFloat(), any(Paint::class.java))
+
+        renderer.drawKeyboard(mockCanvas, model, palette, 1f, KeyboardMode.Number, null)
+
+        // It should be near the center (50) minus descent/ascent offset.
+        assertTrue("Digit should be drawn near the center. drawnY=$drawnY", drawnY > 30f && drawnY < 70f)
+    }
+}

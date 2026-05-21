@@ -20,6 +20,7 @@ class KeyboardLayoutBuilder {
         horizontalGap: Int,
         verticalGap: Int,
         readings: List<String>,
+        isComposing: Boolean,
         keyboardMode: KeyboardMode,
     ): KeyboardLayoutModel {
         val geo = T9KeyboardGeometry.calculate(panelWidth, panelHeight, rowHeight, bottomRowHeight, horizontalGap, verticalGap)
@@ -31,41 +32,42 @@ class KeyboardLayoutBuilder {
 
         val availableScrollHeight = geo.leftRailScrollRect.height()
 
-        val puncts = listOf("，", "。", "？", "！")
-        val punctHeight = minOf(punctLabelHeight, availableScrollHeight / (puncts.size + maxOf(readings.size, 6)))
-        val readingHeight = minOf(readingLabelHeight, punctHeight)
-
         var y = geo.leftRailScrollRect.top
-        for (punctText in puncts) {
-            val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + punctHeight)
-            leftRailKeys.add(
-                KeyboardKey(
-                    id = "punct_$punctText",
-                    role = KeyboardKeyRole.LEFT_RAIL_PUNCT,
-                    rect = r,
-                    label = punctText,
-                    action = "punct:$punctText",
-                    isLeftRail = true,
+        if (isComposing) {
+            val readingHeight = minOf(readingLabelHeight, availableScrollHeight / maxOf(1, readings.size.coerceAtLeast(6)))
+            for (i in 0 until maxOf(6, readings.size)) {
+                if (y + readingHeight > geo.leftRailScrollRect.bottom + 5) break
+                val readingText = readings.getOrElse(i) { "" }
+                val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + readingHeight)
+                leftRailKeys.add(
+                    KeyboardKey(
+                        id = "reading_$i",
+                        role = KeyboardKeyRole.LEFT_RAIL_READING,
+                        rect = r,
+                        label = readingText,
+                        action = "reading:$i",
+                        isLeftRail = true,
+                    )
                 )
-            )
-            y += punctHeight
-        }
-
-        for (i in 0 until 6) {
-            if (y >= geo.leftRailScrollRect.bottom) break
-            val readingText = readings.getOrElse(i) { "" }
-            val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + readingHeight)
-            leftRailKeys.add(
-                KeyboardKey(
-                    id = "reading_$i",
-                    role = KeyboardKeyRole.LEFT_RAIL_READING,
-                    rect = r,
-                    label = readingText,
-                    action = "reading:$i",
-                    isLeftRail = true,
+                y += readingHeight
+            }
+        } else {
+            val puncts = listOf("，", "。", "？", "！")
+            val punctHeight = minOf(punctLabelHeight, availableScrollHeight / puncts.size)
+            for (punctText in puncts) {
+                val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + punctHeight)
+                leftRailKeys.add(
+                    KeyboardKey(
+                        id = "punct_$punctText",
+                        role = KeyboardKeyRole.LEFT_RAIL_PUNCT,
+                        rect = r,
+                        label = punctText,
+                        action = "punct:$punctText",
+                        isLeftRail = true,
+                    )
                 )
-            )
-            y += readingHeight
+                y += punctHeight
+            }
         }
 
         val bottomLeftKey = KeyboardKey(
