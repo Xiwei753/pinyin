@@ -25,6 +25,10 @@ class CandidateViewController(
         symTabActiveText = ThemeColors.LIGHT_TAB_ACTIVE_TEXT,
         symTabInactiveText = ThemeColors.LIGHT_TAB_INACTIVE_TEXT,
         isDark = false,
+        keyBgColor = ThemeColors.LIGHT_KEY_BG,
+        specialKeyBgColor = ThemeColors.LIGHT_SPECIAL_KEY_BG,
+        keyPressedBgColor = ThemeColors.LIGHT_KEY_PRESSED,
+        specialKeyPressedBgColor = ThemeColors.LIGHT_SPECIAL_KEY_PRESSED,
     )
 
     fun updateThemePalette(p: ThemePalette) {

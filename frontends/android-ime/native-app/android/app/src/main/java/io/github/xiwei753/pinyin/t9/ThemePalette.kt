@@ -10,5 +10,9 @@ data class ThemePalette(
     val symTabInactiveBg: Int,
     val symTabActiveText: Int,
     val symTabInactiveText: Int,
-    val isDark: Boolean
+    val isDark: Boolean,
+    val keyBgColor: Int,
+    val specialKeyBgColor: Int,
+    val keyPressedBgColor: Int,
+    val specialKeyPressedBgColor: Int,
 )

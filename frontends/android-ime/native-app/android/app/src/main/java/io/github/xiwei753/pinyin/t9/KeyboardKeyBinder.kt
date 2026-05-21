@@ -159,18 +159,13 @@ class KeyboardKeyBinder(
 
     private fun setupEnterKey(handler: KeyboardActionHandler) {
         v.keyEnter.setOnClickListener {
+            hapticFeedbackManager.performTap(v.keyEnter)
             handler.onEnterShortPress()
         }
         v.keyEnter.setOnLongClickListener {
+            hapticFeedbackManager.performLongPress(v.keyEnter)
             handler.onEnterLongPress()
-            hapticFeedbackManager.performSpecialKey(v.keyEnter)
             true
-        }
-        v.keyEnter.setOnTouchListener { view, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) {
-                hapticFeedbackManager.performSpecialKey(view)
-            }
-            false
         }
     }
 

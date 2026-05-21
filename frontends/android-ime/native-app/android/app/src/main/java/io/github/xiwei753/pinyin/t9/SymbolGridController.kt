@@ -17,6 +17,7 @@ object SymbolGridController {
         rowHeightPx: Int,
         generatedSymbolViews: MutableList<View>,
         textSize: Float = 20f,
+        palette: ThemePalette? = null,
         textColor: Int = 0xFF333333.toInt(),
         metrics: SymbolGridLayoutMetrics? = null,
         onSymbolClick: ((String) -> Unit)? = null,
@@ -45,7 +46,7 @@ object SymbolGridController {
 
             var cellIndex = 0
             for ((_, text) in row) {
-                val btn = createSymbolButton(context, text, textSize, textColor, onSymbolClick, onSymbolTouch)
+                val btn = createSymbolButton(context, text, textSize, textColor, palette, onSymbolClick, onSymbolTouch)
                 if (metrics != null && cellIndex < COLUMNS - 1) {
                     (btn.layoutParams as LinearLayout.LayoutParams).marginEnd = metrics.horizontalGap
                 }
@@ -75,6 +76,7 @@ object SymbolGridController {
         text: String,
         textSize: Float,
         textColor: Int,
+        palette: ThemePalette?,
         onSymbolClick: ((String) -> Unit)?,
         onSymbolTouch: ((View) -> Unit)?,
     ): TextView {
@@ -86,12 +88,20 @@ object SymbolGridController {
             )
             gravity = Gravity.CENTER
             setTextSize(textSize)
-            setTextColor(textColor)
+            setTextColor(if (palette != null) palette.textColor else textColor)
             setText(text)
-            try {
-                setBackgroundResource(R.drawable.key_bg)
-            } catch (e: android.content.res.Resources.NotFoundException) {
-                // Fallback: no background (e.g. in test environment)
+            if (palette != null) {
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    setColor(palette.keyBgColor)
+                    cornerRadius = 14f * context.resources.displayMetrics.density
+                }
+            } else {
+                try {
+                    setBackgroundResource(R.drawable.key_bg)
+                } catch (e: android.content.res.Resources.NotFoundException) {
+                    // Fallback: no background (e.g. in test environment)
+                }
             }
             isClickable = true
             isFocusable = true

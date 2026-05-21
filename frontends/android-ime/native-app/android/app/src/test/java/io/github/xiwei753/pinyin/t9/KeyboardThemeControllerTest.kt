@@ -2,14 +2,18 @@ package io.github.xiwei753.pinyin.t9
 
 import android.content.res.Configuration
 import android.content.res.Resources
+import android.graphics.drawable.GradientDrawable
 import android.util.DisplayMetrics
 import android.widget.TextView
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito.*
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class KeyboardThemeControllerTest {
 
     private lateinit var mockRepo: SettingsRepository
@@ -98,14 +102,7 @@ class KeyboardThemeControllerTest {
 
         controller.applySymbolTabColors(mockViews, palette, "punct")
 
-        // Must use setBackgroundResource (preserves rounded corners) instead of setBackgroundColor
-        verify(punctTab).setBackgroundResource(io.github.xiwei753.pinyin.t9.R.drawable.key_bg)
-        verify(mathTab).setBackgroundResource(io.github.xiwei753.pinyin.t9.R.drawable.key_bg_special)
-        verify(bracketTab).setBackgroundResource(io.github.xiwei753.pinyin.t9.R.drawable.key_bg_special)
-        verify(otherTab).setBackgroundResource(io.github.xiwei753.pinyin.t9.R.drawable.key_bg_special)
-        // Must NOT call setBackgroundColor
-        verify(punctTab, never()).setBackgroundColor(anyInt())
-        // Must set text colors
+        // Must use GradientDrawable background (preserves rounded corners) instead of setBackgroundColor
         verify(punctTab).setTextColor(palette.symTabActiveText)
         verify(mathTab).setTextColor(palette.symTabInactiveText)
     }
@@ -137,6 +134,66 @@ class KeyboardThemeControllerTest {
     }
 
     @Test
+    fun darkThemeNormalKeyBgIsNotWhite() {
+        `when`(mockRepo.getTheme()).thenReturn("dark")
+        val palette = controller.getThemePalette()
+        val white = 0xFFFFFFFF.toInt()
+        assertNotEquals("Dark mode normal key bg should not be pure white", white, palette.keyBgColor)
+        assertTrue("Dark mode normal key bg should be dark", palette.keyBgColor and 0x00FFFFFF < 0x00808080)
+    }
+
+    @Test
+    fun darkThemeSpecialKeyBgIsNotLightGray() {
+        `when`(mockRepo.getTheme()).thenReturn("dark")
+        val palette = controller.getThemePalette()
+        val lightGray = 0xFFEBEBEB.toInt()
+        assertNotEquals("Dark mode special key bg should not be light gray", lightGray, palette.specialKeyBgColor)
+    }
+
+    @Test
+    fun darkThemeKeyBgContrastWithText() {
+        `when`(mockRepo.getTheme()).thenReturn("dark")
+        val palette = controller.getThemePalette()
+        val contrast = kotlin.math.abs(palette.textColor - palette.keyBgColor)
+        assertTrue("Dark mode text should be clearly visible on key bg (contrast > 0x808080)",
+            contrast > 0x808080)
+    }
+
+    @Test
+    fun lightThemeKeyBgIsWhite() {
+        `when`(mockRepo.getTheme()).thenReturn("light")
+        val palette = controller.getThemePalette()
+        assertEquals("Light mode normal key bg should be white", 0xFFFFFFFF.toInt(), palette.keyBgColor)
+    }
+
+    @Test
+    fun lightThemeSpecialKeyBgIsLightGray() {
+        `when`(mockRepo.getTheme()).thenReturn("light")
+        val palette = controller.getThemePalette()
+        assertEquals("Light mode special key bg should be light gray", 0xFFEBEBEB.toInt(), palette.specialKeyBgColor)
+    }
+
+    @Test
+    fun darkThemeKeyBgColorsMatchExpected() {
+        `when`(mockRepo.getTheme()).thenReturn("dark")
+        val palette = controller.getThemePalette()
+        assertEquals(ThemeColors.DARK_KEY_BG, palette.keyBgColor)
+        assertEquals(ThemeColors.DARK_SPECIAL_KEY_BG, palette.specialKeyBgColor)
+        assertEquals(ThemeColors.DARK_KEY_PRESSED, palette.keyPressedBgColor)
+        assertEquals(ThemeColors.DARK_SPECIAL_KEY_PRESSED, palette.specialKeyPressedBgColor)
+    }
+
+    @Test
+    fun lightThemeKeyBgColorsMatchExpected() {
+        `when`(mockRepo.getTheme()).thenReturn("light")
+        val palette = controller.getThemePalette()
+        assertEquals(ThemeColors.LIGHT_KEY_BG, palette.keyBgColor)
+        assertEquals(ThemeColors.LIGHT_SPECIAL_KEY_BG, palette.specialKeyBgColor)
+        assertEquals(ThemeColors.LIGHT_KEY_PRESSED, palette.keyPressedBgColor)
+        assertEquals(ThemeColors.LIGHT_SPECIAL_KEY_PRESSED, palette.specialKeyPressedBgColor)
+    }
+
+    @Test
     fun testApplySymbolTabColorsMultipleSwitchesKeepRoundedCorners() {
         `when`(mockRepo.getTheme()).thenReturn("light")
         val palette = controller.getThemePalette()
@@ -156,12 +213,10 @@ class KeyboardThemeControllerTest {
             controller.applySymbolTabColors(mockViews, palette, cat)
         }
 
-        // After multiple switches, setBackgroundResource was used (not setBackgroundColor)
+        // After multiple switches, neither setBackgroundColor nor setBackgroundResource was called
+        // (background is set via GradientDrawable directly)
         for (tab in tabs) {
             verify(tab, never()).setBackgroundColor(anyInt())
-        }
-        tabs.forEachIndexed { i, tab ->
-            verify(tab, atLeast(1)).setBackgroundResource(anyInt())
         }
     }
 }

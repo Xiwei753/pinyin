@@ -274,6 +274,8 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             hapticFeedbackManager.performTap(view)
         }
 
+        val palette = themeController.getThemePalette()
+
         // Build ONE grid per page with all aggregated entries
         for ((pageName, targetPage) in pageMap) {
             val entries = pageToEntries[pageName] ?: continue
@@ -285,7 +287,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 rowHeightPx = metrics.cellHeight,
                 generatedSymbolViews = keyboardViews.generatedSymbolViews,
                 textSize = 20f,
-                textColor = 0xFF333333.toInt(),
+                palette = palette,
                 metrics = metrics,
                 onSymbolClick = onSymbolClick,
                 onSymbolTouch = onSymbolTouch,
@@ -409,6 +411,12 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     override fun finishComposingText() {
         currentInputConnection?.finishComposingText()
+    }
+
+    override fun getCurrentEditorInfo(): EditorInfo? = currentEditorInfo
+
+    override fun performEditorAction(action: Int): Boolean {
+        return currentInputConnection?.performEditorAction(action) ?: false
     }
 
     override fun refreshUi() {

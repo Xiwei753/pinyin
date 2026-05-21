@@ -1,5 +1,6 @@
 package io.github.xiwei753.pinyin.t9
 
+import android.view.inputmethod.EditorInfo
 import io.github.xiwei753.pinyin.t9.core.Candidate
 import io.github.xiwei753.pinyin.t9.core.CandidateOrigin
 import io.github.xiwei753.pinyin.t9.core.CandidateType
@@ -9,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
@@ -144,10 +146,10 @@ class KeyboardActionHandlerTest {
     }
 
     @Test
-    fun testSymbolMode_enter_shortPress_callsPerformEditorActionOrNewline() {
+    fun testSymbolMode_enter_shortPress_commitsNewline() {
         handler.switchKeyboardMode(KeyboardMode.Symbol)
         handler.onEnter()
-        verify(sink).performEditorActionOrNewline()
+        verify(sink).commitNewline()
     }
 
     @Test
@@ -172,10 +174,10 @@ class KeyboardActionHandlerTest {
     }
 
     @Test
-    fun testNumberMode_enter_shortPress_callsPerformEditorActionOrNewline() {
+    fun testNumberMode_enter_shortPress_commitsNewline() {
         handler.switchKeyboardMode(KeyboardMode.Number)
         handler.onEnter()
-        verify(sink).performEditorActionOrNewline()
+        verify(sink).commitNewline()
     }
 
     @Test
@@ -577,21 +579,52 @@ class KeyboardActionHandlerTest {
     // --- Enter key short/long press tests ---
 
     @Test
-    fun testChineseT9_enterShortPress_emptyBuffer_noAction_callsPerformEditorActionOrNewline() {
-        `when`(sink.performEnterActionIfAvailable()).thenReturn(false)
+    fun testChineseT9_enterShortPress_emptyBuffer_noAction_commitsNewline() {
+        // getCurrentEditorInfo returns null by default => shouldInsertNewline
         handler.onEnterShortPress()
-        verify(sink).performEnterActionIfAvailable()
-        verify(sink).performEditorActionOrNewline()
+        verify(sink).getCurrentEditorInfo()
+        verify(sink).commitNewline()
+        verify(sink, never()).performEditorAction(anyInt())
+    }
+
+    @Test
+    fun testChineseT9_enterShortPress_emptyBuffer_sendAction_performsAction() {
+        val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_SEND }
+        `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
+        handler.onEnterShortPress()
+        verify(sink).getCurrentEditorInfo()
+        verify(sink).performEditorAction(EditorInfo.IME_ACTION_SEND)
         verify(sink, never()).commitNewline()
     }
 
     @Test
-    fun testChineseT9_enterShortPress_emptyBuffer_withAction_performsAction() {
-        `when`(sink.performEnterActionIfAvailable()).thenReturn(true)
+    fun testChineseT9_enterShortPress_emptyBuffer_searchAction_performsAction() {
+        val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_SEARCH }
+        `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
         handler.onEnterShortPress()
-        verify(sink).performEnterActionIfAvailable()
-        verify(sink, never()).performEditorActionOrNewline()
+        verify(sink).getCurrentEditorInfo()
+        verify(sink).performEditorAction(EditorInfo.IME_ACTION_SEARCH)
         verify(sink, never()).commitNewline()
+    }
+
+    @Test
+    fun testChineseT9_enterShortPress_emptyBuffer_doneAction_commitsNewline() {
+        val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_DONE }
+        `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
+        handler.onEnterShortPress()
+        verify(sink).getCurrentEditorInfo()
+        verify(sink).commitNewline()
+        verify(sink, never()).performEditorAction(anyInt())
+    }
+
+    @Test
+    fun testChineseT9_enterShortPress_emptyBuffer_unspecifiedAction_commitsNewline() {
+        val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_UNSPECIFIED }
+        `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
+        handler.onEnterShortPress()
+        verify(sink).getCurrentEditorInfo()
+        verify(sink).commitNewline()
+        verify(sink, never()).performEditorAction(anyInt())
     }
 
     @Test
@@ -602,30 +635,30 @@ class KeyboardActionHandlerTest {
         handler.onDigitPressed("9")
         handler.onDigitPressed("6")
         handler.refreshCandidates(30)
-        `when`(sink.performEnterActionIfAvailable()).thenReturn(false)
 
         handler.onEnterShortPress()
         verify(sink).commitText("我")
-        verify(sink).performEnterActionIfAvailable()
+        verify(sink).getCurrentEditorInfo()
         verify(sink).commitNewline()
-        verify(sink, never()).performEditorActionOrNewline()
+        verify(sink, never()).performEditorAction(anyInt())
     }
 
     @Test
-    fun testChineseT9_enterShortPress_withBuffer_withAction_commitsCandidateThenAction() {
+    fun testChineseT9_enterShortPress_withBuffer_sendAction_commitsCandidateThenSend() {
         setupCandidates(listOf(
             Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
         ))
         handler.onDigitPressed("9")
         handler.onDigitPressed("6")
         handler.refreshCandidates(30)
-        `when`(sink.performEnterActionIfAvailable()).thenReturn(true)
+        val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_SEND }
+        `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
 
         handler.onEnterShortPress()
         verify(sink).commitText("我")
-        verify(sink).performEnterActionIfAvailable()
+        verify(sink).getCurrentEditorInfo()
+        verify(sink).performEditorAction(EditorInfo.IME_ACTION_SEND)
         verify(sink, never()).commitNewline()
-        verify(sink, never()).performEditorActionOrNewline()
     }
 
     @Test
@@ -653,22 +686,22 @@ class KeyboardActionHandlerTest {
     }
 
     @Test
-    fun testEnglishT9_enterShortPress_noPending_noAction_callsPerformEditorActionOrNewline() {
+    fun testEnglishT9_enterShortPress_noPending_noAction_commitsNewline() {
         handler.switchKeyboardMode(KeyboardMode.EnglishT9)
-        `when`(sink.performEnterActionIfAvailable()).thenReturn(false)
         handler.onEnterShortPress()
-        verify(sink).performEnterActionIfAvailable()
-        verify(sink).performEditorActionOrNewline()
-        verify(sink, never()).commitNewline()
+        verify(sink).getCurrentEditorInfo()
+        verify(sink).commitNewline()
+        verify(sink, never()).performEditorAction(anyInt())
     }
 
     @Test
-    fun testEnglishT9_enterShortPress_noPending_withAction_performsAction() {
+    fun testEnglishT9_enterShortPress_noPending_sendAction_performsAction() {
         handler.switchKeyboardMode(KeyboardMode.EnglishT9)
-        `when`(sink.performEnterActionIfAvailable()).thenReturn(true)
+        val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_SEND }
+        `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
         handler.onEnterShortPress()
-        verify(sink).performEnterActionIfAvailable()
-        verify(sink, never()).performEditorActionOrNewline()
+        verify(sink).getCurrentEditorInfo()
+        verify(sink).performEditorAction(EditorInfo.IME_ACTION_SEND)
         verify(sink, never()).commitNewline()
     }
 
@@ -677,27 +710,27 @@ class KeyboardActionHandlerTest {
         handler.switchKeyboardMode(KeyboardMode.EnglishT9)
         handler.onDigitPressed("2") // 'a'
         assertTrue(handler.englishPending)
-        `when`(sink.performEnterActionIfAvailable()).thenReturn(false)
 
         handler.onEnterShortPress()
         verify(sink).commitText("a")
-        verify(sink).performEnterActionIfAvailable()
+        verify(sink).getCurrentEditorInfo()
         verify(sink).commitNewline()
-        verify(sink, never()).performEditorActionOrNewline()
+        verify(sink, never()).performEditorAction(anyInt())
     }
 
     @Test
-    fun testEnglishT9_enterShortPress_withPending_withAction_commitsCharThenAction() {
+    fun testEnglishT9_enterShortPress_withPending_sendAction_commitsCharThenSend() {
         handler.switchKeyboardMode(KeyboardMode.EnglishT9)
         handler.onDigitPressed("2") // 'a'
         assertTrue(handler.englishPending)
-        `when`(sink.performEnterActionIfAvailable()).thenReturn(true)
+        val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_SEND }
+        `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
 
         handler.onEnterShortPress()
         verify(sink).commitText("a")
-        verify(sink).performEnterActionIfAvailable()
+        verify(sink).getCurrentEditorInfo()
+        verify(sink).performEditorAction(EditorInfo.IME_ACTION_SEND)
         verify(sink, never()).commitNewline()
-        verify(sink, never()).performEditorActionOrNewline()
     }
 
     @Test

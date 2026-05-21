@@ -3,6 +3,7 @@ package io.github.xiwei753.pinyin.t9
 import android.view.MotionEvent
 import android.view.View
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.*
@@ -12,12 +13,14 @@ class KeyboardKeyBinderTest {
 
     private lateinit var haptic: HapticFeedbackManager
     private lateinit var binder: KeyboardKeyBinder
+    private lateinit var views: KeyboardViews
 
     @Before
     fun setUp() {
         haptic = mock(HapticFeedbackManager::class.java)
+        views = createMinimalMockKeyboardViews()
         binder = KeyboardKeyBinder(
-            v = createMinimalMockKeyboardViews(),
+            v = views,
             hapticFeedbackManager = haptic,
             panelController = mock(KeyboardPanelController::class.java),
             deleteRepeatController = mock(DeleteRepeatController::class.java),
@@ -146,5 +149,65 @@ class KeyboardKeyBinderTest {
     @Test
     fun testNullViewDoesNotCrash() {
         binder.setupKey(null, isSpecial = false) { }
+    }
+
+    @Test
+    fun testEnterKeyShortPressTriggersTapHaptic() {
+        val mockHandler = mock(KeyboardActionHandler::class.java)
+        binder.setupAllKeys(mockHandler)
+
+        val clickCaptor = ArgumentCaptor.forClass(View.OnClickListener::class.java)
+        verify(views.keyEnter).setOnClickListener(clickCaptor.capture())
+        clickCaptor.value.onClick(views.keyEnter)
+
+        verify(haptic).performTap(views.keyEnter)
+        verify(mockHandler).onEnterShortPress()
+    }
+
+    @Test
+    fun testEnterKeyLongPressTriggersLongPressHaptic() {
+        val mockHandler = mock(KeyboardActionHandler::class.java)
+        binder.setupAllKeys(mockHandler)
+
+        val longClickCaptor = ArgumentCaptor.forClass(View.OnLongClickListener::class.java)
+        verify(views.keyEnter).setOnLongClickListener(longClickCaptor.capture())
+        val result = longClickCaptor.value.onLongClick(views.keyEnter)
+
+        assertTrue("Long click should return true to consume event", result)
+        verify(haptic).performLongPress(views.keyEnter)
+        verify(mockHandler).onEnterLongPress()
+    }
+
+    @Test
+    fun testEnterKeyNoActionDownTouchListener() {
+        val mockHandler = mock(KeyboardActionHandler::class.java)
+        binder.setupAllKeys(mockHandler)
+
+        // Should NOT set an onTouchListener on enter key
+        verify(views.keyEnter, never()).setOnTouchListener(org.mockito.ArgumentMatchers.any())
+    }
+
+    @Test
+    fun testEnterKeyShortPressDoesNotTriggerSpecialKeyHaptic() {
+        val mockHandler = mock(KeyboardActionHandler::class.java)
+        binder.setupAllKeys(mockHandler)
+
+        val clickCaptor = ArgumentCaptor.forClass(View.OnClickListener::class.java)
+        verify(views.keyEnter).setOnClickListener(clickCaptor.capture())
+        clickCaptor.value.onClick(views.keyEnter)
+
+        verify(haptic, never()).performSpecialKey(views.keyEnter)
+    }
+
+    @Test
+    fun testEnterKeyLongPressDoesNotTriggerSpecialKeyHaptic() {
+        val mockHandler = mock(KeyboardActionHandler::class.java)
+        binder.setupAllKeys(mockHandler)
+
+        val longClickCaptor = ArgumentCaptor.forClass(View.OnLongClickListener::class.java)
+        verify(views.keyEnter).setOnLongClickListener(longClickCaptor.capture())
+        longClickCaptor.value.onLongClick(views.keyEnter)
+
+        verify(haptic, never()).performSpecialKey(views.keyEnter)
     }
 }

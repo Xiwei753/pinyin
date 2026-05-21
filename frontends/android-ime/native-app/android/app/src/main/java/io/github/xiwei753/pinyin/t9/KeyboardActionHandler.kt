@@ -345,16 +345,30 @@ class KeyboardActionHandler(
             commitCurrentComposing()
         }
 
-        if (actionSink.performEnterActionIfAvailable()) {
+        val editorInfo = actionSink.getCurrentEditorInfo()
+
+        // SEND: perform action after committing composing
+        if (EnterActionPolicy.shouldSend(editorInfo)) {
+            val action = EnterActionPolicy.getAction(editorInfo)
+            actionSink.performEditorAction(action)
             return
         }
 
+        // Had composing and not SEND: insert newline
         if (hasComposing) {
             actionSink.commitNewline()
             return
         }
 
-        actionSink.performEditorActionOrNewline()
+        // SEARCH/GO/NEXT: still run the explicit action
+        if (EnterActionPolicy.shouldRunExplicitAction(editorInfo)) {
+            val action = EnterActionPolicy.getAction(editorInfo)
+            actionSink.performEditorAction(action)
+            return
+        }
+
+        // Default (NONE/UNSPECIFIED/DONE): insert newline, do NOT close keyboard
+        actionSink.commitNewline()
     }
 
     fun onEnterLongPress() {
