@@ -17,6 +17,14 @@ class KeyboardPanelController(
             v.pinyinFloatingBar.visibility = View.GONE
         }
 
+
+        if (keyboardMode == KeyboardMode.ChineseT9 || keyboardMode == KeyboardMode.EnglishT9) {
+            (v.keyToggleNumber as? android.widget.TextView)?.text = "123"
+        } else {
+            (v.keyToggleNumber as? android.widget.TextView)?.text = "中文"
+        }
+
+
         v.keyToggleEnglish.text = if (keyboardMode == KeyboardMode.EnglishT9) "英/中" else "中/英"
     }
 

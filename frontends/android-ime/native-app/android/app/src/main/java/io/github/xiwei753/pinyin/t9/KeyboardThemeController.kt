@@ -123,21 +123,11 @@ class KeyboardThemeController(
             symTv.setTextColor(textColor)
         }
 
-        val symBottomTextViews = listOf(v.symBack as? TextView, v.symNumber as? TextView, v.symEnter as? TextView, v.symHide as? TextView)
-        for (tv in symBottomTextViews) {
-            tv?.setTextColor(textColor)
-        }
-        (v.symDel as? TextView)?.setTextColor(textColor)
-
-        val numTextViews = listOf(v.num0, v.num1, v.num2, v.num3, v.num4, v.num5, v.num6, v.num7, v.num8, v.num9, v.numDot)
-        for (tv in numTextViews) {
-            tv.setTextColor(textColor)
-        }
-        val numBottomTextViews = listOf(v.numBack as? TextView, v.numSymbol as? TextView, v.numHide as? TextView, v.numEnter as? TextView)
+        val numBottomTextViews = emptyList<TextView>()
         for (tv in numBottomTextViews) {
             tv?.setTextColor(textColor)
         }
-        (v.numDel as? TextView)?.setTextColor(textColor)
+
 
         for (i in 0 until v.candidateContainer.childCount) {
             (v.candidateContainer.getChildAt(i) as? TextView)?.setTextColor(textColor)

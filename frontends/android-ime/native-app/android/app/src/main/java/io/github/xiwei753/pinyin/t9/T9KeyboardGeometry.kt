@@ -8,6 +8,9 @@ class T9KeyboardGeometry(
     val leftRailWidth: Int,
     val leftRailRect: Rect,
     val leftRailScrollRect: Rect,
+    val symbolContentRect: Rect,
+    val numberLeftTopRect: Rect,
+    val numberLeftBottomRect: Rect,
     val symbolButtonRect: Rect,
     val key1Rect: Rect,
     val key2Rect: Rect,
@@ -36,7 +39,7 @@ class T9KeyboardGeometry(
         fun calculate(
             panelWidth: Int,
             panelHeight: Int,
-            rowHeight: Int, // Keeps compatibility with callers, but will be recalculated
+            rowHeight: Int,
             bottomRowHeight: Int,
             horizontalGap: Int,
             verticalGap: Int,
@@ -54,24 +57,20 @@ class T9KeyboardGeometry(
             val bottomRowTop = row3Top + actualRowHeight + verticalGap
             val contentBottom = availableHeight
 
-            // Left column and symbol button are sized to match content area, not panelHeight.
-            // This prevents the symbol button from extending below the bottom row.
             val leftRailRect = Rect(0, 0, leftRailWidth, contentBottom)
-
-            // Symbol button at bottom of content, same baseline as bottom row keys
             val symbolButtonRect = Rect(0, contentBottom - bottomRowHeight, leftRailWidth, contentBottom)
-
-            // Scroll rail fills from top to symbol button top minus gap
             val leftRailScrollRect = Rect(0, 0, leftRailWidth, symbolButtonRect.top - verticalGap)
 
-            // Key width in top 3 rows (3 equal columns)
+            val numLeftTop = Rect(0, row1Top, leftRailWidth - horizontalGap, row2Top + actualRowHeight)
+            val numLeftBottom = Rect(0, row3Top, leftRailWidth - horizontalGap, row3Top + actualRowHeight)
+
             val keyWidth = (midAreaWidth - 4 * horizontalGap) / 3
             val midLeft = leftRailWidth
             val rightColLeft = midLeft + midAreaWidth
+            val symbolContentRect = Rect(0, 0, rightColLeft, symbolButtonRect.top - verticalGap)
 
             fun colX(col: Int) = midLeft + col * (keyWidth + horizontalGap) + horizontalGap
 
-            // Bottom row: wider space key, 123 and 中/英 narrower
             val bottomAvailable = midAreaWidth - 4 * horizontalGap
             val numW = (bottomAvailable / BOTTOM_UNITS).toInt()
             val spaceW = (bottomAvailable * BOTTOM_SPACE_RATIO / BOTTOM_UNITS).toInt()
@@ -86,6 +85,9 @@ class T9KeyboardGeometry(
                 leftRailWidth = leftRailWidth,
                 leftRailRect = leftRailRect,
                 leftRailScrollRect = leftRailScrollRect,
+                symbolContentRect = symbolContentRect,
+                numberLeftTopRect = numLeftTop,
+                numberLeftBottomRect = numLeftBottom,
                 symbolButtonRect = symbolButtonRect,
                 key1Rect = Rect(colX(0), row1Top, colX(0) + keyWidth, row1Top + actualRowHeight),
                 key2Rect = Rect(colX(1), row1Top, colX(1) + keyWidth, row1Top + actualRowHeight),
