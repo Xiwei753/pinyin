@@ -288,8 +288,9 @@ class XiweiT9ImeServiceUiBehaviorTest {
             imeOptions = EditorInfo.IME_ACTION_SEND,
         )
         `when`(ic.performEditorAction(anyInt())).thenReturn(false)
-        service.performEditorActionOrNewline()
-        // performEditorAction called by step 2 and step 3 (sendDefaultEditorAction)
+        val spyService = spy(service)
+        doReturn(false).`when`(spyService).sendDefaultEditorAction(true)
+        spyService.performEditorActionOrNewline()
         verify(ic, atLeastOnce()).performEditorAction(EditorInfo.IME_ACTION_SEND)
         verify(ic).commitText("\n", 1)
     }
@@ -300,7 +301,7 @@ class XiweiT9ImeServiceUiBehaviorTest {
             imeOptions = EditorInfo.IME_ACTION_NONE,
         )
         val spyService = spy(service)
-        `when`(spyService.sendDefaultEditorAction(true)).thenReturn(true)
+        doReturn(true).`when`(spyService).sendDefaultEditorAction(true)
         spyService.performEditorActionOrNewline()
         verify(ic, never()).commitText(anyString(), anyInt())
     }
@@ -311,8 +312,9 @@ class XiweiT9ImeServiceUiBehaviorTest {
             imeOptions = EditorInfo.IME_ACTION_SEND,
         )
         `when`(ic.performEditorAction(anyInt())).thenReturn(false)
-        service.performEditorActionOrNewline()
-        // performEditorAction called by step 2 and step 3 (sendDefaultEditorAction)
+        val spyService = spy(service)
+        doReturn(false).`when`(spyService).sendDefaultEditorAction(true)
+        spyService.performEditorActionOrNewline()
         verify(ic, atLeastOnce()).performEditorAction(EditorInfo.IME_ACTION_SEND)
         verify(ic).commitText("\n", 1)
     }

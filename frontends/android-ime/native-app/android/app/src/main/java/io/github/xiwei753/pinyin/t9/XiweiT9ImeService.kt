@@ -226,14 +226,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     }
 
     override fun sendDefaultEditorAction(fromEnterKey: Boolean): Boolean {
-        val editorInfo = currentEditorInfo
-        if (editorInfo != null) {
-            val action = editorInfo.imeOptions and EditorInfo.IME_MASK_ACTION
-            if (action != EditorInfo.IME_ACTION_NONE) {
-                return currentInputConnection?.performEditorAction(action) ?: false
-            }
-        }
-        return false
+        return super.sendDefaultEditorAction(fromEnterKey)
     }
 
     override fun performEditorActionOrNewline() {
