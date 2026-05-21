@@ -213,7 +213,9 @@ class XiweiKeyboardViewTest {
     fun hitSymbolKeyReturnsSymbolAction() {
         val entries = listOf(1 to "A", 2 to "B", 3 to "C", 4 to "D", 5 to "E")
         val registry = SymbolKeyRegistry()
-        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
+        val builder = KeyboardLayoutBuilder()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry)
+        val renderer = KeyboardRenderer()
 
         val symbolKeys = model.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY }
         assertTrue(symbolKeys.isNotEmpty())
@@ -222,7 +224,7 @@ class XiweiKeyboardViewTest {
         val cx = first.rect.centerX().toFloat()
         val cy = first.rect.centerY().toFloat()
 
-        val hit = KeyboardRenderer().hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
         assertNotNull(hit)
         assertEquals("symbol:commit", hit!!.action)
     }

@@ -123,7 +123,7 @@ class KeyboardLayoutModelTest {
     @Test
     fun symbolPlaceholderNotClickable() {
         val entries = listOf(1 to "X")
-        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry)
 
         val placeholders = model.keys.filter { it.role == KeyboardKeyRole.PLACEHOLDER }
         for (ph in placeholders) {
@@ -147,7 +147,7 @@ class KeyboardLayoutModelTest {
     @Test
     fun symbolKeysHaveActionPayload() {
         val entries = listOf(1 to "A", 2 to "B")
-        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry)
 
         val symbolKeys = model.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY }
         assertTrue("Should have 2 symbol keys", symbolKeys.size >= 2)
