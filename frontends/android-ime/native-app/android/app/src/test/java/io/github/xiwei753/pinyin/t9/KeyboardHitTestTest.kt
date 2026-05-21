@@ -66,7 +66,7 @@ class KeyboardHitTestTest {
         val registry = SymbolKeyRegistry()
         val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, mapOf(
             SymbolKeyRegistry.Category.FULLWIDTH_PUNCT to "punct",
-        ), registry)
+        ), registry, density = 2.5f)
 
         val symbolKeys = model.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY }
         assertTrue("Should have symbol keys", symbolKeys.isNotEmpty())
@@ -114,7 +114,7 @@ class KeyboardHitTestTest {
     fun symbolPlaceholderIsNotReturnedByHitTest() {
         val entries = listOf(1 to "A")
         val registry = SymbolKeyRegistry()
-        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry)
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
 
         val placeholders = model.keys.filter { it.role == KeyboardKeyRole.PLACEHOLDER }
         if (placeholders.isNotEmpty()) {

@@ -349,7 +349,7 @@ class KeyboardLayoutBuilder {
         lastTextMode: KeyboardMode,
         categoryToPage: Map<SymbolKeyRegistry.Category, String>,
         registry: SymbolKeyRegistry,
-        density: Float = 2.5f,
+        density: Float,
     ): KeyboardLayoutModel {
         val geo = T9KeyboardGeometry.calculate(panelWidth, panelHeight, rowHeight, bottomRowHeight, horizontalGap, verticalGap)
         val keys = mutableListOf<KeyboardKey>()

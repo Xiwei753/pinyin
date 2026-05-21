@@ -104,7 +104,7 @@ class KeyboardRenderTest {
     fun symbolModeDrawDoesNotCrash() {
         val entries = listOf(1 to "A", 2 to "B", 3 to "C", 4 to "D", 5 to "E")
         val registry = SymbolKeyRegistry()
-        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry)
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
         val bitmap = Bitmap.createBitmap(1080, 480, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
@@ -137,7 +137,7 @@ class KeyboardRenderTest {
         val numModel = builder.buildNumber(1080, 480, 96, 88, 8, 8, KeyboardMode.Number, KeyboardMode.ChineseT9)
         val entries = listOf(1 to "A", 2 to "B")
         val registry = SymbolKeyRegistry()
-        val symModel = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry)
+        val symModel = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
 
         for (model in listOf(t9Model, numModel, symModel)) {
             val bitmap = Bitmap.createBitmap(1080, 480, Bitmap.Config.ARGB_8888)
