@@ -349,6 +349,7 @@ class KeyboardLayoutBuilder {
         lastTextMode: KeyboardMode,
         categoryToPage: Map<SymbolKeyRegistry.Category, String>,
         registry: SymbolKeyRegistry,
+        density: Float = 2.5f,
     ): KeyboardLayoutModel {
         val geo = T9KeyboardGeometry.calculate(panelWidth, panelHeight, rowHeight, bottomRowHeight, horizontalGap, verticalGap)
         val keys = mutableListOf<KeyboardKey>()
@@ -398,7 +399,6 @@ class KeyboardLayoutBuilder {
             getEntriesForPage(pageName, registry, categoryToPage)
         }
 
-        val density = 2.5f
         val metrics = SymbolGridLayoutMetrics.fromDp(
             density = density,
             symbolPanelWidth = geo.symbolContentRect.width() - geo.leftRailWidth,

@@ -9,8 +9,13 @@ import org.mockito.Mockito
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
+private const val PANEL_W = 1080
+
 @RunWith(RobolectricTestRunner::class)
 class XiweiKeyboardViewTest {
+
+    private val builder = KeyboardLayoutBuilder()
+    private val registry = SymbolKeyRegistry()
 
     private fun createView(): XiweiKeyboardView {
         val ctx = RuntimeEnvironment.getApplication()
@@ -314,6 +319,156 @@ class XiweiKeyboardViewTest {
         assertEquals("Different size should rebuild", 2, callCount)
     }
 
+    @Test
+    fun symbolBuildWithDensity1DoesNotExceedBounds() {
+        val pairs = makeSymbolEntries()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 1.0f)
+        for (k in model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)) {
+            if (k.role == KeyboardKeyRole.PLACEHOLDER) continue
+            assertTrue("key ${k.id} left >= 0", k.rect.left >= 0)
+            assertTrue("key ${k.id} top >= 0", k.rect.top >= 0)
+            assertTrue("key ${k.id} right <= panelWidth", k.rect.right <= 1080)
+        }
+    }
+
+    @Test
+    fun symbolBuildWithDensity3_5DoesNotExceedBounds() {
+        val pairs = makeSymbolEntries()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 3.5f)
+        for (k in model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)) {
+            if (k.role == KeyboardKeyRole.PLACEHOLDER) continue
+            assertTrue("key ${k.id} left >= 0", k.rect.left >= 0)
+            assertTrue("key ${k.id} top >= 0", k.rect.top >= 0)
+            assertTrue("key ${k.id} right <= panelWidth", k.rect.right <= 1080)
+        }
+    }
+
+    @Test
+    fun symbolBuildAlwaysHas5Columns() {
+        val pairs = makeSymbolEntries()
+        for (density in listOf(1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f)) {
+            val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = density)
+            val symbolKeys = model.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY || it.role == KeyboardKeyRole.PLACEHOLDER }
+            val rows = symbolKeys.chunked(5)
+            for ((ri, row) in rows.withIndex()) {
+                assertEquals("Row $ri at density $density should have 5 cells", 5, row.size)
+            }
+        }
+    }
+
+    @Test
+    fun symbolCellWidthChangesWithDensity() {
+        val pairs = makeSymbolEntries()
+        val modelLow = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 1.0f)
+        val modelHigh = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 3.0f)
+        val lowCellWidth = modelLow.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY }.firstOrNull()?.rect?.width() ?: 0
+        val highCellWidth = modelHigh.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY }.firstOrNull()?.rect?.width() ?: 0
+        assertTrue("Cell width should be positive at density 1.0", lowCellWidth > 0)
+        assertTrue("Cell width should be positive at density 3.0", highCellWidth > 0)
+    }
+
+    @Test
+    fun symbolPlaceholderOnlyAtEndOfLastRow() {
+        val pairs = listOf(1 to "A", 2 to "B", 3 to "C", 4 to "D", 5 to "E", 6 to "F", 7 to "G")
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
+        val placeholders = model.keys.filter { it.role == KeyboardKeyRole.PLACEHOLDER }
+        assertEquals("7 entries should produce 3 placeholders (row of 5 + row of 2 => 3 fillers)", 3, placeholders.size)
+        val symbolKeys = model.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY }
+        val lastSymbolIdx = model.keys.indexOfLast { it.role == KeyboardKeyRole.SYMBOL_KEY }
+        for (ph in placeholders) {
+            val phIdx = model.keys.indexOf(ph)
+            assertTrue("Placeholder should appear after last symbol key in keys list", phIdx > lastSymbolIdx)
+        }
+    }
+
+    @Test
+    fun hitTestKeyRectUnchangedAfterHit() {
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val renderer = KeyboardRenderer()
+        val allKeys = model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)
+        val before = allKeys.map { it.id to android.graphics.Rect(it.rect) }.toMap()
+        for (k in allKeys) {
+            renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, k.rect.centerX().toFloat(), k.rect.centerY().toFloat(), 0)
+        }
+        for (k in allKeys) {
+            assertEquals("Key ${k.id} rect unchanged", before[k.id], k.rect)
+        }
+    }
+
+    @Test
+    fun hitTestLeftRailKeyRectUnchanged() {
+        val readings = listOf("meng", "neng", "men")
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, readings, KeyboardMode.ChineseT9)
+        val renderer = KeyboardRenderer()
+        for (k in model.leftRailKeys) {
+            val before = android.graphics.Rect(k.rect)
+            renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, k.rect.centerX().toFloat(), k.rect.centerY().toFloat(), 0)
+            assertEquals("leftRail key ${k.id} rect unchanged", before, k.rect)
+        }
+    }
+
+    @Test
+    fun hitPlaceholderReturnsSymbolKeyNotAction() {
+        val pairs = listOf(1 to "A")
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
+        val renderer = KeyboardRenderer()
+        val placeholder = model.keys.find { it.role == KeyboardKeyRole.PLACEHOLDER }
+        assertNotNull("Should have placeholder", placeholder)
+        val cx = placeholder!!.rect.centerX().toFloat()
+        val cy = placeholder.rect.centerY().toFloat()
+        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        assertEquals(KeyboardKeyRole.PLACEHOLDER, hit!!.role)
+    }
+
+    @Test
+    fun hitSymbolKeyReturnsSymbolCommit() {
+        val pairs = listOf(1 to "A", 2 to "B", 3 to "C", 4 to "D", 5 to "E")
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
+        val renderer = KeyboardRenderer()
+        val first = model.keys.find { it.role == KeyboardKeyRole.SYMBOL_KEY }!!
+        val cx = first.rect.centerX().toFloat()
+        val cy = first.rect.centerY().toFloat()
+        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        assertNotNull(hit)
+        assertEquals("symbol:commit", hit!!.action)
+    }
+
+    @Test
+    fun hitT9Key2ReturnsDigit2() {
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val renderer = KeyboardRenderer()
+        val k2 = model.keys.find { it.id == "key_2" }!!
+        val cx = k2.rect.centerX().toFloat()
+        val cy = k2.rect.centerY().toFloat()
+        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        assertNotNull(hit)
+        assertEquals("digit:2", hit!!.action)
+    }
+
+    @Test
+    fun hitNumberKey1ReturnsDigit1() {
+        val model = builder.buildNumber(1080, 480, 96, 88, 8, 8, KeyboardMode.Number, KeyboardMode.ChineseT9)
+        val renderer = KeyboardRenderer()
+        val n1 = model.keys.find { it.id == "num_1" }!!
+        val cx = n1.rect.centerX().toFloat()
+        val cy = n1.rect.centerY().toFloat()
+        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        assertNotNull(hit)
+        assertEquals("digit:1", hit!!.action)
+    }
+
+    @Test
+    fun hitT9Key1ReturnsSeparator() {
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val renderer = KeyboardRenderer()
+        val k1 = model.keys.find { it.id == "key_1" }!!
+        val cx = k1.rect.centerX().toFloat()
+        val cy = k1.rect.centerY().toFloat()
+        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        assertNotNull(hit)
+        assertEquals("separator", hit!!.action)
+    }
+
     // --- helpers ---
 
     private fun buildT9Layout(): KeyboardLayoutModel {
@@ -406,5 +561,9 @@ class XiweiKeyboardViewTest {
 
     private fun makeTouchEvent(action: Int, x: Float, y: Float): MotionEvent {
         return MotionEvent.obtain(0, System.currentTimeMillis(), action, x, y, 0)
+    }
+
+    private fun makeSymbolEntries(): List<Pair<Int, String>> {
+        return (1..37).map { it to "s$it" }
     }
 }

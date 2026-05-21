@@ -356,6 +356,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                     lastTextMode = handler.lastTextMode,
                     categoryToPage = categoryToPage,
                     registry = registry,
+                    density = density,
                 )
             }
         }

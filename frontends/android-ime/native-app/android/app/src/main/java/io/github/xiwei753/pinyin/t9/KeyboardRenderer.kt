@@ -215,14 +215,12 @@ class KeyboardRenderer {
 
         for (k in leftRailKeys) {
             val shifted = Rect(k.rect).apply { offset(0, leftRailScrollY) }
-            if (Rect.intersects(k.rect, shifted) && shifted.contains(ix, iy)) {
+            if (shifted.contains(ix, iy)) {
                 return k
             }
         }
 
-        if (bottomLeftKey != null) {
-            if (bottomLeftKey.rect.contains(ix, iy)) return bottomLeftKey
-        }
+        if (bottomLeftKey != null && bottomLeftKey.rect.contains(ix, iy)) return bottomLeftKey
 
         for (k in keys) {
             if (k.rect.contains(ix, iy)) return k

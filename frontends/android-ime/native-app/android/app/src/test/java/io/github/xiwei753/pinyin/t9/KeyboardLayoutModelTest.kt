@@ -63,7 +63,7 @@ class KeyboardLayoutModelTest {
     @Test
     fun symbolModeGeneratesCategoryTabsAndSymbolKeys() {
         val entries = registry.getAllSymbolEntries()
-        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry)
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
 
         val tabKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.SYMBOL_TAB }
         assertEquals("Should have 4 category tabs", 4, tabKeys.size)
