@@ -76,7 +76,7 @@ class KeyboardRenderTest {
 
     @Test
     fun t9ModeDrawDoesNotCrash() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val bitmap = Bitmap.createBitmap(1080, 480, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
@@ -117,7 +117,7 @@ class KeyboardRenderTest {
 
     @Test
     fun drawDoesNotChangeKeyRects() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val originalRects = (model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)).map { it.id to android.graphics.Rect(it.rect) }
 
         val bitmap = Bitmap.createBitmap(1080, 480, Bitmap.Config.ARGB_8888)
@@ -133,7 +133,7 @@ class KeyboardRenderTest {
 
     @Test
     fun allModesUseThemePaletteWithoutStateListDrawable() {
-        val t9Model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val t9Model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val numModel = builder.buildNumber(1080, 480, 96, 88, 8, 8, KeyboardMode.Number, KeyboardMode.ChineseT9)
         val entries = listOf(1 to "A", 2 to "B")
         val registry = SymbolKeyRegistry()

@@ -231,7 +231,7 @@ class XiweiKeyboardViewTest {
     fun hitLeftRailReadingReturnsReadingAction() {
         val readings = listOf("meng", "neng", "men")
         val builder = KeyboardLayoutBuilder()
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, readings, KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, readings, true, KeyboardMode.ChineseT9)
         val renderer = KeyboardRenderer()
 
         val readingKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_READING && it.label.isNotEmpty() }
@@ -296,7 +296,7 @@ class XiweiKeyboardViewTest {
     @Test
     fun layoutModelWidthMatchesViewWidth() {
         val builder = KeyboardLayoutBuilder()
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         assertEquals(1080, model.panelWidth)
         assertEquals(480, model.panelHeight)
     }
@@ -381,7 +381,7 @@ class XiweiKeyboardViewTest {
 
     @Test
     fun hitTestKeyRectUnchangedAfterHit() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val renderer = KeyboardRenderer()
         val allKeys = model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)
         val before = allKeys.map { it.id to android.graphics.Rect(it.rect) }.toMap()
@@ -396,7 +396,7 @@ class XiweiKeyboardViewTest {
     @Test
     fun hitTestLeftRailKeyRectUnchanged() {
         val readings = listOf("meng", "neng", "men")
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, readings, KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, readings, true, KeyboardMode.ChineseT9)
         val renderer = KeyboardRenderer()
         for (k in model.leftRailKeys) {
             val before = android.graphics.Rect(k.rect)
@@ -433,7 +433,7 @@ class XiweiKeyboardViewTest {
 
     @Test
     fun hitT9Key2ReturnsDigit2() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val renderer = KeyboardRenderer()
         val k2 = model.keys.find { it.id == "key_2" }!!
         val cx = k2.rect.centerX().toFloat()
@@ -457,7 +457,7 @@ class XiweiKeyboardViewTest {
 
     @Test
     fun hitT9Key1ReturnsSeparator() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val renderer = KeyboardRenderer()
         val k1 = model.keys.find { it.id == "key_1" }!!
         val cx = k1.rect.centerX().toFloat()
@@ -471,7 +471,7 @@ class XiweiKeyboardViewTest {
 
     private fun buildT9Layout(): KeyboardLayoutModel {
         val builder = KeyboardLayoutBuilder()
-        return builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        return builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
     }
 
     private fun lightPalette(): ThemePalette {

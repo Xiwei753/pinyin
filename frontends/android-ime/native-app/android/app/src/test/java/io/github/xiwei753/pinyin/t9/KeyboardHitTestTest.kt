@@ -14,7 +14,7 @@ class KeyboardHitTestTest {
 
     @Test
     fun hitDigit2ReturnsDigit2Key() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val key2 = model.keys.find { it.id == "key_2" }!!
         val cx = key2.rect.centerX().toFloat()
         val cy = key2.rect.centerY().toFloat()
@@ -26,7 +26,7 @@ class KeyboardHitTestTest {
 
     @Test
     fun hitSpaceReturnsSpaceKey() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val spaceKey = model.keys.find { it.action == "space" }!!
         val cx = spaceKey.rect.centerX().toFloat()
         val cy = spaceKey.rect.centerY().toFloat()
@@ -38,7 +38,7 @@ class KeyboardHitTestTest {
 
     @Test
     fun hitDelReturnsDelKey() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val delKey = model.keys.find { it.action == "del" }!!
         val cx = delKey.rect.centerX().toFloat()
         val cy = delKey.rect.centerY().toFloat()
@@ -50,7 +50,7 @@ class KeyboardHitTestTest {
 
     @Test
     fun hitEnterReturnsEnterKey() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val enterKey = model.keys.find { it.action == "enter" }!!
         val cx = enterKey.rect.centerX().toFloat()
         val cy = enterKey.rect.centerY().toFloat()
@@ -83,21 +83,21 @@ class KeyboardHitTestTest {
 
     @Test
     fun hitPlaceholderReturnsNull() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, -10f, -10f, 0)
         assertNull("Hit outside bounds should return null", hit)
     }
 
     @Test
     fun hitOutsideBoundsReturnsNull() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, 2000f, 2000f, 0)
         assertNull("Hit far outside bounds should return null", hit)
     }
 
     @Test
     fun hitPunctKeyReturnsPunct() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_PUNCT }
         assertTrue("Should have punct keys in left rail", punctKeys.isNotEmpty())
 

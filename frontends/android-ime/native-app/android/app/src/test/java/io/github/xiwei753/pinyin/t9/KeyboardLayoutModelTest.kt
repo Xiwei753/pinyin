@@ -28,7 +28,7 @@ class KeyboardLayoutModelTest {
 
     @Test
     fun t9ModeGeneratesCorrectNumberOfKeys() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val allKeys = model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)
 
         assertTrue("T9 mode should have keys in main area", model.keys.size >= 15)
@@ -81,7 +81,7 @@ class KeyboardLayoutModelTest {
     fun allKeyRectsAreWithinKeyboardBounds() {
         val panelW = 1080
         val panelH = 480
-        val model = builder.buildT9(panelW, panelH, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(panelW, panelH, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
 
         val allKeys = model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)
         for (key in allKeys) {
@@ -94,7 +94,7 @@ class KeyboardLayoutModelTest {
 
     @Test
     fun digitKeys2Through9AllHaveCompleteRects() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
 
         for (d in 2..9) {
             val key = model.keys.find { it.id == "key_$d" }
@@ -107,7 +107,7 @@ class KeyboardLayoutModelTest {
 
     @Test
     fun keyRectsDoNotOverlap() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val allKeys = model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)
 
         for (i in allKeys.indices) {
@@ -159,7 +159,7 @@ class KeyboardLayoutModelTest {
 
     @Test
     fun spaceKeyHasCorrectAction() {
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
         val spaceKey = model.keys.find { it.action == "space" }
         assertNotNull("Should have space key", spaceKey)
         assertEquals(KeyboardKeyRole.SPACE, spaceKey!!.role)
