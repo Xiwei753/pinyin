@@ -130,6 +130,7 @@ class KeyboardHeightControllerTest {
 
         `when`(mockKv.keyboardShell.layoutParams).thenReturn(mockVglp)
         `when`(mockKv.symScrollContent.layoutParams).thenReturn(mockVglp)
+        `when`(mockKv.symCategoryTabs).thenReturn(mockView)
 
         try {
             controller.applyHeight(mockKv, metrics)

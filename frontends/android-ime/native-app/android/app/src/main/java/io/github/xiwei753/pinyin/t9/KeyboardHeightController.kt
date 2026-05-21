@@ -134,6 +134,7 @@ class KeyboardHeightController(
         // Symbol panel
         val symContentFrame = (v.panelSymbol as? android.view.ViewGroup)?.getChildAt(0)
         symContentFrame?.setFrame(geo.symbolContentRect)
+        v.symCategoryTabs.layoutParams?.width = geo.leftRailWidth
 
         return usedRealDimensions
     }

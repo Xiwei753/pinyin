@@ -165,10 +165,9 @@ class KeyboardKeyBinder(
     }
 
     private fun setupSymbolGridKeys(handler: KeyboardActionHandler) {
-        val registry = SymbolKeyRegistry()
-        for ((id, text) in registry.getAllSymbolEntries()) {
-            val symTv = v.symTextViews[id] ?: continue
-            setupKey(symTv, false) {
+        for (symView in v.generatedSymbolViews) {
+            setupKey(symView, false) {
+                val text = (symView as? android.widget.TextView)?.text?.toString() ?: return@setupKey
                 handler.onDigitPressed(text)
                 handler.switchKeyboardMode(handler.lastTextMode)
                 onModeChanged()

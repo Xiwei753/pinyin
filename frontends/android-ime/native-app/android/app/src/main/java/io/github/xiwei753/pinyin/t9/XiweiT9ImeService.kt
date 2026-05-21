@@ -141,6 +141,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
         keyBinder.setupAllKeys(handler)
         setupSymbolCategories()
+        populateSymbolPages()
         applyThemeAndHeight()
         updateKeyboardPanel()
         return view
@@ -209,6 +210,68 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             keyBinder.setupKey(tabView, false) {
                 val palette = themeController.getThemePalette()
                 panelController.setSymbolCategory(category, themeController, palette)
+            }
+        }
+    }
+
+    private fun populateSymbolPages() {
+        val registry = SymbolKeyRegistry()
+        val density = resources.displayMetrics.density
+        val pageMap = mapOf<String, android.widget.LinearLayout>(
+            "punct" to (keyboardViews.symPagePunct as? android.widget.LinearLayout)!!,
+            "math" to (keyboardViews.symPageMath as? android.widget.LinearLayout)!!,
+            "bracket" to (keyboardViews.symPageBracket as? android.widget.LinearLayout)!!,
+            "other" to (keyboardViews.symPageOther as? android.widget.LinearLayout)!!,
+        )
+        val categoryToPage = mapOf(
+            SymbolKeyRegistry.Category.FULLWIDTH_PUNCT to "punct",
+            SymbolKeyRegistry.Category.HALFWIDTH_PUNCT to "punct",
+            SymbolKeyRegistry.Category.MATH to "math",
+            SymbolKeyRegistry.Category.BRACKET to "bracket",
+            SymbolKeyRegistry.Category.CURRENCY to "other",
+            SymbolKeyRegistry.Category.UNIT to "other",
+            SymbolKeyRegistry.Category.NETWORK to "other",
+            SymbolKeyRegistry.Category.SEQUENCE to "other",
+            SymbolKeyRegistry.Category.ARROW to "other",
+            SymbolKeyRegistry.Category.GREEK to "other",
+            SymbolKeyRegistry.Category.OTHER to "other",
+        )
+
+        for (category in registry.getAllCategories()) {
+            val pageName = categoryToPage[category] ?: "other"
+            val page = pageMap[pageName] ?: continue
+            val entries = registry.getSymbolsByCategory(category)
+            if (entries.isEmpty()) continue
+
+            val rows = entries.chunked(5)
+            for (row in rows) {
+                val rowLayout = android.widget.LinearLayout(this).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        (48 * density).toInt()
+                    )
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                }
+                for ((_, text) in row) {
+                    val btn = android.widget.TextView(this).apply {
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            0,
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            1f
+                        )
+                        setPadding(0, 0, 0, 0)
+                        gravity = android.view.Gravity.CENTER
+                        textSize = 20f
+                        setTextColor(0xFF333333.toInt())
+                        setText(text)
+                        setBackgroundResource(R.drawable.key_bg)
+                        isClickable = true
+                        isFocusable = true
+                    }
+                    rowLayout.addView(btn)
+                    keyboardViews.generatedSymbolViews.add(btn)
+                }
+                page.addView(rowLayout)
             }
         }
     }

@@ -94,8 +94,10 @@ class KeyboardViews constructor(
     val symTabMath: TextView,
     val symTabBracket: TextView,
     val symTabOther: TextView,
-    // Symbol grid text views
-    val symTextViews: Map<Int, TextView>,
+    // Symbol category rail container
+    val symCategoryTabs: View,
+    // Dynamically generated symbol button views
+    val generatedSymbolViews: MutableList<View>,
     // Symbol bottom row
 
 
@@ -176,24 +178,8 @@ class KeyboardViews constructor(
                 ?: error("sym_tab_bracket not found")
             val symTabOther = rootView.findViewById<TextView>(R.id.sym_tab_other)
                 ?: error("sym_tab_other not found")
-
-            val symIds = listOf(
-                R.id.sym_1, R.id.sym_2, R.id.sym_3, R.id.sym_4, R.id.sym_5,
-                R.id.sym_6, R.id.sym_7, R.id.sym_8, R.id.sym_9, R.id.sym_10,
-                R.id.sym_11, R.id.sym_12, R.id.sym_13, R.id.sym_14, R.id.sym_15,
-                R.id.sym_16, R.id.sym_17, R.id.sym_18, R.id.sym_19, R.id.sym_20,
-                R.id.sym_21, R.id.sym_22, R.id.sym_23, R.id.sym_24, R.id.sym_25,
-                R.id.sym_26, R.id.sym_27, R.id.sym_28, R.id.sym_29, R.id.sym_30,
-                R.id.sym_31, R.id.sym_32, R.id.sym_33, R.id.sym_34, R.id.sym_35,
-                R.id.sym_36, R.id.sym_37, R.id.sym_38, R.id.sym_39, R.id.sym_40,
-                R.id.sym_41, R.id.sym_42, R.id.sym_43, R.id.sym_44, R.id.sym_45,
-                R.id.sym_46, R.id.sym_47, R.id.sym_48, R.id.sym_49, R.id.sym_50,
-                R.id.sym_51, R.id.sym_52, R.id.sym_53, R.id.sym_54, R.id.sym_55,
-                R.id.sym_56, R.id.sym_57, R.id.sym_58, R.id.sym_59, R.id.sym_60,
-            )
-            val symTextViews = symIds.associateWith { id ->
-                rootView.findViewById<TextView>(id) ?: error("Symbol TextView $id not found")
-            }
+            val symCategoryTabs = rootView.findViewById<View>(R.id.sym_category_tabs)
+                ?: error("sym_category_tabs not found")
 
             fun <T : View> req(id: Int): T = rootView.findViewById<T>(id) ?: error("Required view $id not found")
 
@@ -282,7 +268,8 @@ class KeyboardViews constructor(
                 symTabMath = symTabMath,
                 symTabBracket = symTabBracket,
                 symTabOther = symTabOther,
-                symTextViews = symTextViews,
+                symCategoryTabs = symCategoryTabs,
+                generatedSymbolViews = mutableListOf(),
 
 
 

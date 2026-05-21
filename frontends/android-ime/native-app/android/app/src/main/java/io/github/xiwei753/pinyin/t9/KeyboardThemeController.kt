@@ -119,8 +119,8 @@ class KeyboardThemeController(
             tv?.setTextColor(textColor)
         }
 
-        for ((_, symTv) in v.symTextViews) {
-            symTv.setTextColor(textColor)
+        for (symView in v.generatedSymbolViews) {
+            (symView as? android.widget.TextView)?.setTextColor(textColor)
         }
 
         val numBottomTextViews = emptyList<TextView>()

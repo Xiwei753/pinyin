@@ -63,24 +63,30 @@ class KeyboardViewsTest {
     }
 
     @Test
-    fun testAllSymbolTextViewsExist() {
+    fun testSymbolCategoryTabViewsExist() {
         val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(layoutXml())
         val allNodes = doc.getElementsByTagName("*")
 
-        for (i in 1..60) {
-            val id = "sym_$i"
-            var found = false
-            for (j in 0 until allNodes.length) {
-                val node = allNodes.item(j)
+        fun hasId(id: String): Boolean {
+            for (i in 0 until allNodes.length) {
+                val node = allNodes.item(i)
                 if (node is org.w3c.dom.Element) {
-                    if (node.getAttribute("android:id") == "@+id/$id") {
-                        found = true
-                        break
-                    }
+                    if (node.getAttribute("android:id") == "@+id/$id") return true
                 }
             }
-            assertTrue("Symbol TextView $id must exist in layout", found)
+            return false
         }
+
+        assertTrue("sym_tab_punct must exist", hasId("sym_tab_punct"))
+        assertTrue("sym_tab_math must exist", hasId("sym_tab_math"))
+        assertTrue("sym_tab_bracket must exist", hasId("sym_tab_bracket"))
+        assertTrue("sym_tab_other must exist", hasId("sym_tab_other"))
+        assertTrue("sym_page_punct must exist", hasId("sym_page_punct"))
+        assertTrue("sym_page_math must exist", hasId("sym_page_math"))
+        assertTrue("sym_page_bracket must exist", hasId("sym_page_bracket"))
+        assertTrue("sym_page_other must exist", hasId("sym_page_other"))
+        assertTrue("sym_scroll_content must exist", hasId("sym_scroll_content"))
+        assertTrue("sym_category_tabs must exist", hasId("sym_category_tabs"))
     }
 
 }

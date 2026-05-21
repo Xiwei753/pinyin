@@ -48,7 +48,8 @@ class KeyboardKeyBinderTest {
             keyToggleEnglish = mock(),
             enterContainer = mock(),
             symTabPunct = mock(), symTabMath = mock(), symTabBracket = mock(), symTabOther = mock(),
-            symTextViews = emptyMap(),
+            symCategoryTabs = mock(),
+            generatedSymbolViews = mutableListOf(),
                         num0 = mock(), num1 = mock(), num2 = mock(), num3 = mock(), num4 = mock(),
             num5 = mock(), num6 = mock(), num7 = mock(), num8 = mock(), num9 = mock(), numDot = mock(),
 
