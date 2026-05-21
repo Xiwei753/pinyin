@@ -520,4 +520,145 @@ class T9EngineTest {
         assertTrue("啥是够" !in topCandsText)
         assertTrue("啥是构" !in topCandsText)
     }
+
+    // ── Candidate layering tests ──
+
+    @Test
+    fun testVisibleExactPhraseBeforeSingle() {
+        val dict = MockDict()
+        // Use an input where both exact phrase AND single chars appear
+        // "bu tai" is 2-syllable; "不" comes from prefix single-syllable "bu"
+        dict.add(Candidate("不太", "28824", 90000, CandidateType.NORMAL), "bu tai")
+        dict.add(Candidate("不", "28", 80000, CandidateType.SINGLE_CHAR), "bu")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+
+        val visible = engine.getVisibleCandidates()
+        val idxBuTai = visible.indexOfFirst { it.text == "不太" }
+
+        assertTrue("exact phrase 不太 should be visible, got ${visible.map { it.text }}", idxBuTai >= 0)
+        val singleIdx = visible.indexOfFirst { it.origin == CandidateOrigin.EXACT_SINGLE }
+        if (singleIdx >= 0) {
+            assertTrue("exact phrase should appear before any EXACT_SINGLE",
+                idxBuTai < singleIdx)
+        }
+    }
+
+    @Test
+    fun testExactPhraseBlocksDynamicComposition() {
+        val dict = MockDict()
+        // For multi-syllable "bu", mock a complete pinyin that has a phrase
+        dict.add(Candidate("不太", "28824", 500, CandidateType.NORMAL), "bu tai")
+        dict.add(Candidate("不", "28", 100000, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("太", "82", 100000, CandidateType.SINGLE_CHAR), "tai")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+
+        val visible = engine.getVisibleCandidates()
+        // When exact phrase "不太" exists, dynamic composition should NOT appear
+        assertTrue("不太 must be in visible", visible.any { it.text == "不太" })
+        assertTrue("No SAFE_DYNAMIC_COMPOSITION allowed when exact phrase exists",
+            visible.all { it.origin != CandidateOrigin.SAFE_DYNAMIC_COMPOSITION })
+    }
+
+    @Test
+    fun testDynamicFallbackMaxOneCandidate() {
+        val dict = MockDict()
+        // Only single chars that HIGH score (so they appear), no exact phrase
+        dict.add(Candidate("不", "28", 100000, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("太", "82", 100000, CandidateType.SINGLE_CHAR), "tai")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+
+        val visible = engine.getVisibleCandidates()
+        val dynamicCands = visible.filter { it.origin == CandidateOrigin.SAFE_DYNAMIC_COMPOSITION }
+        assertTrue("At most 1 dynamic candidate, got ${dynamicCands.size}", dynamicCands.size <= 1)
+    }
+
+    @Test
+    fun testDynamicCompositionExcludedWhenExactPhraseExists() {
+        val dict = MockDict()
+        dict.add(Candidate("不太行", "288249464", 1000, CandidateType.NORMAL), "bu tai xing")
+        // These digits could be decomposed but all matches are wrong pinyin
+        dict.add(Candidate("不太新股", "288249464", 900, CandidateType.NORMAL), "bu tai xin gu")
+        dict.add(Candidate("不太英语", "288249464", 800, CandidateType.NORMAL), "bu tai ying yu")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+        engine.inputDigit("9")
+        engine.inputDigit("4")
+        engine.inputDigit("6")
+        engine.inputDigit("4")
+
+        val visible = engine.getVisibleCandidates()
+        assertEquals("第一候选应是不太行", "不太行", visible.firstOrNull()?.text)
+        assertTrue("不应出现不太新股", visible.none { it.text == "不太新股" })
+        assertTrue("不应出现不太英语", visible.none { it.text == "不太英语" })
+    }
+
+    @Test
+    fun testExactPhraseFirstRegardlessOfScore() {
+        val dict = MockDict()
+        // Single char with very high score
+        dict.add(Candidate("不", "28", 999999, CandidateType.SINGLE_CHAR), "bu")
+        // Exact phrase with much lower score
+        dict.add(Candidate("不太", "28824", 500, CandidateType.NORMAL), "bu tai")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+
+        val visible = engine.getVisibleCandidates()
+        val idxPhrase = visible.indexOfFirst { it.text == "不太" }
+
+        assertTrue("exact phrase 不太 should be visible, got ${visible.map { it.text }}", idxPhrase >= 0)
+        val firstSingleIdx = visible.indexOfFirst { it.origin == CandidateOrigin.EXACT_SINGLE }
+        if (firstSingleIdx >= 0) {
+            assertTrue("exact phrase (score=500) should appear before first EXACT_SINGLE",
+                idxPhrase < firstSingleIdx)
+        }
+    }
+
+    @Test
+    fun testDynamicCandidateLimitedToOne() {
+        val dict = MockDict()
+        // Only single chars that could form phrases (high score)
+        dict.add(Candidate("不", "28", 100000, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("太", "82", 100000, CandidateType.SINGLE_CHAR), "tai")
+        dict.add(Candidate("好", "46", 100000, CandidateType.SINGLE_CHAR), "hao")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+
+        val visible = engine.getVisibleCandidates()
+        // Dynamic candidates should be at most 1
+        val dynamicCount = visible.count { it.origin == CandidateOrigin.SAFE_DYNAMIC_COMPOSITION }
+        assertTrue("dynamic candidate count should be <= 1, got $dynamicCount", dynamicCount <= 1)
+    }
 }

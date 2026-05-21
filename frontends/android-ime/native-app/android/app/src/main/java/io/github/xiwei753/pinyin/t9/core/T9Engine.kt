@@ -178,55 +178,50 @@ class T9Engine(
             return lastVisibleCandidates
         }
 
-        val compositions = getValidCompositions()
-        val primaryPinyin: String = compositions.firstOrNull { it.isComplete }?.pinyinString
-            ?: compositions.firstOrNull()?.pinyinString ?: ""
-
-        val userCandidates = if (primaryPinyin.isNotEmpty() && userDictionary != null) {
-            userDictionary!!.getUserCandidates(primaryPinyin).map { c ->
-                val boost = userDictionary!!.getUserBoost(c.sourcePinyin, c.text)
-                c.copy(score = c.score + boost)
-            }
-        } else {
-            emptyList()
-        }
-
         val exactCandidatesRaw = generateCandidates(buffer, limit + 10, allowDynamic = false)
         lastInternalCandidates = exactCandidatesRaw
 
-        val exactCandidates = exactCandidatesRaw.filter { c ->
-            if (c.origin != CandidateOrigin.EXACT_SINGLE && c.origin != CandidateOrigin.EXACT_PHRASE) return@filter false
-            if (c.text == buffer) return@filter false
-            if (c.text.matches(Regex("^[a-zA-Z\\s]+$"))) return@filter false
-
-            if (buffer.length == 1) {
-                if (c.text.length > 1) return@filter false
+        // ── Strict layering by origin ──
+        val exactPhrases = exactCandidatesRaw.filter { c ->
+            c.origin == CandidateOrigin.EXACT_PHRASE && c.text.length >= 2 &&
+            !c.text.matches(Regex("^[a-zA-Z\\s]+$"))
+        }
+        val exactSingles = exactCandidatesRaw.filter { c ->
+            c.origin == CandidateOrigin.EXACT_SINGLE && c.text.length == 1 &&
+            !c.text.matches(Regex("^[a-zA-Z\\s]+$"))
+        }.let { singles ->
+            when {
+                buffer.length == 1 -> singles.filter { it.text.length <= 1 }
+                buffer.length == 2 -> singles.filter { it.text.length <= 2 }
+                else -> singles
             }
-
-            if (buffer.length == 2) {
-                if (c.text.length > 2) return@filter false
-            }
-
-            true
         }
 
-        val hasExactPhrase = exactCandidates.any { it.origin == CandidateOrigin.EXACT_PHRASE && it.text.length >= 2 }
+        // User candidates (from userDictionary)
+        val compositions = getValidCompositions()
+        val primaryPinyin: String = compositions.firstOrNull { it.isComplete }?.pinyinString
+            ?: compositions.firstOrNull()?.pinyinString ?: ""
+        val userCands = if (primaryPinyin.isNotEmpty() && userDictionary != null) {
+            userDictionary!!.getUserCandidates(primaryPinyin)
+        } else emptyList()
 
-        val safeDynamicCandidates = if (!hasExactPhrase && buffer.length >= 5 && compositions.isNotEmpty()) {
-            generateSafeDynamicCandidates(compositions, limit).map { c ->
-                c.copy(origin = CandidateOrigin.SAFE_DYNAMIC_COMPOSITION)
-            }
-        } else {
-            emptyList()
-        }
+        val hasExactPhrase = exactPhrases.isNotEmpty()
+        val hasSingle = exactSingles.isNotEmpty()
+        val hasUserCand = userCands.isNotEmpty()
 
-        val combined = mutableListOf<Candidate>()
-        combined.addAll(exactCandidates.filter { it.origin == CandidateOrigin.EXACT_PHRASE })
-        combined.addAll(userCandidates.filter { uc -> combined.none { it.text == uc.text } })
-        combined.addAll(exactCandidates.filter { it.origin == CandidateOrigin.EXACT_SINGLE })
-        combined.addAll(safeDynamicCandidates.take(3))
+        // ── Dynamic fallback: only when no phrase, no user, no single ──
+        val dynamicFallback = if (!hasExactPhrase && !hasUserCand && !hasSingle && buffer.length >= 5) {
+            generateSafeDynamicCandidates(compositions, 3).take(1)
+        } else emptyList()
 
-        val finalCandidates = combined.distinctBy { it.text }.take(limit)
+        // ── Build visible list by strict sourcing ──
+        val combined = linkedSetOf<Candidate>()
+        combined.addAll(exactPhrases)
+        combined.addAll(userCands.filter { uc -> combined.none { c -> c.text == uc.text } })
+        combined.addAll(exactSingles.filter { es -> combined.none { c -> c.text == es.text } })
+        combined.addAll(dynamicFallback.filter { d -> combined.none { c -> c.text == d.text } })
+
+        val finalCandidates = combined.toList().take(limit)
 
         lastVisibleCandidates = finalCandidates
         lastVisibleLimit = limit
@@ -238,49 +233,41 @@ class T9Engine(
     private fun generateSafeDynamicCandidates(
         compositions: List<PinyinComposition>,
         limit: Int,
-        preferredPinyin: String? = null
     ): List<Candidate> {
-        val comps = if (preferredPinyin != null) {
-            compositions.filter { it.pinyinString == preferredPinyin }
-        } else {
-            compositions
-        }
-        val completeComp = comps.firstOrNull { it.isComplete } ?: return emptyList()
+        val completeComp = compositions.firstOrNull { it.isComplete } ?: return emptyList()
         if (completeComp.pinyinList.size < 2) return emptyList()
 
         val pinyins = completeComp.pinyinList
         val results = mutableListOf<Candidate>()
 
-        for (i in 1 until pinyins.size) {
-            val firstPart = pinyins.subList(0, i).joinToString(" ")
-            val secondPart = pinyins.subList(i, pinyins.size).joinToString(" ")
+        // Ultra-conservative: only combine 2-syllable inputs where each fragment is
+        // a high-frequency single character (score >= 50000).
+        if (pinyins.size == 2) {
+            val firstPart = pinyins[0]
+            val secondPart = pinyins[1]
 
             val firstCandidates = dictionary.getPinyinExactCandidates(firstPart)
-                .filter { it.type != CandidateType.LONG_OR_LOW_FREQ && it.score > 30000 }
-                .take(5)
+                .filter { it.origin == CandidateOrigin.EXACT_SINGLE && it.text.length == 1 && it.score >= 50000 }
+                .take(3)
             val secondCandidates = dictionary.getPinyinExactCandidates(secondPart)
-                .filter { it.type != CandidateType.LONG_OR_LOW_FREQ && it.score > 30000 }
-                .take(5)
+                .filter { it.origin == CandidateOrigin.EXACT_SINGLE && it.text.length == 1 && it.score >= 50000 }
+                .take(3)
 
             for (fc in firstCandidates) {
                 for (sc in secondCandidates) {
-                    if (fc.text.length == 1 && sc.text.length == 1) {
-                        val combinedText = fc.text + sc.text
-                        val combinedScore = fc.score + sc.score - 100000
-
-                        if (combinedScore > 50000) {
-                            val combinedCode = fc.code + sc.code
-                            results.add(
-                                Candidate(
-                                    combinedText,
-                                    combinedCode,
-                                    combinedScore,
-                                    CandidateType.NORMAL,
-                                    completeComp.pinyinString,
-                                    CandidateOrigin.SAFE_DYNAMIC_COMPOSITION
-                                )
+                    val combinedText = fc.text + sc.text
+                    val combinedScore = fc.score + sc.score - 100000
+                    if (combinedScore > 80000) {
+                        results.add(
+                            Candidate(
+                                combinedText,
+                                fc.code + sc.code,
+                                combinedScore,
+                                CandidateType.NORMAL,
+                                completeComp.pinyinString,
+                                CandidateOrigin.SAFE_DYNAMIC_COMPOSITION
                             )
-                        }
+                        )
                     }
                 }
             }
