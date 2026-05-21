@@ -217,6 +217,8 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     private fun populateSymbolPages() {
         val registry = SymbolKeyRegistry()
         val density = resources.displayMetrics.density
+        val rowHeightPx = (48 * density).toInt()
+        val symbolContentInsetPx = (4 * density).toInt()
         val pageMap = mapOf<String, android.widget.LinearLayout>(
             "punct" to (keyboardViews.symPagePunct as? android.widget.LinearLayout)!!,
             "math" to (keyboardViews.symPageMath as? android.widget.LinearLayout)!!,
@@ -243,35 +245,24 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             val entries = registry.getSymbolsByCategory(category)
             if (entries.isEmpty()) continue
 
-            val rows = entries.chunked(5)
-            for (row in rows) {
-                val rowLayout = android.widget.LinearLayout(this).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                        (48 * density).toInt()
-                    )
-                    orientation = android.widget.LinearLayout.HORIZONTAL
-                }
-                for ((_, text) in row) {
-                    val btn = android.widget.TextView(this).apply {
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            0,
-                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                            1f
-                        )
-                        setPadding(0, 0, 0, 0)
-                        gravity = android.view.Gravity.CENTER
-                        textSize = 20f
-                        setTextColor(0xFF333333.toInt())
-                        setText(text)
-                        setBackgroundResource(R.drawable.key_bg)
-                        isClickable = true
-                        isFocusable = true
-                    }
-                    rowLayout.addView(btn)
-                    keyboardViews.generatedSymbolViews.add(btn)
-                }
-                page.addView(rowLayout)
+            val symPage = SymbolGridController.buildPage(
+                context = this,
+                entries = entries,
+                rowHeightPx = rowHeightPx,
+                generatedSymbolViews = keyboardViews.generatedSymbolViews,
+                textSize = 20f,
+                textColor = 0xFF333333.toInt(),
+                insetLeft = symbolContentInsetPx,
+                insetTop = symbolContentInsetPx,
+                insetRight = symbolContentInsetPx,
+                insetBottom = symbolContentInsetPx,
+            )
+
+            // Transfer all children from the grid page to the target page
+            while (symPage.childCount > 0) {
+                val child = symPage.getChildAt(0)
+                symPage.removeViewAt(0)
+                page.addView(child)
             }
         }
     }

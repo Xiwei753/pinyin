@@ -35,27 +35,8 @@ class T9Engine(
         get() {
             if (buffer.isEmpty()) return emptyList()
             val validComps = getValidCompositions()
-            val result = linkedSetOf<String>()
-
             val nextIndex = lockedSyllables.size
-            for (comp in validComps) {
-                if (comp.pinyinList.size > nextIndex) {
-                    val syl = comp.pinyinList[nextIndex]
-                    if (syl.isNotEmpty() && syl !in result) result.add(syl)
-                }
-            }
-
-            // Allow selecting shorter prefixes if available in the graph
-            if (result.isEmpty() && nextIndex == 0) {
-                for (end in buffer.length downTo 1) {
-                    val prefix = buffer.substring(0, end)
-                    for (s in PinyinSyllableDecoder.getExactSyllables(prefix)) {
-                        if (s.isNotEmpty() && s !in result) result.add(s)
-                    }
-                }
-            }
-
-            return result.toList()
+            return ReadingRanker.rank(buffer, validComps, nextIndex).map { it.syllable }
         }
 
     fun getReadingDigitSpan(reading: String): String {

@@ -290,10 +290,10 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <!-- Symbol category rail (left sidebar) -->
+                <!-- Symbol category rail (left sidebar) - width set by T9KeyboardGeometry at runtime -->
                 <LinearLayout
                     android:id="@+id/sym_category_tabs"
-                    android:layout_width="56dp"
+                    android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:orientation="vertical">
                     <TextView android:id="@+id/sym_tab_punct" android:layout_width="match_parent" android:layout_height="0dp"
