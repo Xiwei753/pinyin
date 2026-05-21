@@ -39,6 +39,12 @@ android {
             assets.srcDirs("src/main/assets", t9AssetsDir)
         }
     }
+
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 val generateT9DictionaryAssets by tasks.registering(Exec::class) {

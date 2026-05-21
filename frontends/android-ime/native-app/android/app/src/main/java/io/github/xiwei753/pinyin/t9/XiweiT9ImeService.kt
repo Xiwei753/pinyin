@@ -132,41 +132,46 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     }
 
     override fun onCreateInputView(): View {
-        Log.i("XiweiT9ImeService", "inflate start")
-        val view = layoutInflater.inflate(R.layout.keyboard_view, null)
-        Log.i("XiweiT9ImeService", "inflate end")
-        
-        Log.i("XiweiT9ImeService", "bind required views start")
-        keyboardViews = KeyboardViews.bind(view)
-        xiweiKeyboardView = keyboardViews.xiweiKeyboardView!!
-        Log.i("XiweiT9ImeService", "bind required views end")
-        
-        ensureCoreInitialized()
-
-        deleteRepeatController = DeleteRepeatController { handler.onDelete() }
-
-        themeController = KeyboardThemeController(settingsRepository, resources)
-        heightController = KeyboardHeightController(settingsRepository, resources)
-
-        candidateViewController = CandidateViewController(
-            context = this,
-            v = keyboardViews,
-            themeController = themeController,
-            settingsRepository = settingsRepository,
-        )
-
-        setupKeyboardViewActions()
-        Log.i("XiweiT9ImeService", "xiweiKeyboardView init done")
-        Log.i("XiweiT9ImeService", "callbacks setup done")
-
-        applyThemeAndHeight()
-        Log.i("XiweiT9ImeService", "theme applied")
-        
-        updateKeyboardPanel()
-        Log.i("XiweiT9ImeService", "layout model built")
-        
-        Log.i("XiweiT9ImeService", "input view returned")
-        return view
+        try {
+            Log.i("XiweiT9ImeService", "inflate start")
+            val view = layoutInflater.inflate(R.layout.keyboard_view, null)
+            Log.i("XiweiT9ImeService", "inflate end")
+            
+            Log.i("XiweiT9ImeService", "bind required views start")
+            keyboardViews = KeyboardViews.bind(view)
+            xiweiKeyboardView = keyboardViews.xiweiKeyboardView
+            Log.i("XiweiT9ImeService", "bind required views end")
+            
+            ensureCoreInitialized()
+    
+            deleteRepeatController = DeleteRepeatController { handler.onDelete() }
+    
+            themeController = KeyboardThemeController(settingsRepository, resources)
+            heightController = KeyboardHeightController(settingsRepository, resources)
+    
+            candidateViewController = CandidateViewController(
+                context = this,
+                v = keyboardViews,
+                themeController = themeController,
+                settingsRepository = settingsRepository,
+            )
+    
+            setupKeyboardViewActions()
+            Log.i("XiweiT9ImeService", "xiweiKeyboardView init done")
+            Log.i("XiweiT9ImeService", "callbacks setup done")
+    
+            applyThemeAndHeight()
+            Log.i("XiweiT9ImeService", "theme applied")
+            
+            updateKeyboardPanel()
+            Log.i("XiweiT9ImeService", "layout model built")
+            
+            Log.i("XiweiT9ImeService", "input view returned")
+            return view
+        } catch (e: Throwable) {
+            Log.e("XiweiT9ImeService", "Failed to create input view", e)
+            throw e
+        }
     }
 
     private fun setupKeyboardViewActions() {

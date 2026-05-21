@@ -515,7 +515,7 @@ class XiweiKeyboardViewTest {
             candidateContainer = Mockito.mock(),
             pinyinFloatingBar = Mockito.mock(),
             pinyinFloatingText = Mockito.mock(),
-            xiweiKeyboardView = null,
+            xiweiKeyboardView = Mockito.mock(),
         )
     }
 

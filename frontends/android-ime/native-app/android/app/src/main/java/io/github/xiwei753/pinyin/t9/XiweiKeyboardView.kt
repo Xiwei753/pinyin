@@ -9,7 +9,9 @@ import android.view.View
 
 class XiweiKeyboardView @JvmOverloads constructor(
     context: Context,
-) : View(context) {
+    attrs: android.util.AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : View(context, attrs, defStyleAttr) {
 
     var layoutModel: KeyboardLayoutModel? = null
     var palette: ThemePalette? = null

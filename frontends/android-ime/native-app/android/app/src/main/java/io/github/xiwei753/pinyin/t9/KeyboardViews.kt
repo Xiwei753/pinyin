@@ -10,7 +10,7 @@ class KeyboardViews constructor(
     val candidateContainer: LinearLayout,
     val pinyinFloatingBar: View,
     val pinyinFloatingText: TextView,
-    val xiweiKeyboardView: XiweiKeyboardView? = null,
+    val xiweiKeyboardView: XiweiKeyboardView,
 ) {
     companion object {
         fun bind(rootView: View): KeyboardViews {
@@ -25,6 +25,7 @@ class KeyboardViews constructor(
             val pinyinFloatingText = rootView.findViewById<TextView>(R.id.pinyin_floating_text)
                 ?: error("Required view pinyin_floating_text not found")
             val xiweiKeyboardView = rootView.findViewById<XiweiKeyboardView>(R.id.xiwei_keyboard_view)
+                ?: error("Required view xiwei_keyboard_view not found")
 
             return KeyboardViews(
                 imeRoot = imeRoot,

@@ -285,4 +285,80 @@ class XiweiT9ImeServiceUiBehaviorTest {
         verify(mockSink).commitText("a")
         verify(mockSink, never()).performEditorActionOrNewline()
     }
+
+    @Test
+    fun testOnCreateInputViewInitializesComponents() {
+        val service = spy(createService())
+
+        // mock repository
+        val repo = mock(SettingsRepository::class.java)
+        `when`(repo.getTheme()).thenReturn("system")
+        `when`(repo.getKeyboardHeight()).thenReturn("normal")
+        injectField(service, "settingsRepository", repo)
+
+        // mock resources
+        val resources = mock(android.content.res.Resources::class.java)
+        `when`(resources.displayMetrics).thenReturn(android.util.DisplayMetrics())
+        `when`(resources.configuration).thenReturn(android.content.res.Configuration())
+        doReturn(resources).`when`(service).resources
+
+        // mock layout inflater
+        val mockInflater = mock(android.view.LayoutInflater::class.java)
+        doReturn(mockInflater).`when`(service).layoutInflater
+
+        // mock view hierarchy
+        val mockView = mock(android.view.View::class.java)
+        `when`(mockInflater.inflate(eq(R.layout.keyboard_view), org.mockito.ArgumentMatchers.isNull())).thenReturn(mockView)
+
+        val mockImeRoot = mock(android.view.View::class.java)
+        val mockCandidateBar = mock(android.widget.LinearLayout::class.java)
+        val mockCandidateContainer = mock(android.widget.LinearLayout::class.java)
+        val mockPinyinFloatingBar = mock(android.view.View::class.java)
+        val mockPinyinFloatingText = mock(android.widget.TextView::class.java)
+        val mockXiweiKeyboardView = mock(XiweiKeyboardView::class.java)
+
+        `when`(mockView.findViewById<android.view.View>(R.id.ime_root)).thenReturn(mockImeRoot)
+        `when`(mockView.findViewById<android.view.View>(R.id.candidate_bar)).thenReturn(mockCandidateBar)
+        `when`(mockView.findViewById<android.view.View>(R.id.candidate_container)).thenReturn(mockCandidateContainer)
+        `when`(mockView.findViewById<android.view.View>(R.id.pinyin_floating_bar)).thenReturn(mockPinyinFloatingBar)
+        `when`(mockView.findViewById<android.view.View>(R.id.pinyin_floating_text)).thenReturn(mockPinyinFloatingText)
+        `when`(mockView.findViewById<XiweiKeyboardView>(R.id.xiwei_keyboard_view)).thenReturn(mockXiweiKeyboardView)
+
+        // mock handler
+        val handler = KeyboardActionHandler(mock(ImeActionSink::class.java))
+        val engine = mock(T9Engine::class.java)
+        `when`(engine.getPreedit()).thenReturn("")
+        handler.attachEngine(engine)
+        injectField(service, "handler", handler)
+
+
+        // Mock Log and Looper
+        val logMock = mockStatic(android.util.Log::class.java)
+        val looperMock = mockStatic(android.os.Looper::class.java)
+        
+        logMock.`when`<Int> { android.util.Log.i(anyString(), anyString()) }.thenReturn(0)
+        logMock.`when`<Int> { android.util.Log.e(anyString(), anyString(), any()) }.thenAnswer { 
+            val e = it.getArgument<Throwable>(2)
+            e.printStackTrace()
+            0 
+        }
+        
+        val mockLooper = mock(android.os.Looper::class.java)
+        looperMock.`when`<android.os.Looper> { android.os.Looper.getMainLooper() }.thenReturn(mockLooper)
+
+        try {
+            // Run onCreateInputView
+            val view = service.onCreateInputView()
+            
+            // Assert view is returned and non-null
+            org.junit.Assert.assertNotNull(view)
+            org.junit.Assert.assertEquals(mockView, view)
+            
+            verify(mockXiweiKeyboardView, org.mockito.Mockito.atLeastOnce()).palette = any()
+            verify(mockXiweiKeyboardView, org.mockito.Mockito.atLeastOnce()).layoutModel = any()
+        } finally {
+            logMock.close()
+            looperMock.close()
+        }
+    }
 }
