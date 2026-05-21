@@ -3,6 +3,7 @@ package io.github.xiwei753.pinyin.t9
 import android.content.res.Resources
 import android.util.DisplayMetrics
 import android.view.View
+import android.view.ViewGroup
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -138,4 +139,82 @@ class KeyboardHeightControllerTest {
             fail("applyHeight should not crash: ${e.message}")
         }
     }
+
+    @Test
+    fun symbolCategoryTabsWidthMatchesT9LeftRailWidth() {
+        `when`(mockRepo.getKeyboardHeight()).thenReturn("normal")
+        val metrics = controller.calculateHeight()
+
+        // Use realistic panelT9 dimensions so applyT9Geometry uses real values
+        val panelT9 = mock(View::class.java)
+        `when`(panelT9.width).thenReturn(1080)
+        `when`(panelT9.height).thenReturn(480)
+
+        // Real LayoutParams object so width is mutable after assignment
+        val realLp = ViewGroup.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT)
+        val symTabs = mock(View::class.java)
+        `when`(symTabs.layoutParams).thenReturn(realLp)
+
+        val kv = createMinimalMockKeyboardViews(panelT9, symTabs)
+
+        controller.applyHeight(kv, metrics)
+
+        val expected = 1080 / 7
+        assertEquals("symCategoryTabs width = panelWidth/7 = $expected",
+            expected, realLp.width)
+    }
+
+    private fun createMinimalMockKeyboardViews(
+        panelT9: View,
+        symCategoryTabs: View,
+    ): KeyboardViews {
+        val stubView = mock(View::class.java)
+        val kv = mock(KeyboardViews::class.java)
+        `when`(kv.keyboardShell).thenReturn(stubView)
+        `when`(kv.keyToggleSymbol).thenReturn(stubView)
+        `when`(kv.keyToggleNumber).thenReturn(stubView)
+        `when`(kv.keySpace).thenReturn(stubView)
+        `when`(kv.keyToggleEnglish).thenReturn(mock(android.widget.TextView::class.java))
+        `when`(kv.imeRoot).thenReturn(stubView)
+        `when`(kv.symPagePunct).thenReturn(stubView)
+        `when`(kv.symPageMath).thenReturn(stubView)
+        `when`(kv.symPageBracket).thenReturn(stubView)
+        `when`(kv.symPageOther).thenReturn(stubView)
+        `when`(kv.symScrollContent).thenReturn(mock(android.widget.ScrollView::class.java))
+        `when`(kv.numKey1Frame).thenReturn(stubView)
+        `when`(kv.numKey2Frame).thenReturn(stubView)
+        `when`(kv.numKey3Frame).thenReturn(stubView)
+        `when`(kv.numKey4Frame).thenReturn(stubView)
+        `when`(kv.numKey5Frame).thenReturn(stubView)
+        `when`(kv.numKey6Frame).thenReturn(stubView)
+        `when`(kv.numKey7Frame).thenReturn(stubView)
+        `when`(kv.numKey8Frame).thenReturn(stubView)
+        `when`(kv.numKey9Frame).thenReturn(stubView)
+        `when`(kv.numDotFrame).thenReturn(stubView)
+        `when`(kv.num0Frame).thenReturn(stubView)
+        `when`(kv.panelSymbol).thenReturn(mock(android.view.ViewGroup::class.java))
+        `when`(kv.panelT9).thenReturn(panelT9)
+        `when`(kv.t9LeftScrollFrame).thenReturn(stubView)
+        `when`(kv.t9SymbolButtonFrame).thenReturn(stubView)
+        `when`(kv.t9Key1Frame).thenReturn(stubView)
+        `when`(kv.t9Key2Frame).thenReturn(stubView)
+        `when`(kv.t9Key3Frame).thenReturn(stubView)
+        `when`(kv.t9Key4Frame).thenReturn(stubView)
+        `when`(kv.t9Key5Frame).thenReturn(stubView)
+        `when`(kv.t9Key6Frame).thenReturn(stubView)
+        `when`(kv.t9Key7Frame).thenReturn(stubView)
+        `when`(kv.t9Key8Frame).thenReturn(stubView)
+        `when`(kv.t9Key9Frame).thenReturn(stubView)
+        `when`(kv.t9DelFrame).thenReturn(stubView)
+        `when`(kv.t9RetypeFrame).thenReturn(stubView)
+        `when`(kv.enterContainer).thenReturn(stubView)
+        `when`(kv.t9NumberFrame).thenReturn(stubView)
+        `when`(kv.t9SpaceFrame).thenReturn(stubView)
+        `when`(kv.t9EnglishFrame).thenReturn(stubView)
+        `when`(kv.keyboardShell.layoutParams).thenReturn(mock(android.view.ViewGroup.LayoutParams::class.java))
+        `when`(kv.symScrollContent.layoutParams).thenReturn(mock(android.view.ViewGroup.LayoutParams::class.java))
+        `when`(kv.symCategoryTabs).thenReturn(symCategoryTabs)
+        return kv
+    }
 }
+

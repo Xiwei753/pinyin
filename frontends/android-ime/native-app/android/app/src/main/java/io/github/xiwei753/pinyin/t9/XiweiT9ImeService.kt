@@ -217,14 +217,32 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     private fun populateSymbolPages() {
         val registry = SymbolKeyRegistry()
         val density = resources.displayMetrics.density
-        val rowHeightPx = (48 * density).toInt()
-        val symbolContentInsetPx = (4 * density).toInt()
+
+        val metrics = SymbolGridLayoutMetrics.fromDp(
+            density = density,
+            symbolPanelWidth = resources.displayMetrics.widthPixels,
+            rowHeight = (48 * density).toInt(),
+        )
+
         val pageMap = mapOf<String, android.widget.LinearLayout>(
             "punct" to (keyboardViews.symPagePunct as? android.widget.LinearLayout)!!,
             "math" to (keyboardViews.symPageMath as? android.widget.LinearLayout)!!,
             "bracket" to (keyboardViews.symPageBracket as? android.widget.LinearLayout)!!,
             "other" to (keyboardViews.symPageOther as? android.widget.LinearLayout)!!,
         )
+
+        // Apply content insets to target pages directly.
+        // Insets on the temporary buildPage are lost during child transfer,
+        // so we must set them on the actual target page containers.
+        for ((_, targetPage) in pageMap) {
+            targetPage.setPadding(
+                metrics.contentInsetLeft,
+                metrics.contentInsetTop,
+                metrics.contentInsetRight,
+                metrics.contentInsetBottom,
+            )
+        }
+
         val categoryToPage = mapOf(
             SymbolKeyRegistry.Category.FULLWIDTH_PUNCT to "punct",
             SymbolKeyRegistry.Category.HALFWIDTH_PUNCT to "punct",
@@ -248,14 +266,10 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             val symPage = SymbolGridController.buildPage(
                 context = this,
                 entries = entries,
-                rowHeightPx = rowHeightPx,
+                rowHeightPx = metrics.cellHeight,
                 generatedSymbolViews = keyboardViews.generatedSymbolViews,
                 textSize = 20f,
                 textColor = 0xFF333333.toInt(),
-                insetLeft = symbolContentInsetPx,
-                insetTop = symbolContentInsetPx,
-                insetRight = symbolContentInsetPx,
-                insetBottom = symbolContentInsetPx,
             )
 
             // Transfer all children from the grid page to the target page

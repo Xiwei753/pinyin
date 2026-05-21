@@ -74,7 +74,11 @@ object SymbolGridController {
             setTextSize(textSize)
             setTextColor(textColor)
             setText(text)
-            setBackgroundResource(R.drawable.key_bg)
+            try {
+                setBackgroundResource(R.drawable.key_bg)
+            } catch (e: android.content.res.Resources.NotFoundException) {
+                // Fallback: no background (e.g. in test environment)
+            }
             isClickable = true
             isFocusable = true
         }
