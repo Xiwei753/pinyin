@@ -3,6 +3,7 @@ package io.github.xiwei753.pinyin.t9
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -26,9 +27,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     internal lateinit var xiweiKeyboardView: XiweiKeyboardView
     internal lateinit var themeController: KeyboardThemeController
     internal lateinit var heightController: KeyboardHeightController
-    internal lateinit var panelController: KeyboardPanelController
     internal lateinit var candidateViewController: CandidateViewController
-    internal lateinit var keyBinder: KeyboardKeyBinder
     internal lateinit var deleteRepeatController: DeleteRepeatController
     internal lateinit var handler: KeyboardActionHandler
     internal lateinit var settingsRepository: SettingsRepository
@@ -44,6 +43,8 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     private val layoutBuilder = KeyboardLayoutBuilder()
     private val registry = SymbolKeyRegistry()
+
+    private var currentSymCategory: String = "punct"
 
     private val categoryToPage = mapOf(
         SymbolKeyRegistry.Category.FULLWIDTH_PUNCT to "punct",
@@ -131,39 +132,40 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     }
 
     override fun onCreateInputView(): View {
+        Log.i("XiweiT9ImeService", "inflate start")
+        val view = layoutInflater.inflate(R.layout.keyboard_view, null)
+        Log.i("XiweiT9ImeService", "inflate end")
+        
+        Log.i("XiweiT9ImeService", "bind required views start")
+        keyboardViews = KeyboardViews.bind(view)
+        xiweiKeyboardView = keyboardViews.xiweiKeyboardView!!
+        Log.i("XiweiT9ImeService", "bind required views end")
+        
         ensureCoreInitialized()
 
         deleteRepeatController = DeleteRepeatController { handler.onDelete() }
 
-        val view = layoutInflater.inflate(R.layout.keyboard_view, null)
-        keyboardViews = KeyboardViews.bind(view)
-        xiweiKeyboardView = keyboardViews.xiweiKeyboardView!!
-
         themeController = KeyboardThemeController(settingsRepository, resources)
         heightController = KeyboardHeightController(settingsRepository, resources)
-        panelController = KeyboardPanelController(keyboardViews)
-
-        keyBinder = KeyboardKeyBinder(
-            v = keyboardViews,
-            hapticFeedbackManager = hapticFeedbackManager,
-            panelController = panelController,
-            deleteRepeatController = deleteRepeatController,
-            onModeChanged = { updateKeyboardPanel() },
-        )
-        keyBinder.setOnRefreshUi { refreshUi() }
 
         candidateViewController = CandidateViewController(
             context = this,
             v = keyboardViews,
-            keyBinder = keyBinder,
             themeController = themeController,
             settingsRepository = settingsRepository,
         )
 
         setupKeyboardViewActions()
+        Log.i("XiweiT9ImeService", "xiweiKeyboardView init done")
+        Log.i("XiweiT9ImeService", "callbacks setup done")
 
         applyThemeAndHeight()
+        Log.i("XiweiT9ImeService", "theme applied")
+        
         updateKeyboardPanel()
+        Log.i("XiweiT9ImeService", "layout model built")
+        
+        Log.i("XiweiT9ImeService", "input view returned")
         return view
     }
 
@@ -234,7 +236,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 }
                 action.startsWith("symtab:") -> {
                     val cat = action.removePrefix("symtab:")
-                    panelController.currentSymCategory = cat
+                    currentSymCategory = cat
                     updateKeyboardPanel()
                 }
                 action.startsWith("symbol:commit:") -> {
@@ -290,7 +292,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         xiweiKeyboardView.layoutParams?.height = metrics.shellHeight
 
         xiweiKeyboardView.keyboardMode = handler.keyboardMode
-        xiweiKeyboardView.activeSymCategory = panelController.currentSymCategory
+        xiweiKeyboardView.activeSymCategory = currentSymCategory
         xiweiKeyboardView.lastTextMode = handler.lastTextMode
 
         rebuildLayoutModel()
@@ -342,7 +344,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 )
             }
             KeyboardMode.Symbol -> {
-                val pageName = panelController.currentSymCategory
+                val pageName = currentSymCategory
                 val catEntries = getEntriesForPage(pageName)
                 layoutBuilder.buildSymbol(
                     panelWidth = panelWidth,
@@ -379,11 +381,15 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     }
 
     internal fun updateKeyboardPanel() {
-        if (!this::handler.isInitialized || !this::panelController.isInitialized || !this::keyboardViews.isInitialized) return
-        panelController.updatePanel(handler.keyboardMode, handler.lastTextMode)
+        if (!this::handler.isInitialized || !this::keyboardViews.isInitialized) return
+        
+        if (handler.keyboardMode == KeyboardMode.Symbol || handler.keyboardMode == KeyboardMode.Number) {
+            keyboardViews.pinyinFloatingBar.visibility = View.GONE
+        }
+        
         if (this::xiweiKeyboardView.isInitialized) {
             xiweiKeyboardView.keyboardMode = handler.keyboardMode
-            xiweiKeyboardView.activeSymCategory = panelController.currentSymCategory
+            xiweiKeyboardView.activeSymCategory = currentSymCategory
             xiweiKeyboardView.lastTextMode = handler.lastTextMode
             rebuildLayoutModel()
         }

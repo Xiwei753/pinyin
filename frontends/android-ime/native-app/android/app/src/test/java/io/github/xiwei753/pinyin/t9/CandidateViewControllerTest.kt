@@ -15,7 +15,6 @@ class CandidateViewControllerTest {
 
     private lateinit var context: Context
     private lateinit var kv: KeyboardViews
-    private lateinit var keyBinder: KeyboardKeyBinder
     private lateinit var themeController: KeyboardThemeController
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var controller: CandidateViewController
@@ -31,7 +30,6 @@ class CandidateViewControllerTest {
         mockFloatingBar = mock(View::class.java)
         mockFloatingText = mock(android.widget.TextView::class.java)
         mockCandidateContainer = mock(LinearLayout::class.java)
-        keyBinder = mock(KeyboardKeyBinder::class.java)
         themeController = mock(KeyboardThemeController::class.java)
         settingsRepository = mock(SettingsRepository::class.java)
         val eng = mock(T9Engine::class.java)
@@ -43,64 +41,7 @@ class CandidateViewControllerTest {
             candidateContainer = mockCandidateContainer,
             pinyinFloatingBar = mockFloatingBar,
             pinyinFloatingText = mockFloatingText,
-            keyboardShell = mock(),
-            panelT9 = mock(),
-            panelSymbol = mock(),
-            panelNumber = mock(),
-            readingTextViews = listOf(mock(), mock(), mock(), mock()),
-            punctTextViews = listOf(mock(), mock(), mock(), mock()),
-            symPagePunct = mock(),
-            symPageMath = mock(),
-            symPageBracket = mock(),
-            symPageOther = mock(),
-            symScrollContent = mock(),
-            leftScrollRail = mock(),
-            leftScrollContent = mock(),
-            key1Text = mock(),
-            key2 = mock(), key3 = mock(), key4 = mock(), key5 = mock(),
-            key6 = mock(), key7 = mock(), key8 = mock(), key9 = mock(),
-            key2Number = mock(), key3Number = mock(), key4Number = mock(), key5Number = mock(),
-            key6Number = mock(), key7Number = mock(), key8Number = mock(), key9Number = mock(),
-            key2Letters = mock(), key3Letters = mock(), key4Letters = mock(), key5Letters = mock(),
-            key6Letters = mock(), key7Letters = mock(), key8Letters = mock(), key9Letters = mock(),
-            keyDel = mock(), keyRetype = mock(), keyEnter = mock(), keySpace = mock(),
-            keyToggleSymbol = mock(), keyToggleNumber = mock(),
-            keyToggleEnglish = mock(),
-            enterContainer = mock(),
-            symTabPunct = mock(), symTabMath = mock(), symTabBracket = mock(), symTabOther = mock(),
-            symCategoryTabs = mock(),
-            generatedSymbolViews = mutableListOf(),
-                        num0 = mock(), num1 = mock(), num2 = mock(), num3 = mock(), num4 = mock(),
-            num5 = mock(), num6 = mock(), num7 = mock(), num8 = mock(), num9 = mock(), numDot = mock(),
-
-
-                numKey1Frame = mock(),
-                numKey2Frame = mock(),
-                numKey3Frame = mock(),
-                numKey4Frame = mock(),
-                numKey5Frame = mock(),
-                numKey6Frame = mock(),
-                numKey7Frame = mock(),
-                numKey8Frame = mock(),
-                numKey9Frame = mock(),
-                numDotFrame = mock(),
-                num0Frame = mock(),
-                t9LeftScrollFrame = mock(),
-            t9SymbolButtonFrame = mock(),
-            t9Key1Frame = mock(),
-            t9Key2Frame = mock(),
-            t9Key3Frame = mock(),
-            t9Key4Frame = mock(),
-            t9Key5Frame = mock(),
-            t9Key6Frame = mock(),
-            t9Key7Frame = mock(),
-            t9Key8Frame = mock(),
-            t9Key9Frame = mock(),
-            t9DelFrame = mock(),
-            t9RetypeFrame = mock(),
-            t9NumberFrame = mock(),
-            t9SpaceFrame = mock(),
-            t9EnglishFrame = mock(),
+            xiweiKeyboardView = mock(),
         )
 
         handler = KeyboardActionHandler(mock(ImeActionSink::class.java)).apply { attachEngine(eng) }
@@ -108,7 +49,6 @@ class CandidateViewControllerTest {
         controller = CandidateViewController(
             context = context,
             v = kv,
-            keyBinder = keyBinder,
             themeController = themeController,
             settingsRepository = settingsRepository,
         )

@@ -99,27 +99,4 @@ class KeyboardThemeController(
         }
     }
 
-    fun applySymbolTabColors(v: KeyboardViews, palette: ThemePalette, activeCategory: String) {
-        val radiusPx = (14f * resources.displayMetrics.density).toInt()
-
-        fun createTabBg(color: Int): android.graphics.drawable.GradientDrawable {
-            return android.graphics.drawable.GradientDrawable().apply {
-                setColor(color)
-                cornerRadius = radiusPx.toFloat()
-            }
-        }
-
-        val tabs = listOf(
-            v.symTabPunct to "punct",
-            v.symTabMath to "math",
-            v.symTabBracket to "bracket",
-            v.symTabOther to "other",
-        )
-        for ((tab, category) in tabs) {
-            val textColor = if (category == activeCategory) palette.symTabActiveText else palette.symTabInactiveText
-            val bgColor = if (category == activeCategory) palette.symTabActiveBg else palette.symTabInactiveBg
-            tab.background = createTabBg(bgColor)
-            tab.setTextColor(textColor)
-        }
-    }
 }

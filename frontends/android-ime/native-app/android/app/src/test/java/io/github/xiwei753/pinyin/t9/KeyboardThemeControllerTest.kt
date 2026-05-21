@@ -85,53 +85,7 @@ class KeyboardThemeControllerTest {
         assertNotNull("Theme palette should not be null", palette)
     }
 
-    @Test
-    fun testApplySymbolTabColorsPreservesRoundedCorners() {
-        `when`(mockRepo.getTheme()).thenReturn("light")
-        val palette = controller.getThemePalette()
-        val mockViews = mock(KeyboardViews::class.java)
-        val punctTab = mock(TextView::class.java)
-        val mathTab = mock(TextView::class.java)
-        val bracketTab = mock(TextView::class.java)
-        val otherTab = mock(TextView::class.java)
 
-        `when`(mockViews.symTabPunct).thenReturn(punctTab)
-        `when`(mockViews.symTabMath).thenReturn(mathTab)
-        `when`(mockViews.symTabBracket).thenReturn(bracketTab)
-        `when`(mockViews.symTabOther).thenReturn(otherTab)
-
-        controller.applySymbolTabColors(mockViews, palette, "punct")
-
-        // Must use GradientDrawable background (preserves rounded corners) instead of setBackgroundColor
-        verify(punctTab).setTextColor(palette.symTabActiveText)
-        verify(mathTab).setTextColor(palette.symTabInactiveText)
-    }
-
-    @Test
-    fun testApplySymbolTabColorsActiveInactiveCorrect() {
-        `when`(mockRepo.getTheme()).thenReturn("light")
-        val palette = controller.getThemePalette()
-        val mockViews = mock(KeyboardViews::class.java)
-        val punctTab = mock(TextView::class.java)
-        val mathTab = mock(TextView::class.java)
-        val bracketTab = mock(TextView::class.java)
-        val otherTab = mock(TextView::class.java)
-
-        `when`(mockViews.symTabPunct).thenReturn(punctTab)
-        `when`(mockViews.symTabMath).thenReturn(mathTab)
-        `when`(mockViews.symTabBracket).thenReturn(bracketTab)
-        `when`(mockViews.symTabOther).thenReturn(otherTab)
-
-        controller.applySymbolTabColors(mockViews, palette, "punct")
-        verify(punctTab).setTextColor(palette.symTabActiveText)
-        verify(mathTab).setTextColor(palette.symTabInactiveText)
-        verify(bracketTab).setTextColor(palette.symTabInactiveText)
-        verify(otherTab).setTextColor(palette.symTabInactiveText)
-
-        controller.applySymbolTabColors(mockViews, palette, "math")
-        verify(punctTab).setTextColor(palette.symTabInactiveText)
-        verify(mathTab).setTextColor(palette.symTabActiveText)
-    }
 
     @Test
     fun darkThemeNormalKeyBgIsNotWhite() {
@@ -193,30 +147,4 @@ class KeyboardThemeControllerTest {
         assertEquals(ThemeColors.LIGHT_SPECIAL_KEY_PRESSED, palette.specialKeyPressedBgColor)
     }
 
-    @Test
-    fun testApplySymbolTabColorsMultipleSwitchesKeepRoundedCorners() {
-        `when`(mockRepo.getTheme()).thenReturn("light")
-        val palette = controller.getThemePalette()
-        val mockViews = mock(KeyboardViews::class.java)
-        val tabs = listOf(
-            mock(TextView::class.java),
-            mock(TextView::class.java),
-            mock(TextView::class.java),
-            mock(TextView::class.java),
-        )
-        `when`(mockViews.symTabPunct).thenReturn(tabs[0])
-        `when`(mockViews.symTabMath).thenReturn(tabs[1])
-        `when`(mockViews.symTabBracket).thenReturn(tabs[2])
-        `when`(mockViews.symTabOther).thenReturn(tabs[3])
-
-        for (cat in listOf("punct", "math", "bracket", "other", "punct", "math")) {
-            controller.applySymbolTabColors(mockViews, palette, cat)
-        }
-
-        // After multiple switches, neither setBackgroundColor nor setBackgroundResource was called
-        // (background is set via GradientDrawable directly)
-        for (tab in tabs) {
-            verify(tab, never()).setBackgroundColor(anyInt())
-        }
-    }
 }

@@ -44,7 +44,7 @@ class XiweiT9ImeServiceRefactoredRegressionTest {
     fun testServiceHasRequiredControllers() {
         val expectedFields = listOf(
             "keyboardViews", "themeController", "heightController",
-            "panelController", "candidateViewController", "keyBinder",
+            "candidateViewController",
             "deleteRepeatController", "handler", "settingsRepository",
             "hapticFeedbackManager"
         )
