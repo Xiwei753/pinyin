@@ -232,8 +232,6 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         )
 
         // Apply content insets to target pages directly.
-        // Insets on the temporary buildPage are lost during child transfer,
-        // so we must set them on the actual target page containers.
         for ((_, targetPage) in pageMap) {
             targetPage.setPadding(
                 metrics.contentInsetLeft,
@@ -243,6 +241,8 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             )
         }
 
+        // Aggregate entries by page BEFORE building grid
+        val pageToEntries = mutableMapOf<String, MutableList<Pair<Int, String>>>()
         val categoryToPage = mapOf(
             SymbolKeyRegistry.Category.FULLWIDTH_PUNCT to "punct",
             SymbolKeyRegistry.Category.HALFWIDTH_PUNCT to "punct",
@@ -257,6 +257,13 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             SymbolKeyRegistry.Category.OTHER to "other",
         )
 
+        for (category in registry.getAllCategories()) {
+            val pageName = categoryToPage[category] ?: "other"
+            val entries = registry.getSymbolsByCategory(category)
+            if (entries.isEmpty()) continue
+            pageToEntries.getOrPut(pageName) { mutableListOf() }.addAll(entries)
+        }
+
         // Symbol click handler: commit text and return to last text mode
         val onSymbolClick = { symbol: String ->
             handler.onDigitPressed(symbol)
@@ -267,10 +274,9 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             hapticFeedbackManager.performTap(view)
         }
 
-        for (category in registry.getAllCategories()) {
-            val pageName = categoryToPage[category] ?: "other"
-            val page = pageMap[pageName] ?: continue
-            val entries = registry.getSymbolsByCategory(category)
+        // Build ONE grid per page with all aggregated entries
+        for ((pageName, targetPage) in pageMap) {
+            val entries = pageToEntries[pageName] ?: continue
             if (entries.isEmpty()) continue
 
             val symPage = SymbolGridController.buildPage(
@@ -289,7 +295,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             while (symPage.childCount > 0) {
                 val child = symPage.getChildAt(0)
                 symPage.removeViewAt(0)
-                page.addView(child)
+                targetPage.addView(child)
             }
         }
     }
@@ -352,6 +358,48 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         }
         logEnterAction("no editorInfo, fallback: commitText newline")
         currentInputConnection?.commitText("\n", 1)
+    }
+
+    override fun performEnterActionIfAvailable(): Boolean {
+        val info = currentEditorInfo ?: return false
+        val imeOptions = info.imeOptions
+        val flags = imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION
+        if (flags != 0) {
+            logEnterAction("IME_FLAG_NO_ENTER_ACTION set, skip action")
+            return false
+        }
+
+        val action = imeOptions and EditorInfo.IME_MASK_ACTION
+        val actionId = info.actionId
+        val actionLabel = info.actionLabel
+
+        // custom actionId/actionLabel
+        if (actionId != 0 && actionLabel != null) {
+            val result = currentInputConnection?.performEditorAction(actionId)
+            logEnterAction("performEnterActionIfAvailable custom actionId=$actionId result=$result")
+            if (result == true) return true
+        }
+
+        // standard IME action
+        val hasStandardAction = action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED
+        if (hasStandardAction) {
+            val result = currentInputConnection?.performEditorAction(action)
+            logEnterAction("performEnterActionIfAvailable action=$action result=$result")
+            if (result == true) return true
+        }
+
+        return false
+    }
+
+    override fun isEnterActionAvailable(): Boolean {
+        val info = currentEditorInfo ?: return false
+        val imeOptions = info.imeOptions
+        val flags = imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION
+        if (flags != 0) return false
+        val action = imeOptions and EditorInfo.IME_MASK_ACTION
+        if (action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED) return true
+        if (info.actionId != 0 && info.actionLabel != null) return true
+        return false
     }
 
     private fun logEnterAction(msg: String) {

@@ -144,9 +144,16 @@ class KeyboardActionHandlerTest {
     }
 
     @Test
-    fun testSymbolMode_enter_commitsNewline() {
+    fun testSymbolMode_enter_shortPress_callsPerformEditorActionOrNewline() {
         handler.switchKeyboardMode(KeyboardMode.Symbol)
         handler.onEnter()
+        verify(sink).performEditorActionOrNewline()
+    }
+
+    @Test
+    fun testSymbolMode_enter_longPress_commitsNewline() {
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        handler.onEnterLongPress()
         verify(sink).commitNewline()
     }
 
@@ -165,9 +172,16 @@ class KeyboardActionHandlerTest {
     }
 
     @Test
-    fun testNumberMode_enter_commitsNewline() {
+    fun testNumberMode_enter_shortPress_callsPerformEditorActionOrNewline() {
         handler.switchKeyboardMode(KeyboardMode.Number)
         handler.onEnter()
+        verify(sink).performEditorActionOrNewline()
+    }
+
+    @Test
+    fun testNumberMode_enter_longPress_commitsNewline() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.onEnterLongPress()
         verify(sink).commitNewline()
     }
 
@@ -560,17 +574,70 @@ class KeyboardActionHandlerTest {
         assertEquals("neng", handler.preedit)
     }
 
-    // --- Enter key newline tests ---
+    // --- Enter key short/long press tests ---
 
     @Test
-    fun testChineseT9_enter_emptyBuffer_commitsNewline() {
-        handler.onEnter()
+    fun testChineseT9_enterShortPress_emptyBuffer_noAction_callsPerformEditorActionOrNewline() {
+        `when`(sink.performEnterActionIfAvailable()).thenReturn(false)
+        handler.onEnterShortPress()
+        verify(sink).performEnterActionIfAvailable()
+        verify(sink).performEditorActionOrNewline()
+        verify(sink, never()).commitNewline()
+    }
+
+    @Test
+    fun testChineseT9_enterShortPress_emptyBuffer_withAction_performsAction() {
+        `when`(sink.performEnterActionIfAvailable()).thenReturn(true)
+        handler.onEnterShortPress()
+        verify(sink).performEnterActionIfAvailable()
+        verify(sink, never()).performEditorActionOrNewline()
+        verify(sink, never()).commitNewline()
+    }
+
+    @Test
+    fun testChineseT9_enterShortPress_withBuffer_noAction_commitsCandidateThenNewline() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+        `when`(sink.performEnterActionIfAvailable()).thenReturn(false)
+
+        handler.onEnterShortPress()
+        verify(sink).commitText("我")
+        verify(sink).performEnterActionIfAvailable()
         verify(sink).commitNewline()
         verify(sink, never()).performEditorActionOrNewline()
     }
 
     @Test
-    fun testChineseT9_enter_withBuffer_commitsCandidate() {
+    fun testChineseT9_enterShortPress_withBuffer_withAction_commitsCandidateThenAction() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+        `when`(sink.performEnterActionIfAvailable()).thenReturn(true)
+
+        handler.onEnterShortPress()
+        verify(sink).commitText("我")
+        verify(sink).performEnterActionIfAvailable()
+        verify(sink, never()).commitNewline()
+        verify(sink, never()).performEditorActionOrNewline()
+    }
+
+    @Test
+    fun testChineseT9_enterLongPress_emptyBuffer_commitsNewline() {
+        handler.onEnterLongPress()
+        verify(sink).commitNewline()
+        verify(sink, never()).performEditorActionOrNewline()
+        verify(sink, never()).performEnterActionIfAvailable()
+    }
+
+    @Test
+    fun testChineseT9_enterLongPress_withBuffer_commitsThenNewline() {
         setupCandidates(listOf(
             Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
         ))
@@ -578,28 +645,81 @@ class KeyboardActionHandlerTest {
         handler.onDigitPressed("6")
         handler.refreshCandidates(30)
 
-        handler.onEnter()
+        handler.onEnterLongPress()
         verify(sink).commitText("我")
+        verify(sink).commitNewline()
+        verify(sink, never()).performEditorActionOrNewline()
+        verify(sink, never()).performEnterActionIfAvailable()
+    }
+
+    @Test
+    fun testEnglishT9_enterShortPress_noPending_noAction_callsPerformEditorActionOrNewline() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        `when`(sink.performEnterActionIfAvailable()).thenReturn(false)
+        handler.onEnterShortPress()
+        verify(sink).performEnterActionIfAvailable()
+        verify(sink).performEditorActionOrNewline()
         verify(sink, never()).commitNewline()
     }
 
     @Test
-    fun testEnglishT9_enter_noPending_commitsNewline() {
+    fun testEnglishT9_enterShortPress_noPending_withAction_performsAction() {
         handler.switchKeyboardMode(KeyboardMode.EnglishT9)
-        handler.onEnter()
+        `when`(sink.performEnterActionIfAvailable()).thenReturn(true)
+        handler.onEnterShortPress()
+        verify(sink).performEnterActionIfAvailable()
+        verify(sink, never()).performEditorActionOrNewline()
+        verify(sink, never()).commitNewline()
+    }
+
+    @Test
+    fun testEnglishT9_enterShortPress_withPending_noAction_commitsCharThenNewline() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onDigitPressed("2") // 'a'
+        assertTrue(handler.englishPending)
+        `when`(sink.performEnterActionIfAvailable()).thenReturn(false)
+
+        handler.onEnterShortPress()
+        verify(sink).commitText("a")
+        verify(sink).performEnterActionIfAvailable()
         verify(sink).commitNewline()
         verify(sink, never()).performEditorActionOrNewline()
     }
 
     @Test
-    fun testEnglishT9_enter_withPending_commitsChar() {
+    fun testEnglishT9_enterShortPress_withPending_withAction_commitsCharThenAction() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onDigitPressed("2") // 'a'
+        assertTrue(handler.englishPending)
+        `when`(sink.performEnterActionIfAvailable()).thenReturn(true)
+
+        handler.onEnterShortPress()
+        verify(sink).commitText("a")
+        verify(sink).performEnterActionIfAvailable()
+        verify(sink, never()).commitNewline()
+        verify(sink, never()).performEditorActionOrNewline()
+    }
+
+    @Test
+    fun testEnglishT9_enterLongPress_noPending_commitsNewline() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onEnterLongPress()
+        verify(sink).commitNewline()
+        verify(sink, never()).performEditorActionOrNewline()
+        verify(sink, never()).performEnterActionIfAvailable()
+    }
+
+    @Test
+    fun testEnglishT9_enterLongPress_withPending_commitsThenNewline() {
         handler.switchKeyboardMode(KeyboardMode.EnglishT9)
         handler.onDigitPressed("2") // 'a'
         assertTrue(handler.englishPending)
 
-        handler.onEnter()
+        handler.onEnterLongPress()
         verify(sink).commitText("a")
-        verify(sink, never()).commitNewline()
+        verify(sink).commitNewline()
+        verify(sink, never()).performEditorActionOrNewline()
+        verify(sink, never()).performEnterActionIfAvailable()
     }
 
 }

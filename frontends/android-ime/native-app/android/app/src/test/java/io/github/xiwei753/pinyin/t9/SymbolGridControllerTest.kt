@@ -328,7 +328,7 @@ class SymbolGridControllerTest {
     }
 
     @Test
-    fun placeholderHasBackgroundVisual() {
+    fun placeholderIsTransparent() {
         val entries = listOf(1 to "X")
         val page = SymbolGridController.buildPage(
             context = context,

@@ -5,6 +5,8 @@ interface ImeActionSink {
     fun commitNewline()
     fun sendDelete()
     fun performEditorActionOrNewline()
+    fun performEnterActionIfAvailable(): Boolean
+    fun isEnterActionAvailable(): Boolean
     fun finishComposingText()
     fun refreshUi()
     fun scheduleEnglishTimeout(runnable: Runnable, delayMs: Long)

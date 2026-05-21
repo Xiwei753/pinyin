@@ -117,7 +117,7 @@ object SymbolGridController {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 1f,
             )
-            setBackgroundColor(0x1A000000)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
             isClickable = false
             isEnabled = false
         }

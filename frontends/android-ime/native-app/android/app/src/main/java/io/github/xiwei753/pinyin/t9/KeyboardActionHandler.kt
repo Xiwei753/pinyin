@@ -331,24 +331,62 @@ class KeyboardActionHandler(
     }
 
     fun onEnter() {
+        onEnterShortPress()
+    }
+
+    fun onEnterShortPress() {
+        val hasComposing = when (keyboardMode) {
+            KeyboardMode.ChineseT9 -> rawBuffer.isNotEmpty()
+            KeyboardMode.EnglishT9 -> englishPending
+            else -> false
+        }
+
+        if (hasComposing) {
+            commitCurrentComposing()
+        }
+
+        if (actionSink.performEnterActionIfAvailable()) {
+            return
+        }
+
+        if (hasComposing) {
+            actionSink.commitNewline()
+            return
+        }
+
+        actionSink.performEditorActionOrNewline()
+    }
+
+    fun onEnterLongPress() {
         when (keyboardMode) {
             KeyboardMode.ChineseT9 -> {
                 if (rawBuffer.isNotEmpty()) {
                     commitFirstCandidateOrPreedit()
-                    return
                 }
-                actionSink.commitNewline()
             }
             KeyboardMode.EnglishT9 -> {
                 if (englishPending) {
                     commitEnglishChar()
-                    return
                 }
-                actionSink.commitNewline()
             }
-            KeyboardMode.Symbol, KeyboardMode.Number -> {
-                actionSink.commitNewline()
+            else -> {}
+        }
+        actionSink.commitNewline()
+    }
+
+    private fun commitCurrentComposing() {
+        when (keyboardMode) {
+            KeyboardMode.ChineseT9 -> {
+                if (rawBuffer.isNotEmpty()) {
+                    commitFirstCandidateOrPreedit()
+                }
             }
+            KeyboardMode.EnglishT9 -> {
+                if (englishPending) {
+                    commitEnglishChar()
+                }
+            }
+            else -> {}
         }
     }
 
