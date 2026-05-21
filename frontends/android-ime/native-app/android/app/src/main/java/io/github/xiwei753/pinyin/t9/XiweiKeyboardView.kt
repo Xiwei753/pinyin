@@ -28,6 +28,7 @@ class XiweiKeyboardView @JvmOverloads constructor(
     var onHapticTap: (() -> Unit)? = null
     var onHapticSpecial: (() -> Unit)? = null
     var onHapticLongPress: (() -> Unit)? = null
+    var requestRebuildLayout: (() -> Unit)? = null
 
     private val renderer = KeyboardRenderer()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -57,6 +58,13 @@ class XiweiKeyboardView @JvmOverloads constructor(
             pressedKeyId = pressedKeyId,
             longPressedKeyId = longPressedKeyId,
         )
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (w > 0 && h > 0 && (w != oldw || h != oldh)) {
+            requestRebuildLayout?.invoke()
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -118,7 +126,7 @@ class XiweiKeyboardView @JvmOverloads constructor(
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                cancelLongPress()
+                cancelKeyboardLongPress()
                 stopDeleteRepeat()
 
                 val key = trackedKey
@@ -141,6 +149,7 @@ class XiweiKeyboardView @JvmOverloads constructor(
     private fun dispatchAction(key: KeyboardKey) {
         val action = key.action
         when {
+            action == "separator" -> onKeyAction?.invoke("separator")
             action.startsWith("digit:") -> {
                 val digit = action.removePrefix("digit:")
                 onKeyAction?.invoke("digit:$digit")
@@ -176,6 +185,7 @@ class XiweiKeyboardView @JvmOverloads constructor(
     private fun cancelKeyboardLongPress() {
         if (longPressCheckPending) {
             longPressRunnable?.let { mainHandler.removeCallbacks(it) }
+            longPressRunnable = null
             longPressCheckPending = false
         }
     }
@@ -203,6 +213,23 @@ class XiweiKeyboardView @JvmOverloads constructor(
 
     fun destroy() {
         stopDeleteRepeat()
-        cancelLongPress()
+        cancelKeyboardLongPress()
+        trackedKey = null
+        pressedKeyId = null
+        longPressedKeyId = null
+    }
+
+    internal fun simulateLongPress() {
+        val lk = trackedKey ?: return
+        longPressFired = true
+        longPressedKeyId = lk.id
+        cancelKeyboardLongPress()
+        invalidate()
+        onHapticLongPress?.invoke()
+        if (lk.id == "enter") {
+            onEnterLongPress?.invoke()
+        } else if (lk.id == "del") {
+            startDeleteRepeat()
+        }
     }
 }

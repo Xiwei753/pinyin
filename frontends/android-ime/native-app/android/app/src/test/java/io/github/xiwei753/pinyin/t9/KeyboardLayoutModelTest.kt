@@ -36,7 +36,11 @@ class KeyboardLayoutModelTest {
         assertNotNull("T9 mode should have bottom left key", model.bottomLeftKey)
 
         val digitKeys = allKeys.filter { it.action.startsWith("digit:") }
-        assertEquals("Should have 9 digit keys (2-9 + 1 separator)", 9, digitKeys.size)
+        assertEquals("Should have 8 digit keys (2-9)", 8, digitKeys.size)
+
+        val separatorKey = allKeys.find { it.action == "separator" }
+        assertNotNull("Should have separator key", separatorKey)
+        assertEquals("key_1", separatorKey!!.id)
     }
 
     @Test

@@ -43,14 +43,8 @@ class KeyboardRenderer {
         val allKeys = mutableListOf<KeyboardKey>()
 
         for (key in layoutModel.leftRailKeys) {
-            val shiftedRect = if (key.isLeftRail) {
-                Rect(key.rect).apply { offset(0, leftRailScrollY) }
-            } else {
-                key.rect
-            }
-            if (shiftedRect.intersect(key.rect)) {
-                allKeys.add(key.copy(rect = shiftedRect))
-            }
+            val shiftedRect = Rect(key.rect).apply { offset(0, leftRailScrollY) }
+            allKeys.add(key.copy(rect = shiftedRect))
         }
 
         if (layoutModel.bottomLeftKey != null) {
@@ -216,23 +210,22 @@ class KeyboardRenderer {
     }
 
     fun hitTest(keys: List<KeyboardKey>, leftRailKeys: List<KeyboardKey>, bottomLeftKey: KeyboardKey?, x: Float, y: Float, leftRailScrollY: Int): KeyboardKey? {
-        val all = mutableListOf<KeyboardKey>()
+        val ix = x.toInt()
+        val iy = y.toInt()
 
         for (k in leftRailKeys) {
             val shifted = Rect(k.rect).apply { offset(0, leftRailScrollY) }
-            if (k.rect.intersect(Rect(k.rect.left, k.rect.top, k.rect.right, k.rect.bottom))) {
-                if (shifted.contains(x.toInt(), y.toInt())) {
-                    return k
-                }
+            if (Rect.intersects(k.rect, shifted) && shifted.contains(ix, iy)) {
+                return k
             }
         }
 
         if (bottomLeftKey != null) {
-            if (bottomLeftKey.rect.contains(x.toInt(), y.toInt())) return bottomLeftKey
+            if (bottomLeftKey.rect.contains(ix, iy)) return bottomLeftKey
         }
 
         for (k in keys) {
-            if (k.rect.contains(x.toInt(), y.toInt())) return k
+            if (k.rect.contains(ix, iy)) return k
         }
 
         return null

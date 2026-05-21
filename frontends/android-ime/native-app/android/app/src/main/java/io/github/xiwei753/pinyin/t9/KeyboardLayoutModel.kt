@@ -84,7 +84,7 @@ class KeyboardLayoutBuilder {
                 role = KeyboardKeyRole.SPECIAL,
                 rect = geo.key1Rect,
                 label = "分词",
-                action = "digit:1",
+                action = "separator",
             )
         )
 

@@ -181,17 +181,16 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             handler.onEnterLongPress()
         }
 
+        xiweiKeyboardView.requestRebuildLayout = {
+            rebuildLayoutModel()
+        }
+
         xiweiKeyboardView.onKeyAction = { action ->
             when {
+                action == "separator" -> handler.onSeparator()
                 action.startsWith("digit:") -> {
                     val digit = action.removePrefix("digit:")
-                    if (digit.length == 1 && digit[0] == '1') {
-                        handler.onSeparator()
-                    } else if (digit == "." || digit == "0") {
-                        handler.onDigitPressed(digit)
-                    } else {
-                        handler.onDigitPressed(digit)
-                    }
+                    handler.onDigitPressed(digit)
                 }
                 action == "del" -> handler.onDelete()
                 action == "retype" -> handler.onClearComposingForRetype()
