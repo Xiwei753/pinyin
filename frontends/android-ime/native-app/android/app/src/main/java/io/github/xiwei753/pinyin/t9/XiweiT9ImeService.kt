@@ -195,7 +195,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     internal fun updateKeyboardPanel() {
         if (!this::handler.isInitialized || !this::panelController.isInitialized || !this::keyboardViews.isInitialized) return
-        panelController.updatePanel(handler.keyboardMode)
+        panelController.updatePanel(handler.keyboardMode, handler.lastTextMode)
     }
 
     private fun setupSymbolCategories() {
@@ -228,15 +228,34 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     override fun performEditorActionOrNewline() {
         val info = currentEditorInfo
         if (info != null) {
-            val action = info.imeOptions and EditorInfo.IME_MASK_ACTION
-            if (action == EditorInfo.IME_ACTION_NONE || action == EditorInfo.IME_ACTION_UNSPECIFIED) {
-                currentInputConnection?.commitText("\n", 1)
+            val imeOptions = info.imeOptions
+            val action = imeOptions and EditorInfo.IME_MASK_ACTION
+            val actionId = info.actionId
+            val actionLabel = info.actionLabel
+
+            logEditorAction(imeOptions, action, actionId, actionLabel)
+
+            if (actionId != 0 && actionLabel != null) {
+                val result = currentInputConnection?.performEditorAction(actionId)
+                debugLogger.log("XiweiT9Enter", "custom actionId=$actionId actionLabel=$actionLabel result=$result")
                 return
             }
-            currentInputConnection?.performEditorAction(action)
+
+            if (action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED) {
+                val result = currentInputConnection?.performEditorAction(action)
+                debugLogger.log("XiweiT9Enter", "performEditorAction action=$action result=$result")
+                return
+            }
+
+            currentInputConnection?.commitText("\n", 1)
             return
         }
         currentInputConnection?.commitText("\n", 1)
+    }
+
+    private fun logEditorAction(imeOptions: Int, action: Int, actionId: Int, actionLabel: CharSequence?) {
+        if (!settingsRepository.isDebugLoggingEnabled()) return
+        debugLogger.log("XiweiT9Enter", "imeOptions=$imeOptions action=$action actionId=$actionId actionLabel=$actionLabel")
     }
 
     override fun finishComposingText() {

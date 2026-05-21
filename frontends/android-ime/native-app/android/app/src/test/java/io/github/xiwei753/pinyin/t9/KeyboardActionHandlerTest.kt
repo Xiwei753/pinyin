@@ -356,6 +356,170 @@ class KeyboardActionHandlerTest {
         assertEquals("", handler.preedit)
     }
 
+    // --- lastTextMode tests ---
+
+    @Test
+    fun testLastTextMode_ChineseToSymbol() {
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        assertEquals(KeyboardMode.ChineseT9, handler.lastTextMode)
+    }
+
+    @Test
+    fun testLastTextMode_EnglishToSymbol() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        assertEquals(KeyboardMode.EnglishT9, handler.lastTextMode)
+    }
+
+    @Test
+    fun testLastTextMode_ChineseToNumber() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        assertEquals(KeyboardMode.ChineseT9, handler.lastTextMode)
+    }
+
+    @Test
+    fun testLastTextMode_EnglishToNumber() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        assertEquals(KeyboardMode.EnglishT9, handler.lastTextMode)
+    }
+
+    @Test
+    fun testLastTextMode_SymbolToNumber_doesNotChange() {
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        assertEquals(KeyboardMode.ChineseT9, handler.lastTextMode)
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        assertEquals(KeyboardMode.ChineseT9, handler.lastTextMode)
+    }
+
+    @Test
+    fun testLastTextMode_NumberToSymbol_doesNotChange() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        assertEquals(KeyboardMode.ChineseT9, handler.lastTextMode)
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        assertEquals(KeyboardMode.ChineseT9, handler.lastTextMode)
+    }
+
+    @Test
+    fun testLastTextMode_SymbolReturnsToLastTextMode() {
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        assertEquals(KeyboardMode.ChineseT9, handler.lastTextMode)
+        handler.switchKeyboardMode(handler.lastTextMode)
+        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun testLastTextMode_SymbolReturnsToEnglish() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        assertEquals(KeyboardMode.EnglishT9, handler.lastTextMode)
+        handler.switchKeyboardMode(handler.lastTextMode)
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun testLastTextMode_NumberReturnsToLastTextMode() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        assertEquals(KeyboardMode.ChineseT9, handler.lastTextMode)
+        handler.switchKeyboardMode(handler.lastTextMode)
+        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun testToggleSymbolKey_fromChinese_goesToSymbol() {
+        handler.toggleSymbolKey()
+        assertEquals(KeyboardMode.Symbol, handler.keyboardMode)
+    }
+
+    @Test
+    fun testToggleSymbolKey_fromSymbol_returnsToLastTextMode() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.toggleSymbolKey()
+        assertEquals(KeyboardMode.Symbol, handler.keyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, handler.lastTextMode)
+        handler.toggleSymbolKey()
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun testToggleSymbolKey_fromNumber_goesToSymbol() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.toggleSymbolKey()
+        assertEquals(KeyboardMode.Symbol, handler.keyboardMode)
+    }
+
+    @Test
+    fun testToggleNumberKey_fromChinese_goesToNumber() {
+        handler.toggleNumberKey()
+        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+    }
+
+    @Test
+    fun testToggleNumberKey_fromNumber_returnsToLastTextMode() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.toggleNumberKey()
+        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, handler.lastTextMode)
+        handler.toggleNumberKey()
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun testToggleNumberKey_fromSymbol_goesToNumber() {
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        handler.toggleNumberKey()
+        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+    }
+
+    @Test
+    fun testSymbolMode_space_commitsSpace() {
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        handler.onSpace()
+        verify(sink).commitText(" ")
+    }
+
+    @Test
+    fun testNumberMode_space_commitsSpace() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.onSpace()
+        verify(sink).commitText(" ")
+    }
+
+    @Test
+    fun testNumberMode_dot_commitsDot() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.onDigitPressed(".")
+        verify(sink).commitText(".")
+    }
+
+    @Test
+    fun testNumberMode_zero_commitsZero() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.onDigitPressed("0")
+        verify(sink).commitText("0")
+    }
+
+    @Test
+    fun testNumberMode_one_commitsOne() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.onDigitPressed("1")
+        verify(sink).commitText("1")
+    }
+
+    @Test
+    fun testNumberMode_five_commitsFive() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.onDigitPressed("5")
+        verify(sink).commitText("5")
+    }
+
+    @Test
+    fun testNumberMode_nine_commitsNine() {
+        handler.switchKeyboardMode(KeyboardMode.Number)
+        handler.onDigitPressed("9")
+        verify(sink).commitText("9")
+    }
+
     // --- Active reading tests ---
 
     @Test

@@ -43,4 +43,59 @@ class SymbolKeyRegistryTest {
         val ids = registry.getAllSymbolIds()
         assertEquals("Should have 60 ids", 60, ids.size)
     }
+
+    @Test
+    fun testGetSymbolsByCategory_fullwidthPunct() {
+        val punct = registry.getSymbolsByCategory(SymbolKeyRegistry.Category.FULLWIDTH_PUNCT)
+        assertTrue(punct.isNotEmpty())
+        assertTrue(punct.any { it.second == "\uFF0C" })
+        assertTrue(punct.any { it.second == "\u3002" })
+    }
+
+    @Test
+    fun testGetSymbolsByCategory_math() {
+        val math = registry.getSymbolsByCategory(SymbolKeyRegistry.Category.MATH)
+        assertTrue(math.isNotEmpty())
+        assertTrue(math.any { it.second == "+" })
+        assertTrue(math.any { it.second == "-" })
+    }
+
+    @Test
+    fun testGetSymbolsByCategory_bracket() {
+        val bracket = registry.getSymbolsByCategory(SymbolKeyRegistry.Category.BRACKET)
+        assertTrue(bracket.isNotEmpty())
+        assertTrue(bracket.any { it.second == "\uFF08" })
+        assertTrue(bracket.any { it.second == "\uFF09" })
+    }
+
+    @Test
+    fun testGetSymbolsByCategory_currency() {
+        val currency = registry.getSymbolsByCategory(SymbolKeyRegistry.Category.CURRENCY)
+        assertTrue(currency.isNotEmpty())
+        assertTrue(currency.any { it.second == "$" })
+    }
+
+    @Test
+    fun testGetAllCategories() {
+        val cats = registry.getAllCategories()
+        assertTrue(cats.contains(SymbolKeyRegistry.Category.FULLWIDTH_PUNCT))
+        assertTrue(cats.contains(SymbolKeyRegistry.Category.MATH))
+        assertTrue(cats.contains(SymbolKeyRegistry.Category.BRACKET))
+    }
+
+    @Test
+    fun testCategoryEntriesSumToTotal() {
+        var total = 0
+        for (cat in registry.getAllCategories()) {
+            total += registry.getSymbolsByCategory(cat).size
+        }
+        assertEquals(60, total)
+    }
+
+    @Test
+    fun testAllCategoriesHaveDisplayName() {
+        for (cat in registry.getAllCategories()) {
+            assertTrue(cat.displayName.isNotEmpty())
+        }
+    }
 }

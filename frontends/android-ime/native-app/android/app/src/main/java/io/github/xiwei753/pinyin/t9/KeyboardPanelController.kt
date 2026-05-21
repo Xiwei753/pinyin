@@ -1,6 +1,7 @@
 package io.github.xiwei753.pinyin.t9
 
 import android.view.View
+import android.widget.TextView
 
 class KeyboardPanelController(
     private val v: KeyboardViews,
@@ -8,7 +9,7 @@ class KeyboardPanelController(
     var currentSymCategory: String = "punct"
         private set
 
-    fun updatePanel(keyboardMode: KeyboardMode) {
+    fun updatePanel(keyboardMode: KeyboardMode, lastTextMode: KeyboardMode = KeyboardMode.ChineseT9) {
         v.panelT9.visibility = if (keyboardMode == KeyboardMode.ChineseT9 || keyboardMode == KeyboardMode.EnglishT9) View.VISIBLE else View.GONE
         v.panelSymbol.visibility = if (keyboardMode == KeyboardMode.Symbol) View.VISIBLE else View.GONE
         v.panelNumber.visibility = if (keyboardMode == KeyboardMode.Number) View.VISIBLE else View.GONE
@@ -17,13 +18,27 @@ class KeyboardPanelController(
             v.pinyinFloatingBar.visibility = View.GONE
         }
 
+        val symText = v.keyToggleSymbol as? TextView
+        val numText = v.keyToggleNumber as? TextView
 
-        if (keyboardMode == KeyboardMode.ChineseT9 || keyboardMode == KeyboardMode.EnglishT9) {
-            (v.keyToggleNumber as? android.widget.TextView)?.text = "123"
-        } else {
-            (v.keyToggleNumber as? android.widget.TextView)?.text = "中文"
+        when (keyboardMode) {
+            KeyboardMode.ChineseT9 -> {
+                symText?.text = "符"
+                numText?.text = "123"
+            }
+            KeyboardMode.EnglishT9 -> {
+                symText?.text = "符"
+                numText?.text = "123"
+            }
+            KeyboardMode.Symbol -> {
+                symText?.text = if (lastTextMode == KeyboardMode.EnglishT9) "英" else "中"
+                numText?.text = "123"
+            }
+            KeyboardMode.Number -> {
+                symText?.text = "符"
+                numText?.text = if (lastTextMode == KeyboardMode.EnglishT9) "英" else "中"
+            }
         }
-
 
         v.keyToggleEnglish.text = if (keyboardMode == KeyboardMode.EnglishT9) "英/中" else "中/英"
     }

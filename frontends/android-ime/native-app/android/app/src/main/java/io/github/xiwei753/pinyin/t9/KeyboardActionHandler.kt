@@ -12,6 +12,8 @@ class KeyboardActionHandler(
     var keyboardMode: KeyboardMode = KeyboardMode.ChineseT9
         private set
 
+    var lastTextMode: KeyboardMode = KeyboardMode.ChineseT9
+
     private var _currentCandidates: List<Candidate> = emptyList()
     private var fallbackBuffer: String = ""
 
@@ -68,9 +70,30 @@ class KeyboardActionHandler(
 
     fun switchKeyboardMode(targetMode: KeyboardMode) {
         if (keyboardMode == targetMode) return
+        val oldMode = keyboardMode
         leavingCurrentMode()
+        if ((oldMode == KeyboardMode.ChineseT9 || oldMode == KeyboardMode.EnglishT9) &&
+            (targetMode == KeyboardMode.Symbol || targetMode == KeyboardMode.Number)) {
+            lastTextMode = oldMode
+        }
         keyboardMode = targetMode
         actionSink.refreshUi()
+    }
+
+    fun toggleSymbolKey() {
+        when (keyboardMode) {
+            KeyboardMode.Symbol -> switchKeyboardMode(lastTextMode)
+            KeyboardMode.Number -> switchKeyboardMode(KeyboardMode.Symbol)
+            else -> switchKeyboardMode(KeyboardMode.Symbol)
+        }
+    }
+
+    fun toggleNumberKey() {
+        when (keyboardMode) {
+            KeyboardMode.Number -> switchKeyboardMode(lastTextMode)
+            KeyboardMode.Symbol -> switchKeyboardMode(KeyboardMode.Number)
+            else -> switchKeyboardMode(KeyboardMode.Number)
+        }
     }
 
     private fun leavingCurrentMode() {
@@ -219,22 +242,33 @@ class KeyboardActionHandler(
     }
 
     fun onSpace() {
-        if (keyboardMode == KeyboardMode.ChineseT9) {
-            val eng = engine
-            if (eng != null) {
-                if (eng.buffer.isEmpty()) {
-                    actionSink.commitText(" ")
-                } else if (_currentCandidates.isNotEmpty()) {
-                    val candidate = _currentCandidates[0]
-                    eng.commitCandidate(candidate)
-                    _currentCandidates = emptyList()
-                    actionSink.commitText(candidate.text)
-                    actionSink.refreshUi()
+        when (keyboardMode) {
+            KeyboardMode.ChineseT9 -> {
+                val eng = engine
+                if (eng != null) {
+                    if (eng.buffer.isEmpty()) {
+                        actionSink.commitText(" ")
+                    } else if (_currentCandidates.isNotEmpty()) {
+                        val candidate = _currentCandidates[0]
+                        eng.commitCandidate(candidate)
+                        _currentCandidates = emptyList()
+                        actionSink.commitText(candidate.text)
+                        actionSink.refreshUi()
+                    } else {
+                        val text = eng.getPreedit()
+                        if (text.isNotEmpty()) {
+                            actionSink.commitText(text)
+                            eng.clear()
+                            fallbackBuffer = ""
+                            _currentCandidates = emptyList()
+                            actionSink.refreshUi()
+                        } else {
+                            actionSink.commitText(" ")
+                        }
+                    }
                 } else {
-                    val text = eng.getPreedit()
-                    if (text.isNotEmpty()) {
-                        actionSink.commitText(text)
-                        eng.clear()
+                    if (fallbackBuffer.isNotEmpty()) {
+                        actionSink.commitText(fallbackBuffer)
                         fallbackBuffer = ""
                         _currentCandidates = emptyList()
                         actionSink.refreshUi()
@@ -242,21 +276,16 @@ class KeyboardActionHandler(
                         actionSink.commitText(" ")
                     }
                 }
-            } else {
-                if (fallbackBuffer.isNotEmpty()) {
-                    actionSink.commitText(fallbackBuffer)
-                    fallbackBuffer = ""
-                    _currentCandidates = emptyList()
-                    actionSink.refreshUi()
-                } else {
-                    actionSink.commitText(" ")
+            }
+            KeyboardMode.EnglishT9 -> {
+                if (englishPending) {
+                    commitEnglishChar()
                 }
+                actionSink.commitText(" ")
             }
-        } else if (keyboardMode == KeyboardMode.EnglishT9) {
-            if (englishPending) {
-                commitEnglishChar()
+            KeyboardMode.Symbol, KeyboardMode.Number -> {
+                actionSink.commitText(" ")
             }
-            actionSink.commitText(" ")
         }
     }
 
@@ -302,16 +331,20 @@ class KeyboardActionHandler(
     }
 
     fun onEnter() {
-        if (keyboardMode == KeyboardMode.ChineseT9) {
-            if (rawBuffer.isNotEmpty()) {
-                commitFirstCandidateOrPreedit()
-                return
+        when (keyboardMode) {
+            KeyboardMode.ChineseT9 -> {
+                if (rawBuffer.isNotEmpty()) {
+                    commitFirstCandidateOrPreedit()
+                    return
+                }
             }
-        } else if (keyboardMode == KeyboardMode.EnglishT9) {
-            if (englishPending) {
-                commitEnglishChar()
-                return
+            KeyboardMode.EnglishT9 -> {
+                if (englishPending) {
+                    commitEnglishChar()
+                    return
+                }
             }
+            else -> {}
         }
         actionSink.performEditorActionOrNewline()
     }

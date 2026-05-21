@@ -133,11 +133,7 @@ class KeyboardKeyBinder(
 
     private fun setupModeToggleKeys(handler: KeyboardActionHandler) {
         setupKey(v.keyToggleSymbol, false) {
-            if (handler.keyboardMode == KeyboardMode.Symbol) {
-                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
-            } else {
-                handler.switchKeyboardMode(KeyboardMode.Symbol)
-            }
+            handler.toggleSymbolKey()
             onModeChanged()
         }
         setupKey(v.keyToggleEnglish, false) {
@@ -151,11 +147,7 @@ class KeyboardKeyBinder(
             onModeChanged()
         }
         setupKey(v.keyToggleNumber, false) {
-            if (handler.keyboardMode == KeyboardMode.Number) {
-                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
-            } else {
-                handler.switchKeyboardMode(KeyboardMode.Number)
-            }
+            handler.toggleNumberKey()
             onModeChanged()
         }
     }
@@ -178,7 +170,7 @@ class KeyboardKeyBinder(
             val symTv = v.symTextViews[id] ?: continue
             setupKey(symTv, false) {
                 handler.onDigitPressed(text)
-                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+                handler.switchKeyboardMode(handler.lastTextMode)
                 onModeChanged()
             }
         }

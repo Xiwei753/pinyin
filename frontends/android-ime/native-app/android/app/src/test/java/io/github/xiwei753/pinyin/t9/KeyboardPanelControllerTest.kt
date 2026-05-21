@@ -16,6 +16,8 @@ class KeyboardPanelControllerTest {
     private lateinit var mockPanelNumber: View
     private lateinit var mockFloatingBar: View
     private lateinit var mockToggleEnglish: TextView
+    private lateinit var mockToggleSymbol: TextView
+    private lateinit var mockToggleNumber: TextView
 
     @Before
     fun setUp() {
@@ -24,6 +26,8 @@ class KeyboardPanelControllerTest {
         mockPanelNumber = mock(View::class.java)
         mockFloatingBar = mock(View::class.java)
         mockToggleEnglish = mock(TextView::class.java)
+        mockToggleSymbol = mock(TextView::class.java)
+        mockToggleNumber = mock(TextView::class.java)
 
         kv = KeyboardViews(
             imeRoot = mock(),
@@ -52,7 +56,7 @@ class KeyboardPanelControllerTest {
             key2Letters = mock(), key3Letters = mock(), key4Letters = mock(), key5Letters = mock(),
             key6Letters = mock(), key7Letters = mock(), key8Letters = mock(), key9Letters = mock(),
             keyDel = mock(), keyRetype = mock(), keyEnter = mock(), keySpace = mock(),
-            keyToggleSymbol = mock(), keyToggleNumber = mock(),
+            keyToggleSymbol = mockToggleSymbol, keyToggleNumber = mockToggleNumber,
             keyToggleEnglish = mockToggleEnglish,
             enterContainer = mock(),
             symTabPunct = mock(), symTabMath = mock(), symTabBracket = mock(), symTabOther = mock(),
@@ -154,6 +158,48 @@ class KeyboardPanelControllerTest {
         controller.updatePanel(KeyboardMode.EnglishT9)
 
         verify(mockToggleEnglish).text = "英/中"
+    }
+
+    @Test
+    fun testChineseMode_labels() {
+        controller.updatePanel(KeyboardMode.ChineseT9)
+        verify(mockToggleSymbol).text = "符"
+        verify(mockToggleNumber).text = "123"
+    }
+
+    @Test
+    fun testEnglishMode_labels() {
+        controller.updatePanel(KeyboardMode.EnglishT9)
+        verify(mockToggleSymbol).text = "符"
+        verify(mockToggleNumber).text = "123"
+    }
+
+    @Test
+    fun testSymbolMode_labels_ChineseLast() {
+        controller.updatePanel(KeyboardMode.Symbol, KeyboardMode.ChineseT9)
+        verify(mockToggleSymbol).text = "中"
+        verify(mockToggleNumber).text = "123"
+    }
+
+    @Test
+    fun testSymbolMode_labels_EnglishLast() {
+        controller.updatePanel(KeyboardMode.Symbol, KeyboardMode.EnglishT9)
+        verify(mockToggleSymbol).text = "英"
+        verify(mockToggleNumber).text = "123"
+    }
+
+    @Test
+    fun testNumberMode_labels_ChineseLast() {
+        controller.updatePanel(KeyboardMode.Number, KeyboardMode.ChineseT9)
+        verify(mockToggleSymbol).text = "符"
+        verify(mockToggleNumber).text = "中"
+    }
+
+    @Test
+    fun testNumberMode_labels_EnglishLast() {
+        controller.updatePanel(KeyboardMode.Number, KeyboardMode.EnglishT9)
+        verify(mockToggleSymbol).text = "符"
+        verify(mockToggleNumber).text = "英"
     }
 
     @Test
