@@ -36,7 +36,7 @@ class T9KeyboardGeometry(
         fun calculate(
             panelWidth: Int,
             panelHeight: Int,
-            rowHeight: Int,
+            rowHeight: Int, // Keeps compatibility with callers, but will be recalculated
             bottomRowHeight: Int,
             horizontalGap: Int,
             verticalGap: Int,
@@ -46,11 +46,13 @@ class T9KeyboardGeometry(
             val rightKeyWidth = rightAreaWidth / 6
             val midAreaWidth = rightAreaWidth - rightKeyWidth
 
+            val availableHeight = panelHeight
+            val actualRowHeight = (availableHeight - bottomRowHeight - 3 * verticalGap) / 3
             val row1Top = 0
-            val row2Top = row1Top + rowHeight + verticalGap
-            val row3Top = row2Top + rowHeight + verticalGap
-            val bottomRowTop = row3Top + rowHeight + verticalGap
-            val contentBottom = bottomRowTop + bottomRowHeight
+            val row2Top = row1Top + actualRowHeight + verticalGap
+            val row3Top = row2Top + actualRowHeight + verticalGap
+            val bottomRowTop = row3Top + actualRowHeight + verticalGap
+            val contentBottom = availableHeight
 
             // Left column and symbol button are sized to match content area, not panelHeight.
             // This prevents the symbol button from extending below the bottom row.
@@ -85,22 +87,22 @@ class T9KeyboardGeometry(
                 leftRailRect = leftRailRect,
                 leftRailScrollRect = leftRailScrollRect,
                 symbolButtonRect = symbolButtonRect,
-                key1Rect = Rect(colX(0), row1Top, colX(0) + keyWidth, row1Top + rowHeight),
-                key2Rect = Rect(colX(1), row1Top, colX(1) + keyWidth, row1Top + rowHeight),
-                key3Rect = Rect(colX(2), row1Top, colX(2) + keyWidth, row1Top + rowHeight),
-                key4Rect = Rect(colX(0), row2Top, colX(0) + keyWidth, row2Top + rowHeight),
-                key5Rect = Rect(colX(1), row2Top, colX(1) + keyWidth, row2Top + rowHeight),
-                key6Rect = Rect(colX(2), row2Top, colX(2) + keyWidth, row2Top + rowHeight),
-                key7Rect = Rect(colX(0), row3Top, colX(0) + keyWidth, row3Top + rowHeight),
-                key8Rect = Rect(colX(1), row3Top, colX(1) + keyWidth, row3Top + rowHeight),
-                key9Rect = Rect(colX(2), row3Top, colX(2) + keyWidth, row3Top + rowHeight),
-                keyDelRect = Rect(rightColLeft, row1Top, rightColLeft + rightKeyWidth, row1Top + rowHeight),
-                keyRetypeRect = Rect(rightColLeft, row2Top, rightColLeft + rightKeyWidth, row2Top + rowHeight),
-                keyEnterRect = Rect(rightColLeft, row3Top, rightColLeft + rightKeyWidth, bottomRowTop + bottomRowHeight),
-                keyNumberToggleRect = Rect(bottomCol0, bottomRowTop, bottomCol0 + numW, bottomRowTop + bottomRowHeight),
-                keySpaceRect = Rect(bottomCol1, bottomRowTop, bottomCol1 + spaceW, bottomRowTop + bottomRowHeight),
-                keyEnglishToggleRect = Rect(bottomCol2, bottomRowTop, bottomCol2 + engW, bottomRowTop + bottomRowHeight),
-                rowHeight = rowHeight,
+                key1Rect = Rect(colX(0), row1Top, colX(0) + keyWidth, row1Top + actualRowHeight),
+                key2Rect = Rect(colX(1), row1Top, colX(1) + keyWidth, row1Top + actualRowHeight),
+                key3Rect = Rect(colX(2), row1Top, colX(2) + keyWidth, row1Top + actualRowHeight),
+                key4Rect = Rect(colX(0), row2Top, colX(0) + keyWidth, row2Top + actualRowHeight),
+                key5Rect = Rect(colX(1), row2Top, colX(1) + keyWidth, row2Top + actualRowHeight),
+                key6Rect = Rect(colX(2), row2Top, colX(2) + keyWidth, row2Top + actualRowHeight),
+                key7Rect = Rect(colX(0), row3Top, colX(0) + keyWidth, row3Top + actualRowHeight),
+                key8Rect = Rect(colX(1), row3Top, colX(1) + keyWidth, row3Top + actualRowHeight),
+                key9Rect = Rect(colX(2), row3Top, colX(2) + keyWidth, row3Top + actualRowHeight),
+                keyDelRect = Rect(rightColLeft, row1Top, rightColLeft + rightKeyWidth, row1Top + actualRowHeight),
+                keyRetypeRect = Rect(rightColLeft, row2Top, rightColLeft + rightKeyWidth, row2Top + actualRowHeight),
+                keyEnterRect = Rect(rightColLeft, row3Top, rightColLeft + rightKeyWidth, contentBottom),
+                keyNumberToggleRect = Rect(bottomCol0, bottomRowTop, bottomCol0 + numW, contentBottom),
+                keySpaceRect = Rect(bottomCol1, bottomRowTop, bottomCol1 + spaceW, contentBottom),
+                keyEnglishToggleRect = Rect(bottomCol2, bottomRowTop, bottomCol2 + engW, contentBottom),
+                rowHeight = actualRowHeight,
                 bottomRowHeight = bottomRowHeight,
                 horizontalGap = horizontalGap,
                 verticalGap = verticalGap,

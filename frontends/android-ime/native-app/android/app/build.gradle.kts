@@ -63,6 +63,7 @@ tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.con
 }
 
 dependencies {
+    testImplementation("org.robolectric:robolectric:4.11.1")
     implementation("androidx.core:core-ktx:1.12.0")
 
     testImplementation("junit:junit:4.13.2")
