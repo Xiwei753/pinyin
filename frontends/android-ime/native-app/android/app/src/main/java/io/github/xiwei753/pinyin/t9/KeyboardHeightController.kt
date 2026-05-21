@@ -12,7 +12,6 @@ class KeyboardHeightController(
         val rowHeightPx: Int,
         val bottomRowHeightPx: Int,
         val shellHeight: Int,
-        val symbolScrollHeight: Int,
     )
 
     fun calculateHeight(): HeightMetrics {
@@ -24,7 +23,6 @@ class KeyboardHeightController(
             else -> (44 * density).toInt()
         }
         val panelPaddingPx = (4 * density).toInt()
-        val tabsHeightPx = (36 * density).toInt()
         val rowHeightPx = when (heightSetting) {
             "low" -> (44 * density).toInt()
             "high" -> (56 * density).toInt()
@@ -32,14 +30,12 @@ class KeyboardHeightController(
         }
         val interRowMarginPx = (4 * density).toInt()
         val numberModeHeight = 4 * rowHeightPx + 3 * interRowMarginPx + bottomRowHeightPx + 2 * panelPaddingPx
-        val symbolModeHeight = tabsHeightPx + 2 * rowHeightPx + bottomRowHeightPx + 2 * panelPaddingPx
+        val symbolModeHeight = 3 * rowHeightPx + 2 * interRowMarginPx + bottomRowHeightPx + 2 * panelPaddingPx
         val shellHeight = maxOf(numberModeHeight, symbolModeHeight)
-        val scrollHeight = shellHeight - tabsHeightPx - bottomRowHeightPx - 2 * panelPaddingPx
         return HeightMetrics(
             rowHeightPx = rowHeightPx,
             bottomRowHeightPx = bottomRowHeightPx,
             shellHeight = shellHeight,
-            symbolScrollHeight = scrollHeight,
         )
     }
 

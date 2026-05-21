@@ -61,11 +61,12 @@ class KeyboardHeightControllerTest {
     }
 
     @Test
-    fun testSymbolScrollHeightGreaterThanZero() {
+    fun testSymbolModeShellHeightPositive() {
         `when`(mockRepo.getKeyboardHeight()).thenReturn("normal")
         val metrics = controller.calculateHeight()
 
-        assertTrue("Symbol scroll height should be > 0", metrics.symbolScrollHeight > 0)
+        assertTrue("Shell height should be > 0", metrics.shellHeight > 0)
+        assertTrue("Row height should be > 0", metrics.rowHeightPx > 0)
     }
 
     @Test

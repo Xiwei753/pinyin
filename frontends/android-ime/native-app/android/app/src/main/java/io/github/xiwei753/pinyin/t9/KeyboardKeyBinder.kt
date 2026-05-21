@@ -49,10 +49,10 @@ class KeyboardKeyBinder(
 
     private fun setupNumberPadKeys(handler: KeyboardActionHandler) {
         val numKeys = listOf(
-            v.numKey1Frame to "1", v.numKey2Frame to "2", v.numKey3Frame to "3",
-            v.numKey4Frame to "4", v.numKey5Frame to "5", v.numKey6Frame to "6",
-            v.numKey7Frame to "7", v.numKey8Frame to "8", v.numKey9Frame to "9",
-            v.num0Frame to "0", v.numDotFrame to ".",
+            v.num1 to "1", v.num2 to "2", v.num3 to "3",
+            v.num4 to "4", v.num5 to "5", v.num6 to "6",
+            v.num7 to "7", v.num8 to "8", v.num9 to "9",
+            v.num0 to "0", v.numDot to ".",
         )
         for ((keyView, text) in numKeys) {
             setupKey(keyView, false) {
