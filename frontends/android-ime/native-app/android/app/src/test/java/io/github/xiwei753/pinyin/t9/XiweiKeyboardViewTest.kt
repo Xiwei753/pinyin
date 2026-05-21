@@ -196,7 +196,7 @@ class XiweiKeyboardViewTest {
         val cx = key2.rect.centerX().toFloat()
         val cy = key2.rect.centerY().toFloat()
 
-        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        val hit = KeyboardRenderer().hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
         assertNotNull(hit)
         assertEquals("key_2", hit!!.id)
     }
@@ -213,9 +213,7 @@ class XiweiKeyboardViewTest {
     fun hitSymbolKeyReturnsSymbolAction() {
         val entries = listOf(1 to "A", 2 to "B", 3 to "C", 4 to "D", 5 to "E")
         val registry = SymbolKeyRegistry()
-        val builder = KeyboardLayoutBuilder()
-        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry)
-        val renderer = KeyboardRenderer()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
 
         val symbolKeys = model.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY }
         assertTrue(symbolKeys.isNotEmpty())
@@ -224,7 +222,7 @@ class XiweiKeyboardViewTest {
         val cx = first.rect.centerX().toFloat()
         val cy = first.rect.centerY().toFloat()
 
-        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        val hit = KeyboardRenderer().hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
         assertNotNull(hit)
         assertEquals("symbol:commit", hit!!.action)
     }
@@ -243,7 +241,7 @@ class XiweiKeyboardViewTest {
         val cx = first.rect.centerX().toFloat()
         val cy = first.rect.centerY().toFloat()
 
-        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        val hit = KeyboardRenderer().hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
         assertNotNull(hit)
         assertTrue(hit!!.action.startsWith("reading:"))
     }
@@ -259,7 +257,7 @@ class XiweiKeyboardViewTest {
         val cx = bt!!.rect.centerX().toFloat()
         val cy = bt.rect.centerY().toFloat()
 
-        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        val hit = KeyboardRenderer().hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
         assertNotNull(hit)
         assertEquals("toggle:symbol", hit!!.action)
     }
@@ -416,7 +414,7 @@ class XiweiKeyboardViewTest {
         assertNotNull("Should have placeholder", placeholder)
         val cx = placeholder!!.rect.centerX().toFloat()
         val cy = placeholder.rect.centerY().toFloat()
-        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        val hit = KeyboardRenderer().hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
         assertEquals(KeyboardKeyRole.PLACEHOLDER, hit!!.role)
     }
 
@@ -428,7 +426,7 @@ class XiweiKeyboardViewTest {
         val first = model.keys.find { it.role == KeyboardKeyRole.SYMBOL_KEY }!!
         val cx = first.rect.centerX().toFloat()
         val cy = first.rect.centerY().toFloat()
-        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        val hit = KeyboardRenderer().hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
         assertNotNull(hit)
         assertEquals("symbol:commit", hit!!.action)
     }
@@ -440,7 +438,7 @@ class XiweiKeyboardViewTest {
         val k2 = model.keys.find { it.id == "key_2" }!!
         val cx = k2.rect.centerX().toFloat()
         val cy = k2.rect.centerY().toFloat()
-        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        val hit = KeyboardRenderer().hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
         assertNotNull(hit)
         assertEquals("digit:2", hit!!.action)
     }
@@ -452,7 +450,7 @@ class XiweiKeyboardViewTest {
         val n1 = model.keys.find { it.id == "num_1" }!!
         val cx = n1.rect.centerX().toFloat()
         val cy = n1.rect.centerY().toFloat()
-        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        val hit = KeyboardRenderer().hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
         assertNotNull(hit)
         assertEquals("digit:1", hit!!.action)
     }
@@ -464,7 +462,7 @@ class XiweiKeyboardViewTest {
         val k1 = model.keys.find { it.id == "key_1" }!!
         val cx = k1.rect.centerX().toFloat()
         val cy = k1.rect.centerY().toFloat()
-        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
+        val hit = KeyboardRenderer().hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, cx, cy, 0)
         assertNotNull(hit)
         assertEquals("separator", hit!!.action)
     }
