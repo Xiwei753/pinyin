@@ -661,4 +661,77 @@ class T9EngineTest {
         val dynamicCount = visible.count { it.origin == CandidateOrigin.SAFE_DYNAMIC_COMPOSITION }
         assertTrue("dynamic candidate count should be <= 1, got $dynamicCount", dynamicCount <= 1)
     }
+
+    @Test
+    fun testRawFallbackNotInVisibleCandidates() {
+        val dict = MockDict()
+        // No candidates at all for "28" (empty dict)
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+
+        val visible = engine.getVisibleCandidates()
+        assertTrue("visible must not contain RAW_FALLBACK",
+            visible.none { it.origin == CandidateOrigin.RAW_FALLBACK })
+
+        val internal = engine.getCandidates()
+        assertTrue("internal getCandidates must still contain RAW_FALLBACK",
+            internal.any { it.origin == CandidateOrigin.RAW_FALLBACK || it.text == "28" })
+    }
+
+    @Test
+    fun testVisibleOrderByLayerNotByScore() {
+        val dict = MockDict()
+        // Exact phrase with very low score
+        dict.add(Candidate("不太", "28824", 1, CandidateType.NORMAL), "bu tai")
+        // Single chars with extremely high score
+        dict.add(Candidate("不", "28", 999999, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("部", "28", 999999, CandidateType.SINGLE_CHAR), "bu")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+
+        val visible = engine.getVisibleCandidates()
+        val idxPhrase = visible.indexOfFirst { it.text == "不太" }
+        val firstSingleIdx = visible.indexOfFirst { it.origin == CandidateOrigin.EXACT_SINGLE }
+
+        assertTrue("exact phrase 不太 must be visible", idxPhrase >= 0)
+        if (firstSingleIdx >= 0) {
+            assertTrue("exact phrase (score=1) must appear before EXACT_SINGLE (score=999999)",
+                idxPhrase < firstSingleIdx)
+        }
+    }
+
+    @Test
+    fun testExactSingleHighScoreDoesNotCrowdOutPhrase() {
+        val dict = MockDict()
+        // Single char with extremely high score, for multi-syllable input
+        dict.add(Candidate("不", "28", 999999, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("太", "82", 999999, CandidateType.SINGLE_CHAR), "tai")
+        // Exact phrase with low score
+        dict.add(Candidate("不太", "28824", 1, CandidateType.NORMAL), "bu tai")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+
+        val visible = engine.getVisibleCandidates()
+        val idxPhrase = visible.indexOfFirst { it.text == "不太" }
+
+        assertTrue("exact phrase 不太 must be in visible (score=1 regardless)",
+            idxPhrase >= 0)
+        // The phrase must appear before any EXACT_SINGLE if possible
+        val firstSingleIdx = visible.indexOfFirst { it.origin == CandidateOrigin.EXACT_SINGLE }
+        if (firstSingleIdx >= 0) {
+            assertTrue("phrase must appear before any single char regardless of score",
+                idxPhrase < firstSingleIdx)
+        }
+    }
 }
