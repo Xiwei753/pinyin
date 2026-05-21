@@ -7,7 +7,6 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
-import android.widget.LinearLayout
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 import io.github.xiwei753.pinyin.t9.data.DictionaryManager
 import io.github.xiwei753.pinyin.t9.data.DictionaryState
@@ -24,6 +23,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     }
 
     internal lateinit var keyboardViews: KeyboardViews
+    internal lateinit var xiweiKeyboardView: XiweiKeyboardView
     internal lateinit var themeController: KeyboardThemeController
     internal lateinit var heightController: KeyboardHeightController
     internal lateinit var panelController: KeyboardPanelController
@@ -42,6 +42,23 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     private val englishTimer by lazy { Handler(Looper.getMainLooper()) }
     private var currentEnglishRunnable: Runnable? = null
 
+    private val layoutBuilder = KeyboardLayoutBuilder()
+    private val registry = SymbolKeyRegistry()
+
+    private val categoryToPage = mapOf(
+        SymbolKeyRegistry.Category.FULLWIDTH_PUNCT to "punct",
+        SymbolKeyRegistry.Category.HALFWIDTH_PUNCT to "punct",
+        SymbolKeyRegistry.Category.MATH to "math",
+        SymbolKeyRegistry.Category.BRACKET to "bracket",
+        SymbolKeyRegistry.Category.CURRENCY to "other",
+        SymbolKeyRegistry.Category.UNIT to "other",
+        SymbolKeyRegistry.Category.NETWORK to "other",
+        SymbolKeyRegistry.Category.SEQUENCE to "other",
+        SymbolKeyRegistry.Category.ARROW to "other",
+        SymbolKeyRegistry.Category.GREEK to "other",
+        SymbolKeyRegistry.Category.OTHER to "other",
+    )
+
     override fun onCreate() {
         super.onCreate()
         try {
@@ -58,6 +75,9 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         DictionaryManager.unregisterListener(this)
         cancelEnglishTimeout()
         deleteRepeatController.destroy()
+        if (this::xiweiKeyboardView.isInitialized) {
+            xiweiKeyboardView.destroy()
+        }
     }
 
     override fun onStateChanged(state: DictionaryState) {
@@ -117,6 +137,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
         keyboardViews = KeyboardViews.bind(view)
+        xiweiKeyboardView = keyboardViews.xiweiKeyboardView!!
 
         themeController = KeyboardThemeController(settingsRepository, resources)
         heightController = KeyboardHeightController(settingsRepository, resources)
@@ -139,12 +160,92 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             settingsRepository = settingsRepository,
         )
 
-        keyBinder.setupAllKeys(handler)
-        setupSymbolCategories()
-        populateSymbolPages()
+        setupKeyboardViewActions()
+
         applyThemeAndHeight()
         updateKeyboardPanel()
         return view
+    }
+
+    private fun setupKeyboardViewActions() {
+        xiweiKeyboardView.onHapticTap = { hapticFeedbackManager.performTap(xiweiKeyboardView) }
+        xiweiKeyboardView.onHapticSpecial = { hapticFeedbackManager.performSpecialKey(xiweiKeyboardView) }
+        xiweiKeyboardView.onHapticLongPress = { hapticFeedbackManager.performLongPress(xiweiKeyboardView) }
+
+        xiweiKeyboardView.onDeleteRepeat = { handler.onDelete() }
+
+        xiweiKeyboardView.onEnterShortPress = {
+            handler.onEnterShortPress()
+        }
+        xiweiKeyboardView.onEnterLongPress = {
+            handler.onEnterLongPress()
+        }
+
+        xiweiKeyboardView.onKeyAction = { action ->
+            when {
+                action.startsWith("digit:") -> {
+                    val digit = action.removePrefix("digit:")
+                    if (digit.length == 1 && digit[0] == '1') {
+                        handler.onSeparator()
+                    } else if (digit == "." || digit == "0") {
+                        handler.onDigitPressed(digit)
+                    } else {
+                        handler.onDigitPressed(digit)
+                    }
+                }
+                action == "del" -> handler.onDelete()
+                action == "retype" -> handler.onClearComposingForRetype()
+                action == "space" -> handler.onSpace()
+                action.startsWith("toggle:") -> {
+                    val toggle = action.removePrefix("toggle:")
+                    when (toggle) {
+                        "symbol" -> {
+                            handler.toggleSymbolKey()
+                            updateKeyboardPanel()
+                        }
+                        "english" -> {
+                            if (handler.keyboardMode == KeyboardMode.EnglishT9) {
+                                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+                            } else if (handler.keyboardMode == KeyboardMode.ChineseT9) {
+                                handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+                            } else {
+                                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+                            }
+                            updateKeyboardPanel()
+                        }
+                        "number" -> {
+                            handler.toggleNumberKey()
+                            updateKeyboardPanel()
+                        }
+                    }
+                }
+                action.startsWith("punct:") -> {
+                    val punct = action.removePrefix("punct:")
+                    handler.onPunctCommit(punct)
+                }
+                action.startsWith("reading:") -> {
+                    val indexStr = action.removePrefix("reading:")
+                    val index = indexStr.toIntOrNull()
+                    if (index != null) {
+                        val readings = handler.readings
+                        if (index < readings.size) {
+                            handler.setActiveReading(readings[index])
+                        }
+                    }
+                }
+                action.startsWith("symtab:") -> {
+                    val cat = action.removePrefix("symtab:")
+                    panelController.currentSymCategory = cat
+                    updateKeyboardPanel()
+                }
+                action.startsWith("symbol:commit:") -> {
+                    val text = action.removePrefix("symbol:commit:")
+                    handler.onDigitPressed(text)
+                    handler.switchKeyboardMode(handler.lastTextMode)
+                    updateKeyboardPanel()
+                }
+            }
+        }
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
@@ -177,128 +278,114 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
     }
 
-    private fun resetUiStateIfReady() {
-        if (this::candidateViewController.isInitialized) {
-            candidateViewController.resetUi()
-        }
-    }
-
     private fun applyThemeAndHeight() {
-        if (!this::keyboardViews.isInitialized || !this::themeController.isInitialized) return
+        if (!this::keyboardViews.isInitialized || !this::themeController.isInitialized || !this::xiweiKeyboardView.isInitialized) return
         val palette = themeController.getThemePalette()
         if (this::candidateViewController.isInitialized) {
             candidateViewController.updateThemePalette(palette)
         }
         themeController.applyTheme(keyboardViews, palette)
+        xiweiKeyboardView.palette = palette
+
         val metrics = heightController.calculateHeight()
+        xiweiKeyboardView.layoutParams?.height = metrics.shellHeight
+
+        xiweiKeyboardView.keyboardMode = handler.keyboardMode
+        xiweiKeyboardView.activeSymCategory = panelController.currentSymCategory
+        xiweiKeyboardView.lastTextMode = handler.lastTextMode
+
+        rebuildLayoutModel()
         heightController.applyHeight(keyboardViews, metrics)
+    }
+
+    private fun rebuildLayoutModel() {
+        if (!this::xiweiKeyboardView.isInitialized || !this::handler.isInitialized) return
+
+        val metrics = heightController.calculateHeight()
+        val density = resources.displayMetrics.density
+        val hGap = (4 * density).toInt()
+        val vGap = (4 * density).toInt()
+
+        val panelWidth: Int
+        val panelHeight: Int
+        if (xiweiKeyboardView.width > 0 && xiweiKeyboardView.height > 0) {
+            panelWidth = xiweiKeyboardView.width
+            panelHeight = xiweiKeyboardView.height
+        } else {
+            panelWidth = resources.displayMetrics.widthPixels
+            panelHeight = metrics.shellHeight
+        }
+
+        val model = when (handler.keyboardMode) {
+            KeyboardMode.ChineseT9, KeyboardMode.EnglishT9 -> {
+                val readings = handler.readings
+                layoutBuilder.buildT9(
+                    panelWidth = panelWidth,
+                    panelHeight = panelHeight,
+                    rowHeight = metrics.rowHeightPx,
+                    bottomRowHeight = metrics.bottomRowHeightPx,
+                    horizontalGap = hGap,
+                    verticalGap = vGap,
+                    readings = readings,
+                    keyboardMode = handler.keyboardMode,
+                )
+            }
+            KeyboardMode.Number -> {
+                layoutBuilder.buildNumber(
+                    panelWidth = panelWidth,
+                    panelHeight = panelHeight,
+                    rowHeight = metrics.rowHeightPx,
+                    bottomRowHeight = metrics.bottomRowHeightPx,
+                    horizontalGap = hGap,
+                    verticalGap = vGap,
+                    keyboardMode = handler.keyboardMode,
+                    lastTextMode = handler.lastTextMode,
+                )
+            }
+            KeyboardMode.Symbol -> {
+                val pageName = panelController.currentSymCategory
+                val catEntries = getEntriesForPage(pageName)
+                layoutBuilder.buildSymbol(
+                    panelWidth = panelWidth,
+                    panelHeight = panelHeight,
+                    rowHeight = metrics.rowHeightPx,
+                    bottomRowHeight = metrics.bottomRowHeightPx,
+                    horizontalGap = hGap,
+                    verticalGap = vGap,
+                    symbolEntries = catEntries,
+                    activeCategory = pageName,
+                    lastTextMode = handler.lastTextMode,
+                    categoryToPage = categoryToPage,
+                    registry = registry,
+                )
+            }
+        }
+
+        xiweiKeyboardView.layoutModel = model
+        xiweiKeyboardView.invalidate()
+    }
+
+    private fun getEntriesForPage(pageName: String): List<Pair<Int, String>> {
+        val results = mutableListOf<Pair<Int, String>>()
+        for (category in registry.getAllCategories()) {
+            if (categoryToPage[category] == pageName) {
+                results.addAll(registry.getSymbolsByCategory(category))
+            }
+        }
+        if (results.isEmpty()) {
+            return registry.getAllSymbolEntries().take(60)
+        }
+        return results
     }
 
     internal fun updateKeyboardPanel() {
         if (!this::handler.isInitialized || !this::panelController.isInitialized || !this::keyboardViews.isInitialized) return
         panelController.updatePanel(handler.keyboardMode, handler.lastTextMode)
-    }
-
-    private fun setupSymbolCategories() {
-        val tabs = mapOf(
-            keyboardViews.symTabPunct to "punct",
-            keyboardViews.symTabMath to "math",
-            keyboardViews.symTabBracket to "bracket",
-            keyboardViews.symTabOther to "other",
-        )
-        for ((tabView, category) in tabs) {
-            keyBinder.setupKey(tabView, false) {
-                val palette = themeController.getThemePalette()
-                panelController.setSymbolCategory(category, themeController, palette)
-            }
-        }
-    }
-
-    private fun populateSymbolPages() {
-        val registry = SymbolKeyRegistry()
-        val density = resources.displayMetrics.density
-
-        val metrics = SymbolGridLayoutMetrics.fromDp(
-            density = density,
-            symbolPanelWidth = resources.displayMetrics.widthPixels,
-            rowHeight = (48 * density).toInt(),
-        )
-
-        val pageMap = mapOf<String, android.widget.LinearLayout>(
-            "punct" to (keyboardViews.symPagePunct as? android.widget.LinearLayout)!!,
-            "math" to (keyboardViews.symPageMath as? android.widget.LinearLayout)!!,
-            "bracket" to (keyboardViews.symPageBracket as? android.widget.LinearLayout)!!,
-            "other" to (keyboardViews.symPageOther as? android.widget.LinearLayout)!!,
-        )
-
-        // Apply content insets to target pages directly.
-        for ((_, targetPage) in pageMap) {
-            targetPage.setPadding(
-                metrics.contentInsetLeft,
-                metrics.contentInsetTop,
-                metrics.contentInsetRight,
-                metrics.contentInsetBottom,
-            )
-        }
-
-        // Aggregate entries by page BEFORE building grid
-        val pageToEntries = mutableMapOf<String, MutableList<Pair<Int, String>>>()
-        val categoryToPage = mapOf(
-            SymbolKeyRegistry.Category.FULLWIDTH_PUNCT to "punct",
-            SymbolKeyRegistry.Category.HALFWIDTH_PUNCT to "punct",
-            SymbolKeyRegistry.Category.MATH to "math",
-            SymbolKeyRegistry.Category.BRACKET to "bracket",
-            SymbolKeyRegistry.Category.CURRENCY to "other",
-            SymbolKeyRegistry.Category.UNIT to "other",
-            SymbolKeyRegistry.Category.NETWORK to "other",
-            SymbolKeyRegistry.Category.SEQUENCE to "other",
-            SymbolKeyRegistry.Category.ARROW to "other",
-            SymbolKeyRegistry.Category.GREEK to "other",
-            SymbolKeyRegistry.Category.OTHER to "other",
-        )
-
-        for (category in registry.getAllCategories()) {
-            val pageName = categoryToPage[category] ?: "other"
-            val entries = registry.getSymbolsByCategory(category)
-            if (entries.isEmpty()) continue
-            pageToEntries.getOrPut(pageName) { mutableListOf() }.addAll(entries)
-        }
-
-        // Symbol click handler: commit text and return to last text mode
-        val onSymbolClick = { symbol: String ->
-            handler.onDigitPressed(symbol)
-            handler.switchKeyboardMode(handler.lastTextMode)
-            updateKeyboardPanel()
-        }
-        val onSymbolTouch = { view: android.view.View ->
-            hapticFeedbackManager.performTap(view)
-        }
-
-        val palette = themeController.getThemePalette()
-
-        // Build ONE grid per page with all aggregated entries
-        for ((pageName, targetPage) in pageMap) {
-            val entries = pageToEntries[pageName] ?: continue
-            if (entries.isEmpty()) continue
-
-            val symPage = SymbolGridController.buildPage(
-                context = this,
-                entries = entries,
-                rowHeightPx = metrics.cellHeight,
-                generatedSymbolViews = keyboardViews.generatedSymbolViews,
-                textSize = 20f,
-                palette = palette,
-                metrics = metrics,
-                onSymbolClick = onSymbolClick,
-                onSymbolTouch = onSymbolTouch,
-            )
-
-            // Transfer all children from the grid page to the target page
-            while (symPage.childCount > 0) {
-                val child = symPage.getChildAt(0)
-                symPage.removeViewAt(0)
-                targetPage.addView(child)
-            }
+        if (this::xiweiKeyboardView.isInitialized) {
+            xiweiKeyboardView.keyboardMode = handler.keyboardMode
+            xiweiKeyboardView.activeSymCategory = panelController.currentSymCategory
+            xiweiKeyboardView.lastTextMode = handler.lastTextMode
+            rebuildLayoutModel()
         }
     }
 
@@ -333,14 +420,12 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
             logEnterAction("imeOptions=$imeOptions action=$action actionId=$actionId actionLabel=$actionLabel")
 
-            // Step 1: custom actionId/actionLabel
             if (actionId != 0 && actionLabel != null) {
                 val result = currentInputConnection?.performEditorAction(actionId)
                 logEnterAction("custom actionId=$actionId actionLabel=$actionLabel result=$result")
                 if (result == true) return
             }
 
-            // Step 2: standard IME action (SEND/GO/SEARCH/DONE/NEXT/PREVIOUS)
             val hasStandardAction = action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED
             if (hasStandardAction) {
                 val result = currentInputConnection?.performEditorAction(action)
@@ -348,12 +433,10 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 if (result == true) return
             }
 
-            // Step 3: default editor action via framework
             val defaultResult = sendDefaultEditorAction(true)
             logEnterAction("sendDefaultEditorAction result=$defaultResult")
             if (defaultResult) return
 
-            // Step 4: final fallback - insert newline
             logEnterAction("fallback: commitText newline")
             currentInputConnection?.commitText("\n", 1)
             return
@@ -375,14 +458,12 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         val actionId = info.actionId
         val actionLabel = info.actionLabel
 
-        // custom actionId/actionLabel
         if (actionId != 0 && actionLabel != null) {
             val result = currentInputConnection?.performEditorAction(actionId)
             logEnterAction("performEnterActionIfAvailable custom actionId=$actionId result=$result")
             if (result == true) return true
         }
 
-        // standard IME action
         val hasStandardAction = action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED
         if (hasStandardAction) {
             val result = currentInputConnection?.performEditorAction(action)
@@ -422,6 +503,9 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     override fun refreshUi() {
         if (!this::keyboardViews.isInitialized || !this::handler.isInitialized || !this::candidateViewController.isInitialized) return
         candidateViewController.refreshUi(handler)
+        if (this::xiweiKeyboardView.isInitialized) {
+            rebuildLayoutModel()
+        }
         logDebugInfo()
     }
 

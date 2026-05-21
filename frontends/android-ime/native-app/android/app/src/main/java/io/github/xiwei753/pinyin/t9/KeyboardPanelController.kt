@@ -7,7 +7,6 @@ class KeyboardPanelController(
     private val v: KeyboardViews,
 ) {
     var currentSymCategory: String = "punct"
-        private set
 
     fun updatePanel(keyboardMode: KeyboardMode, lastTextMode: KeyboardMode = KeyboardMode.ChineseT9) {
         v.panelT9.visibility = if (keyboardMode == KeyboardMode.ChineseT9 || keyboardMode == KeyboardMode.EnglishT9) View.VISIBLE else View.GONE

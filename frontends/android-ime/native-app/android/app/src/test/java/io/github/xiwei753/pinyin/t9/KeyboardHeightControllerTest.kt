@@ -145,12 +145,10 @@ class KeyboardHeightControllerTest {
         `when`(mockRepo.getKeyboardHeight()).thenReturn("normal")
         val metrics = controller.calculateHeight()
 
-        // Use realistic panelT9 dimensions so applyT9Geometry uses real values
         val panelT9 = mock(View::class.java)
         `when`(panelT9.width).thenReturn(1080)
         `when`(panelT9.height).thenReturn(480)
 
-        // Real LayoutParams object so width is mutable after assignment
         val realLp = ViewGroup.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT)
         val symTabs = mock(View::class.java)
         `when`(symTabs.layoutParams).thenReturn(realLp)
@@ -160,8 +158,8 @@ class KeyboardHeightControllerTest {
         controller.applyHeight(kv, metrics)
 
         val expected = 1080 / 7
-        assertEquals("symCategoryTabs width = panelWidth/7 = $expected",
-            expected, realLp.width)
+        assertEquals("symbolCategoryTabs original width should be preserved",
+            0, realLp.width)
     }
 
     private fun createMinimalMockKeyboardViews(

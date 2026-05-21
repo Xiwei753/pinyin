@@ -115,9 +115,7 @@ class KeyboardViews constructor(
     val num9: TextView,
     val numDot: TextView,
 
-
-
-
+    val xiweiKeyboardView: XiweiKeyboardView? = null,
 
 ) {
     companion object {
@@ -271,10 +269,6 @@ class KeyboardViews constructor(
                 symCategoryTabs = symCategoryTabs,
                 generatedSymbolViews = mutableListOf(),
 
-
-
-
-
                 num0 = req(R.id.num_0),
                 num1 = req(R.id.num_1),
                 num2 = req(R.id.num_2),
@@ -287,9 +281,7 @@ class KeyboardViews constructor(
                 num9 = req(R.id.num_9),
                 numDot = req(R.id.num_dot),
 
-
-
-
+                xiweiKeyboardView = rootView.findViewById<XiweiKeyboardView>(R.id.xiwei_keyboard_view),
 
             )
         }

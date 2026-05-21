@@ -94,8 +94,9 @@ class KeyboardThemeController(
         v.pinyinFloatingBar.setBackgroundColor(palette.preeditBgColor)
         v.pinyinFloatingText.setTextColor(palette.textColor)
 
-        setTextColorOnAllKeys(v, palette.textColor, palette.subColor)
-        applyKeyBackgrounds(v, palette)
+        for (i in 0 until v.candidateContainer.childCount) {
+            (v.candidateContainer.getChildAt(i) as? android.widget.TextView)?.setTextColor(palette.textColor)
+        }
     }
 
     fun setTextColorOnAllKeys(v: KeyboardViews, textColor: Int, subColor: Int) {
