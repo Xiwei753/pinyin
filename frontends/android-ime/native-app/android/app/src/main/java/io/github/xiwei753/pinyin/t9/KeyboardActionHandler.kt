@@ -337,16 +337,19 @@ class KeyboardActionHandler(
                     commitFirstCandidateOrPreedit()
                     return
                 }
+                actionSink.commitNewline()
             }
             KeyboardMode.EnglishT9 -> {
                 if (englishPending) {
                     commitEnglishChar()
                     return
                 }
+                actionSink.commitNewline()
             }
-            else -> {}
+            KeyboardMode.Symbol, KeyboardMode.Number -> {
+                actionSink.commitNewline()
+            }
         }
-        actionSink.performEditorActionOrNewline()
     }
 
     fun onCandidateClick(index: Int) {

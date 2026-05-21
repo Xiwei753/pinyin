@@ -97,4 +97,35 @@ class SymbolGridLayoutTest {
         val fromDp = SymbolGridLayoutMetrics.fromDp(density, panelWidth, rowHeight)
         assertEquals(fromGeo, fromDp)
     }
+
+    @Test
+    fun defaultVerticalGapIsPositive() {
+        val metrics = SymbolGridLayoutMetrics.fromDp(
+            density = 2.0f,
+            symbolPanelWidth = 800,
+            rowHeight = 100,
+        )
+        assertTrue("default verticalGap should be > 0", metrics.verticalGap > 0)
+    }
+
+    @Test
+    fun defaultVerticalGapMatchesHorizontalGap() {
+        val metrics = SymbolGridLayoutMetrics.fromDp(
+            density = 3.0f,
+            symbolPanelWidth = 1080,
+            rowHeight = 144,
+        )
+        assertEquals("default vGap should equal hGap", metrics.horizontalGap, metrics.verticalGap)
+    }
+
+    @Test
+    fun customVerticalGapOverridesDefault() {
+        val metrics = SymbolGridLayoutMetrics.fromDp(
+            density = 2.0f,
+            symbolPanelWidth = 800,
+            rowHeight = 100,
+            vGapDp = 8f,
+        )
+        assertEquals("custom vGap should be 8dp * density", (8 * 2.0f).toInt(), metrics.verticalGap)
+    }
 }

@@ -144,10 +144,10 @@ class KeyboardActionHandlerTest {
     }
 
     @Test
-    fun testSymbolMode_enter_performsEditorAction() {
+    fun testSymbolMode_enter_commitsNewline() {
         handler.switchKeyboardMode(KeyboardMode.Symbol)
         handler.onEnter()
-        verify(sink).performEditorActionOrNewline()
+        verify(sink).commitNewline()
     }
 
     @Test
@@ -165,10 +165,10 @@ class KeyboardActionHandlerTest {
     }
 
     @Test
-    fun testNumberMode_enter_performsEditorAction() {
+    fun testNumberMode_enter_commitsNewline() {
         handler.switchKeyboardMode(KeyboardMode.Number)
         handler.onEnter()
-        verify(sink).performEditorActionOrNewline()
+        verify(sink).commitNewline()
     }
 
     @Test
@@ -558,6 +558,48 @@ class KeyboardActionHandlerTest {
         assertTrue(success)
         verify(sink, never()).commitText(anyString())
         assertEquals("neng", handler.preedit)
+    }
+
+    // --- Enter key newline tests ---
+
+    @Test
+    fun testChineseT9_enter_emptyBuffer_commitsNewline() {
+        handler.onEnter()
+        verify(sink).commitNewline()
+        verify(sink, never()).performEditorActionOrNewline()
+    }
+
+    @Test
+    fun testChineseT9_enter_withBuffer_commitsCandidate() {
+        setupCandidates(listOf(
+            Candidate("我", "96", 1000, CandidateType.SINGLE_CHAR, "wo", CandidateOrigin.EXACT_SINGLE)
+        ))
+        handler.onDigitPressed("9")
+        handler.onDigitPressed("6")
+        handler.refreshCandidates(30)
+
+        handler.onEnter()
+        verify(sink).commitText("我")
+        verify(sink, never()).commitNewline()
+    }
+
+    @Test
+    fun testEnglishT9_enter_noPending_commitsNewline() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onEnter()
+        verify(sink).commitNewline()
+        verify(sink, never()).performEditorActionOrNewline()
+    }
+
+    @Test
+    fun testEnglishT9_enter_withPending_commitsChar() {
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.onDigitPressed("2") // 'a'
+        assertTrue(handler.englishPending)
+
+        handler.onEnter()
+        verify(sink).commitText("a")
+        verify(sink, never()).commitNewline()
     }
 
 }

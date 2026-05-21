@@ -21,7 +21,7 @@ data class SymbolGridLayoutMetrics(
             hInsetDp: Float = 4f,
             vInsetDp: Float = 4f,
             hGapDp: Float = 4f,
-            vGapDp: Float = 0f,
+            vGapDp: Float = 4f,
         ): SymbolGridLayoutMetrics {
             val hInset = (hInsetDp * density).toInt()
             val vInset = (vInsetDp * density).toInt()

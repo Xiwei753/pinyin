@@ -300,6 +300,11 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         currentInputConnection?.commitText(text, 1)
     }
 
+    override fun commitNewline() {
+        logAction("NEWLINE", "\\n")
+        currentInputConnection?.commitText("\n", 1)
+    }
+
     override fun sendDelete() {
         logAction("KEY_DEL", "send DEL")
         currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))

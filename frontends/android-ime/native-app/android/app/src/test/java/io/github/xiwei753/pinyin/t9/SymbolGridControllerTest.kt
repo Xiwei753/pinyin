@@ -326,4 +326,79 @@ class SymbolGridControllerTest {
             }
         }
     }
+
+    @Test
+    fun placeholderHasBackgroundVisual() {
+        val entries = listOf(1 to "X")
+        val page = SymbolGridController.buildPage(
+            context = context,
+            entries = entries,
+            rowHeightPx = 100,
+            generatedSymbolViews = generatedViews,
+        )
+
+        val row = page.getChildAt(0) as LinearLayout
+        for (i in 1 until 5) {
+            val placeholder = row.getChildAt(i)
+            assertTrue("Placeholder should not be TextView", placeholder !is TextView)
+            assertTrue("Placeholder $i should have a background", placeholder.background != null)
+        }
+    }
+
+    @Test
+    fun defaultMetricsApplyVerticalGapBetweenRows() {
+        val metrics = SymbolGridLayoutMetrics.fromDp(
+            density = context.resources.displayMetrics.density,
+            symbolPanelWidth = context.resources.displayMetrics.widthPixels,
+            rowHeight = (48 * context.resources.displayMetrics.density).toInt(),
+        )
+        assertTrue("Default metrics should have verticalGap > 0", metrics.verticalGap > 0)
+
+        val entries = (1..10).map { it to "v$it" }
+        SymbolGridController.buildPage(
+            context = context,
+            entries = entries,
+            rowHeightPx = metrics.cellHeight,
+            generatedSymbolViews = generatedViews,
+            metrics = metrics,
+        )
+
+        val page = generatedViews[0].parent.parent as LinearLayout
+        assertEquals(2, page.childCount)
+        val firstRow = page.getChildAt(0) as LinearLayout
+        val firstLp = firstRow.layoutParams as LinearLayout.LayoutParams
+        assertEquals("First row bottomMargin should equal verticalGap",
+            metrics.verticalGap, firstLp.bottomMargin)
+    }
+
+    @Test
+    fun allPagesHaveConsistentGaps() {
+        val metrics = SymbolGridLayoutMetrics.fromDp(
+            density = 2.0f,
+            symbolPanelWidth = 800,
+            rowHeight = 100,
+        )
+        assertTrue("hGap and vGap should both be positive",
+            metrics.horizontalGap > 0 && metrics.verticalGap > 0)
+
+        val entries = (1..12).map { it to "p$it" }
+        SymbolGridController.buildPage(
+            context = context,
+            entries = entries,
+            rowHeightPx = metrics.cellHeight,
+            generatedSymbolViews = generatedViews,
+            metrics = metrics,
+        )
+
+        val page = generatedViews[0].parent.parent as LinearLayout
+        for (i in 0 until page.childCount - 1) {
+            val row = page.getChildAt(i) as LinearLayout
+            val lp = row.layoutParams as LinearLayout.LayoutParams
+            assertEquals("Row $i bottomMargin should equal verticalGap",
+                metrics.verticalGap, lp.bottomMargin)
+        }
+        val lastRow = page.getChildAt(page.childCount - 1) as LinearLayout
+        val lastLp = lastRow.layoutParams as LinearLayout.LayoutParams
+        assertEquals("Last row should have no bottomMargin", 0, lastLp.bottomMargin)
+    }
 }
