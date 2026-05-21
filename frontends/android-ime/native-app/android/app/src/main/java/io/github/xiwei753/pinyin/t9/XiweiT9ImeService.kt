@@ -225,6 +225,17 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
     }
 
+    override fun sendDefaultEditorAction(fromEnterKey: Boolean): Boolean {
+        val editorInfo = currentEditorInfo
+        if (editorInfo != null) {
+            val action = editorInfo.imeOptions and EditorInfo.IME_MASK_ACTION
+            if (action != EditorInfo.IME_ACTION_NONE) {
+                return currentInputConnection?.performEditorAction(action) ?: false
+            }
+        }
+        return false
+    }
+
     override fun performEditorActionOrNewline() {
         val info = currentEditorInfo
         if (info != null) {
@@ -233,29 +244,40 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             val actionId = info.actionId
             val actionLabel = info.actionLabel
 
-            logEditorAction(imeOptions, action, actionId, actionLabel)
+            logEnterAction("imeOptions=$imeOptions action=$action actionId=$actionId actionLabel=$actionLabel")
 
+            // Step 1: custom actionId/actionLabel
             if (actionId != 0 && actionLabel != null) {
                 val result = currentInputConnection?.performEditorAction(actionId)
-                debugLogger.log("XiweiT9Enter", "custom actionId=$actionId actionLabel=$actionLabel result=$result")
-                return
+                logEnterAction("custom actionId=$actionId actionLabel=$actionLabel result=$result")
+                if (result == true) return
             }
 
-            if (action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED) {
+            // Step 2: standard IME action (SEND/GO/SEARCH/DONE/NEXT/PREVIOUS)
+            val hasStandardAction = action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED
+            if (hasStandardAction) {
                 val result = currentInputConnection?.performEditorAction(action)
-                debugLogger.log("XiweiT9Enter", "performEditorAction action=$action result=$result")
-                return
+                logEnterAction("performEditorAction action=$action result=$result")
+                if (result == true) return
             }
 
+            // Step 3: default editor action via framework
+            val defaultResult = sendDefaultEditorAction(true)
+            logEnterAction("sendDefaultEditorAction result=$defaultResult")
+            if (defaultResult) return
+
+            // Step 4: final fallback - insert newline
+            logEnterAction("fallback: commitText newline")
             currentInputConnection?.commitText("\n", 1)
             return
         }
+        logEnterAction("no editorInfo, fallback: commitText newline")
         currentInputConnection?.commitText("\n", 1)
     }
 
-    private fun logEditorAction(imeOptions: Int, action: Int, actionId: Int, actionLabel: CharSequence?) {
+    private fun logEnterAction(msg: String) {
         if (!settingsRepository.isDebugLoggingEnabled()) return
-        debugLogger.log("XiweiT9Enter", "imeOptions=$imeOptions action=$action actionId=$actionId actionLabel=$actionLabel")
+        debugLogger.log("XiweiT9Enter", msg)
     }
 
     override fun finishComposingText() {
