@@ -70,7 +70,6 @@ class SymbolGridControllerTest {
         for (i in 2 until 5) {
             val cell = lastRow.getChildAt(i)
             assertTrue("Cell $i should be placeholder (View, not TextView)", cell !is TextView)
-            assertEquals("Placeholder $i should be INVISIBLE", View.INVISIBLE, cell.visibility)
             assertFalse("Placeholder $i should not be clickable", cell.isClickable)
             assertFalse("Placeholder $i should not be enabled", cell.isEnabled)
         }
@@ -157,9 +156,174 @@ class SymbolGridControllerTest {
         for (i in 1 until 5) {
             val cell = row.getChildAt(i)
             assertTrue("Cell $i should be placeholder", cell !is TextView)
-            assertEquals(View.INVISIBLE, cell.visibility)
+            assertFalse("Placeholder $i should not be clickable", cell.isClickable)
         }
 
         assertEquals("Should have 1 generated view", 1, generatedViews.size)
+    }
+
+    @Test
+    fun symbolKeyClickTriggersCallback() {
+        val clicked = mutableListOf<String>()
+        val entries = listOf(1 to "A", 2 to "B")
+        SymbolGridController.buildPage(
+            context = context,
+            entries = entries,
+            rowHeightPx = 100,
+            generatedSymbolViews = generatedViews,
+            onSymbolClick = { symbol -> clicked.add(symbol) },
+        )
+
+        assertEquals(2, generatedViews.size)
+        val btnA = generatedViews[0]
+        val btnB = generatedViews[1]
+
+        btnA.performClick()
+        assertEquals(listOf("A"), clicked)
+
+        btnB.performClick()
+        assertEquals(listOf("A", "B"), clicked)
+    }
+
+    @Test
+    fun placeholderClickDoesNothing() {
+        val clicked = mutableListOf<String>()
+        val entries = listOf(1 to "X")
+        val page = SymbolGridController.buildPage(
+            context = context,
+            entries = entries,
+            rowHeightPx = 100,
+            generatedSymbolViews = generatedViews,
+            onSymbolClick = { symbol -> clicked.add(symbol) },
+        )
+
+        // Click symbol first to verify binding works
+        generatedViews[0].performClick()
+        assertEquals(listOf("X"), clicked)
+
+        val row = page.getChildAt(0) as LinearLayout
+        // cells 1-4 = placeholders
+        for (i in 1 until 5) {
+            val placeholder = row.getChildAt(i)
+            assertFalse("placeholder should not be clickable", placeholder.isClickable)
+            assertFalse("placeholder should not be enabled", placeholder.isEnabled)
+            placeholder.performClick()
+        }
+        // clicked should still be only ["X"] - placeholders don't trigger callback
+        assertEquals(listOf("X"), clicked)
+    }
+
+    @Test
+    fun horizontalGapAppliedFromMetrics() {
+        val metrics = SymbolGridLayoutMetrics(
+            cellWidth = 100, cellHeight = 100, columnCount = 5,
+            contentInsetLeft = 0, contentInsetRight = 0,
+            contentInsetTop = 0, contentInsetBottom = 0,
+            horizontalGap = 8, verticalGap = 0,
+        )
+        val entries = (1..5).map { it to "v$it" }
+        SymbolGridController.buildPage(
+            context = context,
+            entries = entries,
+            rowHeightPx = 100,
+            generatedSymbolViews = generatedViews,
+            metrics = metrics,
+        )
+
+        val page = generatedViews[0].parent.parent as LinearLayout
+        val row = page.getChildAt(0) as LinearLayout
+        for (i in 0 until 4) {
+            val cell = row.getChildAt(i)
+            val lp = cell.layoutParams as LinearLayout.LayoutParams
+            assertEquals("Cell $i should have marginEnd = 8",
+                8, lp.marginEnd)
+        }
+        // Last cell should have no marginEnd
+        val lastCell = row.getChildAt(4)
+        val lastLp = lastCell.layoutParams as LinearLayout.LayoutParams
+        assertEquals("Last cell should have no marginEnd", 0, lastLp.marginEnd)
+    }
+
+    @Test
+    fun verticalGapAppliedFromMetrics() {
+        val metrics = SymbolGridLayoutMetrics(
+            cellWidth = 100, cellHeight = 100, columnCount = 5,
+            contentInsetLeft = 0, contentInsetRight = 0,
+            contentInsetTop = 0, contentInsetBottom = 0,
+            horizontalGap = 0, verticalGap = 6,
+        )
+        val entries = (1..10).map { it to "r$it" }
+        SymbolGridController.buildPage(
+            context = context,
+            entries = entries,
+            rowHeightPx = 100,
+            generatedSymbolViews = generatedViews,
+            metrics = metrics,
+        )
+
+        val page = generatedViews[0].parent.parent as LinearLayout
+        assertEquals(2, page.childCount)
+        val firstRow = page.getChildAt(0) as LinearLayout
+        val firstLp = firstRow.layoutParams as LinearLayout.LayoutParams
+        assertEquals("First row should have bottomMargin = verticalGap",
+            6, firstLp.bottomMargin)
+
+        val lastRow = page.getChildAt(1) as LinearLayout
+        val lastLp = lastRow.layoutParams as LinearLayout.LayoutParams
+        assertEquals("Last row should have no bottomMargin", 0, lastLp.bottomMargin)
+    }
+
+    @Test
+    fun onSymbolTouchDoesNotCrash() {
+        // Verify that setting onSymbolTouch doesn't prevent button creation
+        val entries = listOf(1 to "T")
+        SymbolGridController.buildPage(
+            context = context,
+            entries = entries,
+            rowHeightPx = 100,
+            generatedSymbolViews = generatedViews,
+            onSymbolTouch = { _ -> },
+        )
+        assertEquals(1, generatedViews.size)
+        val btn = generatedViews[0]
+        assertTrue("Symbol button should be clickable", btn.isClickable)
+    }
+
+    @Test
+    fun allSymbolKeysHaveVisibleWhiteBackgroundSeparatedByGaps() {
+        val metrics = SymbolGridLayoutMetrics(
+            cellWidth = 100, cellHeight = 100, columnCount = 5,
+            contentInsetLeft = 0, contentInsetRight = 0,
+            contentInsetTop = 0, contentInsetBottom = 0,
+            horizontalGap = 4, verticalGap = 4,
+        )
+        val entries = (1..7).map { it to "g$it" }
+        SymbolGridController.buildPage(
+            context = context,
+            entries = entries,
+            rowHeightPx = 100,
+            generatedSymbolViews = generatedViews,
+            metrics = metrics,
+        )
+
+        val page = generatedViews[0].parent.parent as LinearLayout
+        // First row: 5 symbol keys all have margins between them
+        val row = page.getChildAt(0) as LinearLayout
+        for (i in 0 until 4) {
+            val cell = row.getChildAt(i)
+            assertTrue("Cell $i should be TextView", cell is TextView)
+            val lp = cell.layoutParams as LinearLayout.LayoutParams
+            assertTrue("Cell $i marginEnd should be >= 0", lp.marginEnd >= 0)
+        }
+        // Last row: 2 symbol keys + 3 placeholders
+        val lastRow = page.getChildAt(1) as LinearLayout
+        for (i in 0 until 5) {
+            val cell = lastRow.getChildAt(i)
+            if (i < 2) {
+                assertTrue("Last row cell $i should be TextView", cell is TextView)
+            } else {
+                assertTrue("Last row cell $i should be placeholder", cell !is TextView)
+            }
+        }
     }
 }

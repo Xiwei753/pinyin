@@ -14,6 +14,9 @@ enum class ReadingCategory {
 
 object ReadingRanker {
 
+    // Readings that produce no useful Chinese T9 candidates
+    private val LOW_VALUE_READINGS = setOf("ng", "o")
+
     fun rank(
         buffer: String,
         compositions: List<PinyinComposition>,
@@ -80,11 +83,13 @@ object ReadingRanker {
             results.add(RankedReading(syl, score, ReadingCategory.PREFIX_FALLBACK))
         }
 
-        return results.sortedWith(
-            compareBy<RankedReading> { it.category.ordinal }
-                .thenByDescending { it.syllable.length }
-                .thenByDescending { it.score }
-                .thenBy { it.syllable }
-        )
+        return results
+            .filter { it.syllable !in LOW_VALUE_READINGS }
+            .sortedWith(
+                compareBy<RankedReading> { it.category.ordinal }
+                    .thenByDescending { it.syllable.length }
+                    .thenByDescending { it.score }
+                    .thenBy { it.syllable }
+            )
     }
 }

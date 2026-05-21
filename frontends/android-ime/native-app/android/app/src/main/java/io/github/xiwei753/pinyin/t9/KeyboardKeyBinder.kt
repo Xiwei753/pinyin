@@ -44,7 +44,6 @@ class KeyboardKeyBinder(
         setupModeToggleKeys(handler)
         setupSpaceKey(handler)
         setupEnterKey(handler)
-        setupSymbolGridKeys(handler)
     }
 
     private fun setupNumberPadKeys(handler: KeyboardActionHandler) {
@@ -164,14 +163,4 @@ class KeyboardKeyBinder(
         }
     }
 
-    private fun setupSymbolGridKeys(handler: KeyboardActionHandler) {
-        for (symView in v.generatedSymbolViews) {
-            setupKey(symView, false) {
-                val text = (symView as? android.widget.TextView)?.text?.toString() ?: return@setupKey
-                handler.onDigitPressed(text)
-                handler.switchKeyboardMode(handler.lastTextMode)
-                onModeChanged()
-            }
-        }
-    }
 }

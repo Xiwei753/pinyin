@@ -2,6 +2,7 @@ package io.github.xiwei753.pinyin.t9
 
 import android.content.Context
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -17,10 +18,9 @@ object SymbolGridController {
         generatedSymbolViews: MutableList<View>,
         textSize: Float = 20f,
         textColor: Int = 0xFF333333.toInt(),
-        insetLeft: Int = 0,
-        insetTop: Int = 0,
-        insetRight: Int = 0,
-        insetBottom: Int = 0,
+        metrics: SymbolGridLayoutMetrics? = null,
+        onSymbolClick: ((String) -> Unit)? = null,
+        onSymbolTouch: ((View) -> Unit)? = null,
     ): LinearLayout {
         val page = LinearLayout(context)
         page.layoutParams = LinearLayout.LayoutParams(
@@ -28,10 +28,10 @@ object SymbolGridController {
             LinearLayout.LayoutParams.WRAP_CONTENT,
         )
         page.orientation = LinearLayout.VERTICAL
-        page.setPadding(insetLeft, insetTop, insetRight, insetBottom)
 
         val rows = entries.chunked(COLUMNS)
-        for (row in rows) {
+        val rowCount = rows.size
+        for ((rowIndex, row) in rows.withIndex()) {
             val rowLayout = LinearLayout(context)
             rowLayout.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -39,16 +39,29 @@ object SymbolGridController {
             )
             rowLayout.orientation = LinearLayout.HORIZONTAL
 
+            if (metrics != null && rowIndex < rowCount - 1) {
+                (rowLayout.layoutParams as LinearLayout.LayoutParams).bottomMargin = metrics.verticalGap
+            }
+
+            var cellIndex = 0
             for ((_, text) in row) {
-                val btn = createSymbolButton(context, text, textSize, textColor)
+                val btn = createSymbolButton(context, text, textSize, textColor, onSymbolClick, onSymbolTouch)
+                if (metrics != null && cellIndex < COLUMNS - 1) {
+                    (btn.layoutParams as LinearLayout.LayoutParams).marginEnd = metrics.horizontalGap
+                }
                 rowLayout.addView(btn)
                 generatedSymbolViews.add(btn)
+                cellIndex++
             }
 
             val remaining = COLUMNS - row.size
             for (i in 0 until remaining) {
                 val placeholder = createPlaceholder(context)
+                if (metrics != null && cellIndex < COLUMNS - 1) {
+                    (placeholder.layoutParams as LinearLayout.LayoutParams).marginEnd = metrics.horizontalGap
+                }
                 rowLayout.addView(placeholder)
+                cellIndex++
             }
 
             page.addView(rowLayout)
@@ -62,6 +75,8 @@ object SymbolGridController {
         text: String,
         textSize: Float,
         textColor: Int,
+        onSymbolClick: ((String) -> Unit)?,
+        onSymbolTouch: ((View) -> Unit)?,
     ): TextView {
         return TextView(context).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -69,7 +84,6 @@ object SymbolGridController {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 1f,
             )
-            setPadding(0, 0, 0, 0)
             gravity = Gravity.CENTER
             setTextSize(textSize)
             setTextColor(textColor)
@@ -81,6 +95,18 @@ object SymbolGridController {
             }
             isClickable = true
             isFocusable = true
+
+            if (onSymbolClick != null) {
+                setOnClickListener { onSymbolClick(text) }
+            }
+            if (onSymbolTouch != null) {
+                setOnTouchListener { v, event ->
+                    if (event.action == MotionEvent.ACTION_DOWN) {
+                        onSymbolTouch(v)
+                    }
+                    false
+                }
+            }
         }
     }
 
@@ -91,7 +117,6 @@ object SymbolGridController {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 1f,
             )
-            visibility = View.INVISIBLE
             isClickable = false
             isEnabled = false
         }

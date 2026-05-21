@@ -2,7 +2,6 @@ package io.github.xiwei753.pinyin.t9
 
 import android.content.res.Configuration
 import android.content.res.Resources
-import android.graphics.Color
 import android.view.View
 import android.widget.TextView
 
@@ -142,13 +141,10 @@ class KeyboardThemeController(
             v.symTabOther to "other",
         )
         for ((tab, category) in tabs) {
-            if (category == activeCategory) {
-                tab.setBackgroundColor(palette.symTabActiveBg)
-                tab.setTextColor(palette.symTabActiveText)
-            } else {
-                tab.setBackgroundColor(palette.symTabInactiveBg)
-                tab.setTextColor(palette.symTabInactiveText)
-            }
+            val textColor = if (category == activeCategory) palette.symTabActiveText else palette.symTabInactiveText
+            val bgRes = if (category == activeCategory) R.drawable.key_bg else R.drawable.key_bg_special
+            tab.setBackgroundResource(bgRes)
+            tab.setTextColor(textColor)
         }
     }
 }

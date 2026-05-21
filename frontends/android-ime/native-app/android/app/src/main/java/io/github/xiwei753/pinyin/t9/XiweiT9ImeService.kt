@@ -257,6 +257,16 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             SymbolKeyRegistry.Category.OTHER to "other",
         )
 
+        // Symbol click handler: commit text and return to last text mode
+        val onSymbolClick = { symbol: String ->
+            handler.onDigitPressed(symbol)
+            handler.switchKeyboardMode(handler.lastTextMode)
+            updateKeyboardPanel()
+        }
+        val onSymbolTouch = { view: android.view.View ->
+            hapticFeedbackManager.performTap(view)
+        }
+
         for (category in registry.getAllCategories()) {
             val pageName = categoryToPage[category] ?: "other"
             val page = pageMap[pageName] ?: continue
@@ -270,6 +280,9 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 generatedSymbolViews = keyboardViews.generatedSymbolViews,
                 textSize = 20f,
                 textColor = 0xFF333333.toInt(),
+                metrics = metrics,
+                onSymbolClick = onSymbolClick,
+                onSymbolTouch = onSymbolTouch,
             )
 
             // Transfer all children from the grid page to the target page
