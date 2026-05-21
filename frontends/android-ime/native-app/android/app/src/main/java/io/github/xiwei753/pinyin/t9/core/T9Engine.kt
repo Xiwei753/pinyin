@@ -182,18 +182,14 @@ class T9Engine(
         val primaryPinyin: String = compositions.firstOrNull { it.isComplete }?.pinyinString
             ?: compositions.firstOrNull()?.pinyinString ?: ""
 
-        // Generate raw candidates through the full composition/DP pipeline (needed for proper
-        // multi-syllable candidate discovery). Then filter into strict sourcing layers.
-        val rawCandidates = generateCandidates(buffer, limit + 10, allowDynamic = false)
-
-        // ── Layer 1: exact phrases ──
-        val exactPhrases = generateExactPhraseCandidates(rawCandidates)
+        // ── Layer 1: exact phrases (from complete multi-syllable compositions) ──
+        val exactPhrases = generateExactPhraseCandidates(compositions, limit)
 
         // ── Layer 2: user candidates ──
         val userCands = generateUserCandidates(primaryPinyin)
 
-        // ── Layer 3: exact single chars ──
-        val exactSingles = generateExactSingleCandidates(rawCandidates).let { singles ->
+        // ── Layer 3: exact single chars (from single-syllable compositions) ──
+        val exactSingles = generateExactSingleCandidates(compositions, limit).let { singles ->
             when {
                 buffer.length == 1 -> singles.filter { it.text.length <= 1 }
                 buffer.length == 2 -> singles.filter { it.text.length <= 2 }
@@ -207,7 +203,7 @@ class T9Engine(
 
         // ── Layer 4: dynamic fallback (only when no other candidates exist) ──
         val dynamicFallback = if (!hasExactPhrase && !hasUserCand && !hasSingle && buffer.length >= 5) {
-            generateDynamicFallbackCandidates(compositions).take(1)
+            generateDynamicFallbackCandidates(compositions)
         } else emptyList()
 
         // ── Build visible list by strict sourcing: order determined by layer, not score ──
@@ -227,21 +223,40 @@ class T9Engine(
     }
 
     private fun generateExactPhraseCandidates(
-        rawCandidates: List<Candidate>,
+        compositions: List<PinyinComposition>,
+        limit: Int,
     ): List<Candidate> {
-        return rawCandidates.filter { c ->
-            c.origin == CandidateOrigin.EXACT_PHRASE && c.text.length >= 2 &&
-            !c.text.matches(Regex("^[a-zA-Z\\s]+$"))
+        val results = mutableListOf<Candidate>()
+        for (comp in compositions) {
+            if (!comp.isComplete || comp.pinyinList.size < 2) continue
+            val candidates = getSentenceCandidates(
+                comp, limit, comp.pinyinString, allowDynamic = false
+            ).filter { c ->
+                c.origin == CandidateOrigin.EXACT_PHRASE && c.text.length >= 2 &&
+                !c.text.matches(Regex("^[a-zA-Z\\s]+$"))
+            }
+            results.addAll(candidates)
         }
+        return results.sortedByDescending { it.score }.take(limit)
     }
 
     private fun generateExactSingleCandidates(
-        rawCandidates: List<Candidate>,
+        compositions: List<PinyinComposition>,
+        limit: Int,
     ): List<Candidate> {
-        return rawCandidates.filter { c ->
-            c.origin == CandidateOrigin.EXACT_SINGLE && c.text.length == 1 &&
-            !c.text.matches(Regex("^[a-zA-Z\\s]+$"))
+        val results = mutableListOf<Candidate>()
+        for (comp in compositions) {
+            if (comp.pinyinList.size != 1) continue
+            val pinyin = comp.pinyinList[0]
+            val candidates = getSingleSyllableCandidates(
+                pinyin, comp.isComplete, limit, comp.pinyinString, comp.segmentDigits
+            ).filter { c ->
+                c.origin == CandidateOrigin.EXACT_SINGLE && c.text.length == 1 &&
+                !c.text.matches(Regex("^[a-zA-Z\\s]+$"))
+            }
+            results.addAll(candidates)
         }
+        return results.sortedByDescending { it.score }.distinctBy { it.text }.take(limit)
     }
 
     private fun generateUserCandidates(primaryPinyin: String): List<Candidate> {
