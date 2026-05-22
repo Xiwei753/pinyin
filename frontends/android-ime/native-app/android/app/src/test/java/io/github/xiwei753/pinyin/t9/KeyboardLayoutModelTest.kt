@@ -211,6 +211,9 @@ class KeyboardLayoutModelTest {
         
         val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_PUNCT }
         assertTrue("Should not contain punct keys when composing", punctKeys.isEmpty())
+
+        val preeditKeys = model.leftRailKeys.filter { it.role.name == "RAIL_PREEDIT" }
+        assertTrue("Should not contain preedit keys in left rail", preeditKeys.isEmpty())
     }
 
     @Test
