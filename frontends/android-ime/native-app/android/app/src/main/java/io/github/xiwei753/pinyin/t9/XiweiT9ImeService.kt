@@ -3,6 +3,7 @@ package io.github.xiwei753.pinyin.t9
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
 import android.os.Looper
+import android.text.InputType
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
@@ -199,8 +200,26 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     internal fun handleInputAction(action: ImeInputAction) {
         if (!this::handler.isInitialized) return
         if (!isActionAllowedByPolicy(action)) return
+        val debugLogging = settingsRepository.isDebugLoggingEnabled()
+        val beforeMode = if (debugLogging) handler.keyboardMode else null
+        val beforeBufferEmpty = if (debugLogging) handler.rawBuffer.isEmpty() else null
         handler.handle(action)
         renderCurrentState()
+        if (debugLogging) {
+            val afterMode = handler.keyboardMode
+            val afterBufferEmpty = handler.rawBuffer.isEmpty()
+            val uiState = handler.uiState(isDictPreparing)
+            val candidateCount = uiState.candidatesSnapshot.size
+            val preeditVisible = uiState.preeditState.visible
+            val symbolCategory = uiState.currentSymbolCategory
+            debugLogger.log("XiweiT9StateMachine",
+                "action=${action::class.simpleName} " +
+                "beforeMode=$beforeMode afterMode=$afterMode " +
+                "beforeBufferEmpty=$beforeBufferEmpty afterBufferEmpty=$afterBufferEmpty " +
+                "candidateCount=$candidateCount " +
+                "preeditVisible=$preeditVisible " +
+                "currentSymbolCategory=$symbolCategory")
+        }
     }
 
     private fun isActionAllowedByPolicy(action: ImeInputAction): Boolean {
@@ -236,13 +255,13 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         super.onStartInputView(info, restarting)
         currentEditorInfo = info
         applyThemeAndHeight()
-        if (this::handler.isInitialized) applyEditorContext(info)
+        if (this::handler.isInitialized) applyEditorContext(info, restarting)
     }
 
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         super.onStartInput(info, restarting)
         currentEditorInfo = info
-        if (this::handler.isInitialized) applyEditorContext(info)
+        if (this::handler.isInitialized) applyEditorContext(info, restarting)
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
@@ -261,8 +280,37 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         if (this::handler.isInitialized) handler.handle(ImeInputAction.LifecycleFinishInput)
     }
 
-    private fun applyEditorContext(info: EditorInfo?) {
+    private fun applyEditorContext(info: EditorInfo?, restarting: Boolean = false) {
         val policy = EditorInputTypePolicy.resolve(info)
+        if (settingsRepository.isDebugLoggingEnabled()) {
+            val inputTypeVal = info?.inputType ?: 0
+            val classMask = inputTypeVal and InputType.TYPE_MASK_CLASS
+            val variation = inputTypeVal and InputType.TYPE_MASK_VARIATION
+            val isPhone = classMask == InputType.TYPE_CLASS_PHONE
+            val isNumber = classMask == InputType.TYPE_CLASS_NUMBER
+            val isPassword = classMask == InputType.TYPE_CLASS_TEXT && (
+                variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
+                variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
+                variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+            ) || classMask == InputType.TYPE_CLASS_NUMBER && variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            val isUrl = classMask == InputType.TYPE_CLASS_TEXT && (
+                variation == InputType.TYPE_TEXT_VARIATION_URI ||
+                variation == InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
+            )
+            val isEmail = classMask == InputType.TYPE_CLASS_TEXT && (
+                variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS ||
+                variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
+            )
+            debugLogger.log("XiweiT9EditorPolicy",
+                String.format("inputType=0x%08x imeOptions=0x%08x classMask=0x%08x variation=0x%08x " +
+                    "defaultKeyboardMode=%s defaultLastTextMode=%s allowChineseCandidates=%s " +
+                    "enterBehavior=%s restarting=%s " +
+                    "password=%s number=%s phone=%s url=%s email=%s",
+                    inputTypeVal, info?.imeOptions ?: 0, classMask, variation,
+                    policy.defaultKeyboardMode, policy.defaultLastTextMode, policy.allowChineseCandidates,
+                    policy.enterBehavior, restarting,
+                    isPassword, isNumber, isPhone, isUrl, isEmail))
+        }
         handler.beginInputContext(policy.defaultKeyboardMode, policy.defaultLastTextMode)
         renderCurrentState()
     }

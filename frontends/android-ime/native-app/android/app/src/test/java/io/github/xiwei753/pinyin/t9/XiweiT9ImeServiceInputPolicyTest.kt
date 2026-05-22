@@ -61,6 +61,129 @@ class XiweiT9ImeServiceInputPolicyTest {
         assertFalse(uiState.preeditState.visible)
     }
 
+    @Test
+    fun passwordToggleChineseEnglishStaysEnglishT9() {
+        val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
+        val info = editorInfo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+
+        service.onStartInput(info, false)
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+
+        service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun urlToggleChineseEnglishStaysEnglishT9() {
+        val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
+        val info = editorInfo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
+
+        service.onStartInput(info, false)
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+
+        service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun emailToggleChineseEnglishStaysEnglishT9() {
+        val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
+        val info = editorInfo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
+
+        service.onStartInput(info, false)
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+
+        service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun numberToggleChineseEnglishStaysNumber() {
+        val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
+        val info = editorInfo(InputType.TYPE_CLASS_NUMBER)
+
+        service.onStartInput(info, false)
+        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+
+        service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
+        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+    }
+
+    @Test
+    fun phoneToggleChineseEnglishStaysPhone() {
+        val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
+        val info = editorInfo(InputType.TYPE_CLASS_PHONE)
+
+        service.onStartInput(info, false)
+        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+
+        service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
+        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+    }
+
+    @Test
+    fun numberDigitInputDoesNotShowCandidateStrip() {
+        val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
+        val info = editorInfo(InputType.TYPE_CLASS_NUMBER)
+
+        service.onStartInput(info, false)
+        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+
+        service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.DigitPressed("2"))
+        val uiState = buildKeyboardUiState(service)
+
+        assertFalse(uiState.candidateStripState.visible)
+        assertTrue(uiState.candidateStripState.candidates.isEmpty())
+        assertFalse(uiState.preeditState.visible)
+    }
+
+    @Test
+    fun phoneDigitInputDoesNotShowCandidateStrip() {
+        val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
+        val info = editorInfo(InputType.TYPE_CLASS_PHONE)
+
+        service.onStartInput(info, false)
+        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+
+        service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.DigitPressed("5"))
+        val uiState = buildKeyboardUiState(service)
+
+        assertFalse(uiState.candidateStripState.visible)
+        assertTrue(uiState.candidateStripState.candidates.isEmpty())
+        assertFalse(uiState.preeditState.visible)
+    }
+
+    @Test
+    fun lifecycleStartResetsSymbolCategoryToPunct() {
+        val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
+
+        service.onStartInput(editorInfo(InputType.TYPE_CLASS_TEXT), false)
+
+        service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.SymbolCategorySelected("math"))
+
+        service.onStartInput(editorInfo(InputType.TYPE_CLASS_TEXT), false)
+
+        val state = buildKeyboardUiState(service)
+        assertEquals("punct", state.currentSymCategory)
+    }
+
+    @Test
+    fun consecutiveOnStartInputAndOnStartInputViewClearsBuffer() {
+        val (service, handler, engine) = createServiceWithFakeEngine(buffer = "96", preedit = "wo")
+        val info = editorInfo(InputType.TYPE_CLASS_TEXT)
+
+        service.onStartInput(info, false)
+        assertEquals("", handler.rawBuffer)
+        assertTrue(engine.cleared)
+
+        service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.DigitPressed("9"))
+        service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.DigitPressed("6"))
+        assertTrue(handler.rawBuffer.isNotEmpty())
+
+        service.onStartInputView(info, false)
+        assertEquals("", handler.rawBuffer)
+    }
+
     private fun createServiceWithFakeEngine(buffer: String, preedit: String): Triple<XiweiT9ImeService, KeyboardActionHandler, MutableEngine> {
         val service = XiweiT9ImeService()
         injectField(service, "settingsRepository", mock(SettingsRepository::class.java))

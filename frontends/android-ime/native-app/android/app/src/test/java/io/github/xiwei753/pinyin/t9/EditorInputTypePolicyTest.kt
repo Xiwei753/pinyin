@@ -56,6 +56,68 @@ class EditorInputTypePolicyTest {
     }
 
     @Test
+    fun webPasswordIsTreatedAsPassword() {
+        val policy = EditorInputTypePolicy.resolve(editorInfo(
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+        ))
+        assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
+        assertFalse(policy.allowChineseCandidates)
+    }
+
+    @Test
+    fun visiblePasswordIsTreatedAsPassword() {
+        val policy = EditorInputTypePolicy.resolve(editorInfo(
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        ))
+        assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
+        assertFalse(policy.allowChineseCandidates)
+    }
+
+    @Test
+    fun numberVariationPasswordUsesNumberMode() {
+        val policy = EditorInputTypePolicy.resolve(editorInfo(
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        ))
+        assertEquals(KeyboardMode.Number, policy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
+        assertFalse(policy.allowChineseCandidates)
+    }
+
+    @Test
+    fun webEmailAddressIsTreatedAsEmail() {
+        val policy = EditorInputTypePolicy.resolve(editorInfo(
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
+        ))
+        assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
+        assertFalse(policy.allowChineseCandidates)
+    }
+
+    @Test
+    fun webEditTextIsTreatedAsUrl() {
+        val policy = EditorInputTypePolicy.resolve(editorInfo(
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
+        ))
+        assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
+        assertFalse(policy.allowChineseCandidates)
+    }
+
+    @Test
+    fun multilineWithNoEnterActionHasNewlineBehavior() {
+        val policy = EditorInputTypePolicy.resolve(
+            editorInfo(
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE,
+                imeOptions = EditorInfo.IME_FLAG_NO_ENTER_ACTION,
+            )
+        )
+        assertEquals(KeyboardMode.ChineseT9, policy.defaultKeyboardMode)
+        assertEquals(EditorEnterBehavior.NEWLINE, policy.enterBehavior)
+    }
+
+    @Test
     fun multilineTextKeepsChineseAndNewlinePolicy() {
         val policy = EditorInputTypePolicy.resolve(
             editorInfo(

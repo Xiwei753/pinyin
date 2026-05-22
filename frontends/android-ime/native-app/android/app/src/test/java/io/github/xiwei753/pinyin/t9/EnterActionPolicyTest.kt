@@ -130,6 +130,35 @@ class EnterActionPolicyTest {
     }
 
     @Test
+    fun shouldSend_nextAction_returnsFalse() {
+        val info = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_NEXT }
+        assertFalse(EnterActionPolicy.shouldSend(info))
+    }
+
+    @Test
+    fun shouldInsertNewline_go_returnsFalse() {
+        val info = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_GO }
+        assertFalse(EnterActionPolicy.shouldInsertNewline(info))
+    }
+
+    @Test
+    fun shouldInsertNewline_next_returnsFalse() {
+        val info = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_NEXT }
+        assertFalse(EnterActionPolicy.shouldInsertNewline(info))
+    }
+
+    @Test
+    fun shouldInsertNewline_multilineWithNoEnterAction_returnsTrue() {
+        val info = EditorInfo().apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            imeOptions = EditorInfo.IME_FLAG_NO_ENTER_ACTION
+        }
+        assertTrue(EnterActionPolicy.shouldInsertNewline(info))
+        assertFalse(EnterActionPolicy.shouldSend(info))
+        assertFalse(EnterActionPolicy.shouldRunExplicitAction(info))
+    }
+
+    @Test
     fun getAction_null_returnsNone() {
         assertEquals(EditorInfo.IME_ACTION_NONE, EnterActionPolicy.getAction(null))
     }
