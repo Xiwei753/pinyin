@@ -229,12 +229,12 @@ class XiweiKeyboardViewTest {
 
     @Test
     fun hitLeftRailKeysAlwaysReturnsPunctAction() {
-        val readings = listOf("meng", "neng", "men")
+        val readings = emptyList<String>()
         val builder = KeyboardLayoutBuilder()
-        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, readings, true, KeyboardMode.ChineseT9)
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, readings, false, KeyboardMode.ChineseT9)
         val renderer = KeyboardRenderer()
 
-        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_PUNCT }
+        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_PUNCT }
         assertEquals(4, punctKeys.size)
 
         val first = punctKeys.first()

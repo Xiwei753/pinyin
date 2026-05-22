@@ -98,7 +98,7 @@ class KeyboardHitTestTest {
     @Test
     fun hitPunctKeyReturnsPunct() {
         val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
-        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_PUNCT }
+        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_PUNCT }
         assertTrue("Should have punct keys in left rail", punctKeys.isNotEmpty())
 
         val firstPunct = punctKeys.first()

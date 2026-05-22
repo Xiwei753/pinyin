@@ -28,26 +28,50 @@ class KeyboardLayoutBuilder {
         val keys = mutableListOf<KeyboardKey>()
         val leftRailKeys = mutableListOf<KeyboardKey>()
 
-        val punctLabelHeight = rowHeight / 2
-
         val availableScrollHeight = geo.leftRailScrollRect.height()
 
-        var y = geo.leftRailScrollRect.top
-        val puncts = listOf("，", "。", "？", "！")
-        val punctHeight = minOf(punctLabelHeight, availableScrollHeight / puncts.size)
-        for (punctText in puncts) {
-            val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + punctHeight)
-            leftRailKeys.add(
-                KeyboardKey(
-                    id = "punct_$punctText",
-                    role = KeyboardKeyRole.LEFT_RAIL_PUNCT,
-                    rect = r,
-                    label = punctText,
-                    action = "punct:$punctText",
-                    isLeftRail = true,
+        if (!isComposing) {
+            // Empty buffer: display punctuation
+            val puncts = listOf("，", "。", "？", "！")
+            val punctHeight = availableScrollHeight / puncts.size
+            var y = geo.leftRailScrollRect.top
+            for (punctText in puncts) {
+                val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + punctHeight)
+                leftRailKeys.add(
+                    KeyboardKey(
+                        id = "punct_$punctText",
+                        role = KeyboardKeyRole.RAIL_PUNCT,
+                        rect = r,
+                        label = punctText,
+                        action = "punct:$punctText",
+                        isLeftRail = true,
+                    )
                 )
-            )
-            y += punctHeight
+                y += punctHeight
+            }
+        } else {
+            // Composing: display readings
+            if (readings.isNotEmpty()) {
+                val displayCount = minOf(readings.size, 5) // Show up to 5 readings in rail
+                val itemHeight = availableScrollHeight / maxOf(displayCount, 1)
+                var y = geo.leftRailScrollRect.top
+                for (i in 0 until displayCount) {
+                    val reading = readings[i]
+                    val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + itemHeight)
+                    leftRailKeys.add(
+                        KeyboardKey(
+                            id = "reading_$i",
+                            role = KeyboardKeyRole.RAIL_READING,
+                            rect = r,
+                            label = reading,
+                            action = "reading:$i",
+                            isLeftRail = true,
+                            isSelected = reading == activeReading
+                        )
+                    )
+                    y += itemHeight
+                }
+            }
         }
 
         val bottomLeftKey = KeyboardKey(
@@ -194,7 +218,7 @@ class KeyboardLayoutBuilder {
         leftRailKeys.add(
             KeyboardKey(
                 id = "num_dot",
-                role = KeyboardKeyRole.NUMBER_LEFT_RAIL,
+                role = KeyboardKeyRole.RAIL_NUMBER_AUX,
                 rect = dotRect,
                 label = ".",
                 action = "digit:.",
@@ -205,7 +229,7 @@ class KeyboardLayoutBuilder {
         leftRailKeys.add(
             KeyboardKey(
                 id = "num_0",
-                role = KeyboardKeyRole.NUMBER_LEFT_RAIL,
+                role = KeyboardKeyRole.RAIL_NUMBER_AUX,
                 rect = zeroRect,
                 label = "0",
                 action = "digit:0",
@@ -337,27 +361,27 @@ class KeyboardLayoutBuilder {
         val keys = mutableListOf<KeyboardKey>()
         val leftRailKeys = mutableListOf<KeyboardKey>()
 
-        val tabHeight = geo.leftRailScrollRect.height() / 4
-        val tabY = geo.leftRailScrollRect.top
-        val tabWidth = geo.leftRailWidth
+        val availableScrollHeight = geo.leftRailScrollRect.height()
 
-        val tabCategories = mapOf(
+        val tabCategories = listOf(
             "punct" to "标点",
             "math" to "数学",
             "bracket" to "括号",
             "other" to "其他",
         )
-        var y = tabY
+        val tabHeight = availableScrollHeight / tabCategories.size
+        var y = geo.leftRailScrollRect.top
         for ((cat, label) in tabCategories) {
             val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + tabHeight)
             leftRailKeys.add(
                 KeyboardKey(
                     id = "sym_tab_$cat",
-                    role = KeyboardKeyRole.SYMBOL_TAB,
+                    role = KeyboardKeyRole.RAIL_SYMBOL_CATEGORY,
                     rect = r,
                     label = label,
                     action = "symtab:$cat",
                     isLeftRail = true,
+                    isSelected = activeCategory == cat
                 )
             )
             y += tabHeight
@@ -415,7 +439,7 @@ class KeyboardLayoutBuilder {
                                 actionPayload = text,
                             )
                         )
-                    } else {
+                    } else if (row == rows - 1) { // Only placeholder in last row
                         val r = Rect(cellX, rowY, cellX + cellWidth, rowY + cellHeight)
                         keys.add(
                             KeyboardKey(

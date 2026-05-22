@@ -79,7 +79,7 @@ class XiweiKeyboardView @JvmOverloads constructor(
                 val key = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, x, y, 0)
                 if (key == null) return false
                 if (key.role == KeyboardKeyRole.PLACEHOLDER) return false
-                if (key.role == KeyboardKeyRole.LEFT_RAIL_READING && key.label.isEmpty()) return false
+                if (key.role == KeyboardKeyRole.RAIL_READING && key.label.isEmpty()) return false
 
                 trackedKey = key
                 longPressFired = false
@@ -89,7 +89,7 @@ class XiweiKeyboardView @JvmOverloads constructor(
                 invalidate()
 
                 when (key.role) {
-                    KeyboardKeyRole.SPECIAL, KeyboardKeyRole.SYMBOL_TAB -> onHapticSpecial?.invoke()
+                    KeyboardKeyRole.SPECIAL, KeyboardKeyRole.RAIL_SYMBOL_CATEGORY -> onHapticSpecial?.invoke()
                     else -> onHapticTap?.invoke()
                 }
 

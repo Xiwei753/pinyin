@@ -50,7 +50,7 @@ class KeyboardLayoutModelTest {
         val digitKeys = model.keys.filter { it.action.startsWith("digit:") }
         assertEquals("Number mode should have 9 digit keys", 9, digitKeys.size)
 
-        val leftRailNumberKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.NUMBER_LEFT_RAIL }
+        val leftRailNumberKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_NUMBER_AUX }
         assertEquals("Number mode should have dot and 0 in left rail", 2, leftRailNumberKeys.size)
 
         val hasDel = model.keys.any { it.action == "del" }
@@ -65,7 +65,7 @@ class KeyboardLayoutModelTest {
         val entries = registry.getAllSymbolEntries()
         val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
 
-        val tabKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.SYMBOL_TAB }
+        val tabKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_SYMBOL_CATEGORY }
         assertEquals("Should have 4 category tabs", 4, tabKeys.size)
 
         val symbolKeys = model.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY }
@@ -166,7 +166,7 @@ class KeyboardLayoutModelTest {
     }
 
     @Test
-    fun buildT9WithComposingTrueStillGeneratesPunctKeys() {
+    fun buildT9WithComposingTrueGeneratesReadingsKeys() {
         val readings = listOf("mi", "qu", "a")
         val model = builder.buildT9(
             panelWidth = 1080,
@@ -181,18 +181,18 @@ class KeyboardLayoutModelTest {
             activeReading = "qu"
         )
 
-        assertEquals("Should have exactly 4 punctuation keys even when composing", 4, model.leftRailKeys.size)
-        val expectedPunct = listOf("，", "。", "？", "！")
-        for (i in 0 until 4) {
+        assertEquals("Should have exactly 3 reading keys when composing with 3 readings", 3, model.leftRailKeys.size)
+        val expectedReadings = listOf("mi", "qu", "a")
+        for (i in 0 until 3) {
             val key = model.leftRailKeys[i]
-            assertEquals(KeyboardKeyRole.LEFT_RAIL_PUNCT, key.role)
-            assertEquals("punct_${expectedPunct[i]}", key.id)
-            assertEquals(expectedPunct[i], key.label)
+            assertEquals(KeyboardKeyRole.RAIL_READING, key.role)
+            assertEquals("reading_$i", key.id)
+            assertEquals(expectedReadings[i], key.label)
         }
     }
 
     @Test
-    fun buildT9DoesNotGenerateLeftRailReadings() {
+    fun buildT9GeneratesLeftRailReadingsWhenComposing() {
         val readings = listOf("mi", "qu", "a", "xian", "sheng")
         val model = builder.buildT9(
             panelWidth = 1080,
@@ -206,11 +206,11 @@ class KeyboardLayoutModelTest {
             keyboardMode = KeyboardMode.ChineseT9
         )
 
-        val readingKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_READING }
-        assertTrue("Should contain zero reading keys in left rail", readingKeys.isEmpty())
+        val readingKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_READING }
+        assertEquals("Should contain 5 reading keys in left rail", 5, readingKeys.size)
         
-        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_PUNCT }
-        assertEquals("All 4 left rail keys must be punct keys", 4, punctKeys.size)
+        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_PUNCT }
+        assertTrue("Should not contain punct keys when composing", punctKeys.isEmpty())
     }
 
     @Test
@@ -231,7 +231,7 @@ class KeyboardLayoutModelTest {
         val expectedPunct = listOf("，", "。", "？", "！")
         for (i in 0 until 4) {
             val key = model.leftRailKeys[i]
-            assertEquals(KeyboardKeyRole.LEFT_RAIL_PUNCT, key.role)
+            assertEquals(KeyboardKeyRole.RAIL_PUNCT, key.role)
             assertEquals("punct_${expectedPunct[i]}", key.id)
             assertEquals(expectedPunct[i], key.label)
         }

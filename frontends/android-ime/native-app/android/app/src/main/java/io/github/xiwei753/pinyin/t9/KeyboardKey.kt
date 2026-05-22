@@ -6,12 +6,12 @@ enum class KeyboardKeyRole {
     NORMAL,
     SPECIAL,
     SPACE,
-    LEFT_RAIL_PUNCT,
-    LEFT_RAIL_READING,
-    SYMBOL_TAB,
+    RAIL_PUNCT,
+    RAIL_READING,
+    RAIL_SYMBOL_CATEGORY,
+    RAIL_NUMBER_AUX,
     SYMBOL_KEY,
     PLACEHOLDER,
-    NUMBER_LEFT_RAIL
 }
 
 data class KeyboardKey(
