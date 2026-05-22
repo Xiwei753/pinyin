@@ -30,7 +30,7 @@ class KeyboardRendererTest {
         
         val punctKey = KeyboardKey(
             id = "punct_，",
-            role = KeyboardKeyRole.LEFT_RAIL_PUNCT,
+            role = KeyboardKeyRole.RAIL_PUNCT,
             rect = Rect(0, 0, 100, 100),
             label = "，",
             action = "punct:，",
@@ -155,7 +155,7 @@ class KeyboardRendererTest {
         
         val readingKey = KeyboardKey(
             id = "reading_0",
-            role = KeyboardKeyRole.LEFT_RAIL_READING,
+            role = KeyboardKeyRole.RAIL_READING,
             rect = Rect(0, 0, 100, 100),
             label = "mi",
             action = "reading:0",
@@ -193,7 +193,7 @@ class KeyboardRendererTest {
         
         val selectedKey = KeyboardKey(
             id = "reading_0",
-            role = KeyboardKeyRole.LEFT_RAIL_READING,
+            role = KeyboardKeyRole.RAIL_READING,
             rect = Rect(0, 0, 100, 100),
             label = "mi",
             action = "reading:0",

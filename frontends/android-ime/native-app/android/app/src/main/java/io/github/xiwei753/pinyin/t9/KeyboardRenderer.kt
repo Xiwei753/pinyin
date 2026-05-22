@@ -70,7 +70,7 @@ class KeyboardRenderer {
         longPressedKeyId: String?,
     ) {
         if (key.role == KeyboardKeyRole.PLACEHOLDER) return
-        if (key.role == KeyboardKeyRole.LEFT_RAIL_READING && key.label.isEmpty()) return
+        if (key.role == KeyboardKeyRole.RAIL_READING && key.label.isEmpty()) return
 
         val isPressed = pressedKeyId == key.id
         val isLongPressed = longPressedKeyId == key.id
@@ -98,7 +98,7 @@ class KeyboardRenderer {
     ): Int {
         if (isLongPressed || isPressed) {
             return when (key.role) {
-                KeyboardKeyRole.SPECIAL, KeyboardKeyRole.SYMBOL_TAB -> palette.specialKeyPressedBgColor
+                KeyboardKeyRole.SPECIAL, KeyboardKeyRole.RAIL_SYMBOL_CATEGORY, KeyboardKeyRole.RAIL_READING -> palette.specialKeyPressedBgColor
                 else -> palette.keyPressedBgColor
             }
         }
@@ -108,18 +108,10 @@ class KeyboardRenderer {
         }
 
         return when (key.role) {
-            KeyboardKeyRole.SPECIAL, KeyboardKeyRole.LEFT_RAIL_PUNCT,
-            KeyboardKeyRole.LEFT_RAIL_READING, KeyboardKeyRole.SYMBOL_TAB,
-            KeyboardKeyRole.NUMBER_LEFT_RAIL -> {
-                if (key.role == KeyboardKeyRole.SYMBOL_TAB && activeSymCategory != null) {
-                    if (key.id.contains(activeSymCategory)) {
-                        palette.symTabActiveBg
-                    } else {
-                        palette.symTabInactiveBg
-                    }
-                } else {
-                    palette.specialKeyBgColor
-                }
+            KeyboardKeyRole.SPECIAL, KeyboardKeyRole.RAIL_PUNCT,
+            KeyboardKeyRole.RAIL_READING, KeyboardKeyRole.RAIL_SYMBOL_CATEGORY,
+            KeyboardKeyRole.RAIL_NUMBER_AUX -> {
+                palette.specialKeyBgColor
             }
             KeyboardKeyRole.SYMBOL_KEY -> palette.keyBgColor
             KeyboardKeyRole.SPACE -> palette.keyBgColor
@@ -174,14 +166,14 @@ class KeyboardRenderer {
             }
             KeyboardKeyRole.SPACE -> {
             }
-            KeyboardKeyRole.LEFT_RAIL_PUNCT -> {
+            KeyboardKeyRole.RAIL_PUNCT -> {
                 textPaint.color = textColor
                 textPaint.textSize = minOf(rect.height() * 0.62f, rect.width() * 0.75f)
                 val centerX = rect.centerX().toFloat()
                 val textY = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
                 canvas.drawText(key.label, centerX, textY, textPaint)
             }
-            KeyboardKeyRole.LEFT_RAIL_READING -> {
+            KeyboardKeyRole.RAIL_READING -> {
                 textPaint.color = textColor
                 textPaint.textSize = minOf(rect.height() * 0.45f, rect.width() * 0.65f)
                 val centerX = rect.centerX().toFloat()
@@ -195,14 +187,14 @@ class KeyboardRenderer {
                 val textY = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
                 canvas.drawText(key.label, centerX, textY, textPaint)
             }
-            KeyboardKeyRole.SYMBOL_TAB -> {
+            KeyboardKeyRole.RAIL_SYMBOL_CATEGORY -> {
                 textPaint.color = textColor
                 textPaint.textSize = rect.height() * 0.30f
                 val centerX = rect.centerX().toFloat()
                 val textY = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
                 canvas.drawText(key.label, centerX, textY, textPaint)
             }
-            KeyboardKeyRole.NUMBER_LEFT_RAIL -> {
+            KeyboardKeyRole.RAIL_NUMBER_AUX -> {
                 textPaint.color = textColor
                 textPaint.textSize = rect.height() * 0.42f
                 val centerX = rect.centerX().toFloat()

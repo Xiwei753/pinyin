@@ -117,8 +117,8 @@ class XiweiT9ImeServiceLayoutRefreshTest {
         service.refreshUi()
 
         val model = captureLayoutModel()
-        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_PUNCT }
-        val readingKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_READING }
+        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_PUNCT }
+        val readingKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_READING }
         
         assertTrue("Should show punctuation when buffer is empty", punctKeys.isNotEmpty())
         assertTrue("Should not show readings when buffer is empty", readingKeys.isEmpty())
@@ -134,11 +134,11 @@ class XiweiT9ImeServiceLayoutRefreshTest {
         handler.onDigitPressed("6")
         
         val model = captureLayoutModel()
-        val readingKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_READING }
-        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_PUNCT }
+        val readingKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_READING }
+        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_PUNCT }
 
-        assertTrue("Should contain zero reading keys in left rail", readingKeys.isEmpty())
-        assertEquals("All 4 left rail keys must be punct keys", 4, punctKeys.size)
+        assertTrue("Should contain reading keys in left rail", readingKeys.isNotEmpty())
+        assertTrue("Should not show punctuation when buffer is non-empty", punctKeys.isEmpty())
     }
 
     @Test
@@ -150,7 +150,7 @@ class XiweiT9ImeServiceLayoutRefreshTest {
         handler.onDelete()
 
         val model = captureLayoutModel()
-        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_PUNCT }
+        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_PUNCT }
         assertTrue("Should return to punctuation when buffer is cleared", punctKeys.isNotEmpty())
     }
 

@@ -8,8 +8,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 enum class CandidateItemType {
-    PREEDIT,
-    READING,
     CANDIDATE,
     PREPARING
 }
@@ -95,16 +93,6 @@ class CandidateViewController(
         }
 
         val items = mutableListOf<CandidateItem>()
-        if (hasInput) {
-            if (preedit.isNotEmpty()) {
-                items.add(CandidateItem(CandidateItemType.PREEDIT, preedit))
-            }
-            for (reading in state.readings) {
-                val isActive = (reading == state.activeReading)
-                items.add(CandidateItem(CandidateItemType.READING, reading, isActive = isActive, payload = reading))
-            }
-        }
-
         for ((index, candidate) in state.candidatesSnapshot.withIndex()) {
             items.add(CandidateItem(CandidateItemType.CANDIDATE, candidate.text, payload = index))
         }
@@ -148,42 +136,6 @@ class CandidateViewController(
         tv.layoutParams = lp
 
         when (type) {
-            CandidateItemType.PREEDIT -> {
-                tv.setTextColor(palette.textColor)
-                tv.background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = 6f * density
-                    setColor(palette.preeditBgColor)
-                }
-                tv.isClickable = false
-                tv.isFocusable = false
-            }
-            CandidateItemType.READING -> {
-                if (isActive) {
-                    tv.setTextColor(palette.symTabActiveText)
-                    tv.background = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = 6f * density
-                        setColor(palette.symTabActiveBg)
-                    }
-                } else {
-                    tv.setTextColor(palette.textColor)
-                    tv.background = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = 6f * density
-                        setColor(palette.symTabInactiveBg)
-                    }
-                }
-                tv.isClickable = true
-                tv.isFocusable = true
-                tv.setOnClickListener {
-                    val reading = payload as? String
-                    if (reading != null) {
-                        handler.setActiveReading(reading)
-                        handler.actionSink.refreshUi()
-                    }
-                }
-            }
             CandidateItemType.CANDIDATE -> {
                 tv.setTextColor(palette.textColor)
                 tv.background = getCandidateBg()

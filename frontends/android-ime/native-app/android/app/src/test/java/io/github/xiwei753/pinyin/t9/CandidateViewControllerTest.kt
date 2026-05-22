@@ -113,18 +113,17 @@ class CandidateViewControllerTest {
 
         controller.refreshUi(handler)
 
-        assertEquals(3, candidateContainer.childCount)
-        val tv0 = candidateContainer.getChildAt(0) as TextView
-        val tv1 = candidateContainer.getChildAt(1) as TextView
-        val tv2 = candidateContainer.getChildAt(2) as TextView
+        // Only candidates should be in the container, NOT preedit or reading
+        assertEquals(2, candidateContainer.childCount)
+        val tv1 = candidateContainer.getChildAt(0) as TextView
+        val tv2 = candidateContainer.getChildAt(1) as TextView
 
-        assertEquals("wo", tv0.text.toString())
         assertEquals("我", tv1.text.toString())
         assertEquals("你", tv2.text.toString())
     }
 
     @Test
-    fun testReadingsRenderedCorrectly() {
+    fun testReadingsAreNOTInCandidateBar() {
         `when`(engine.buffer).thenReturn("64")
         `when`(engine.getPreedit()).thenReturn("ni")
         `when`(engine.readings).thenReturn(listOf("ni", "mi"))
@@ -138,39 +137,11 @@ class CandidateViewControllerTest {
 
         controller.refreshUi(handler)
 
-        assertEquals(4, candidateContainer.childCount)
+        // Only Chinese candidates should be here
+        assertEquals(1, candidateContainer.childCount)
         
-        val tvPreedit = candidateContainer.getChildAt(0) as TextView
-        val tvReading1 = candidateContainer.getChildAt(1) as TextView
-        val tvReading2 = candidateContainer.getChildAt(2) as TextView
-        val tvCandidate = candidateContainer.getChildAt(3) as TextView
-
-        assertEquals("ni", tvPreedit.text.toString())
-        assertEquals("ni", tvReading1.text.toString())
-        assertEquals("mi", tvReading2.text.toString())
+        val tvCandidate = candidateContainer.getChildAt(0) as TextView
         assertEquals("你", tvCandidate.text.toString())
-    }
-
-    @Test
-    fun testReadingClickTriggersHandler() {
-        `when`(engine.buffer).thenReturn("64")
-        `when`(engine.getPreedit()).thenReturn("ni")
-        `when`(engine.readings).thenReturn(listOf("ni", "mi"))
-        `when`(engine.activeReading).thenReturn("ni")
-        `when`(settingsRepository.getCandidateCount()).thenReturn(30)
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(emptyList())
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
-
-        controller.refreshUi(handler)
-
-        val tvReading2 = candidateContainer.getChildAt(2) as TextView
-        assertEquals("mi", tvReading2.text.toString())
-
-        tvReading2.performClick()
-
-        verify(handler).setActiveReading("mi")
-        verify(handler.actionSink).refreshUi()
     }
 
     @Test
@@ -186,8 +157,8 @@ class CandidateViewControllerTest {
 
         controller.refreshUi(handler)
 
-        assertEquals(2, candidateContainer.childCount)
-        val tvCandidate = candidateContainer.getChildAt(1) as TextView
+        assertEquals(1, candidateContainer.childCount)
+        val tvCandidate = candidateContainer.getChildAt(0) as TextView
         assertEquals("我", tvCandidate.text.toString())
 
         tvCandidate.performClick()
