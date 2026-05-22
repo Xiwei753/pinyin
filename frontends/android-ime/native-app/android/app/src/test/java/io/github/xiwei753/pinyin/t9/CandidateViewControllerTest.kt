@@ -167,6 +167,56 @@ class CandidateViewControllerTest {
     }
 
     @Test
+    fun testPreeditIsNotClickableAndDoesNotCallHandler() {
+        `when`(engine.buffer).thenReturn("96")
+        `when`(engine.getPreedit()).thenReturn("wo")
+        `when`(settingsRepository.getCandidateCount()).thenReturn(30)
+        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(
+            listOf(Candidate("我", "96", 900))
+        )
+        `when`(engine.getCompositions()).thenReturn(emptyList())
+        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
+
+        controller.refreshUi(handler)
+
+        assertEquals(View.VISIBLE, mockFloatingBar.visibility)
+
+        mockFloatingBar.performClick()
+        mockFloatingText.performClick()
+
+        verify(handler, never()).onCandidateClick(anyInt())
+    }
+
+    @Test
+    fun testPreeditDisplayDoesNotShiftCandidateIndex() {
+        `when`(engine.buffer).thenReturn("96")
+        `when`(engine.getPreedit()).thenReturn("wo")
+        `when`(settingsRepository.getCandidateCount()).thenReturn(30)
+        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(
+            listOf(Candidate("我", "96", 900), Candidate("喔", "96", 800))
+        )
+        `when`(engine.getCompositions()).thenReturn(emptyList())
+        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
+
+        controller.refreshUi(handler)
+
+        assertEquals(View.VISIBLE, mockFloatingBar.visibility)
+        assertEquals(2, candidateContainer.childCount)
+
+        val tvCandidate0 = candidateContainer.getChildAt(0) as TextView
+        val tvCandidate1 = candidateContainer.getChildAt(1) as TextView
+
+        assertEquals("我", tvCandidate0.text.toString())
+        assertEquals("喔", tvCandidate1.text.toString())
+
+        tvCandidate0.performClick()
+        verify(handler).onCandidateClick(0)
+
+        tvCandidate1.performClick()
+        verify(handler).onCandidateClick(1)
+    }
+
+    @Test
     fun testResetUi() {
         controller.resetUi()
 
