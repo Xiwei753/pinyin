@@ -1,5 +1,7 @@
 # Android IME Architecture
 
+长期路线和禁止项见 `TECHNICAL_ROADMAP.md`；本文件只解释当前 Android IME 分层细节。
+
 This stage keeps the input core in Kotlin instead of Rust. The Android IME is still moving quickly, and the main risk is not CPU performance but unclear ownership between input state, Android side effects, and rendering. A Kotlin core lets Android tests cover the reducer directly while preserving the current T9 engine and dictionary behavior. Rust can replace the same core boundary later without rewriting Android views.
 
 Commit `645ca3e` introduced the first platform-independent core skeleton. The second stage tightened the boundary so render code cannot refresh candidates and the candidate snapshot has one owner, `ImeStateMachine`. The third stage starts decoupling UI state from internal T9 engine models: UI-visible candidates are now `CandidateSnapshotItem`, not `t9.core.Candidate`.
