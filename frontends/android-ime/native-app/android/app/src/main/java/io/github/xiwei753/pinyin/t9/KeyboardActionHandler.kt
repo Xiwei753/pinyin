@@ -4,7 +4,7 @@ import io.github.xiwei753.pinyin.t9.core.Candidate
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 
 class KeyboardActionHandler(
-    private val actionSink: ImeActionSink
+    val actionSink: ImeActionSink
 ) {
     var engine: T9Engine? = null
         private set

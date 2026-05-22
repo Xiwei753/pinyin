@@ -3,14 +3,19 @@ package io.github.xiwei753.pinyin.t9
 import android.content.Context
 import android.view.View
 import android.widget.LinearLayout
+import android.widget.TextView
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mockito.*
 import org.mockito.ArgumentMatchers.anyInt
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import io.github.xiwei753.pinyin.t9.core.Candidate
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 
+@RunWith(RobolectricTestRunner::class)
 class CandidateViewControllerTest {
 
     private lateinit var context: Context
@@ -21,15 +26,15 @@ class CandidateViewControllerTest {
     private lateinit var handler: KeyboardActionHandler
     private lateinit var engine: T9Engine
     private lateinit var mockFloatingBar: View
-    private lateinit var mockFloatingText: android.widget.TextView
-    private lateinit var mockCandidateContainer: LinearLayout
+    private lateinit var mockFloatingText: TextView
+    private lateinit var candidateContainer: LinearLayout
 
     @Before
     fun setUp() {
-        context = mock(Context::class.java)
-        mockFloatingBar = mock(View::class.java)
-        mockFloatingText = mock(android.widget.TextView::class.java)
-        mockCandidateContainer = mock(LinearLayout::class.java)
+        context = RuntimeEnvironment.getApplication()
+        mockFloatingBar = View(context)
+        mockFloatingText = TextView(context)
+        candidateContainer = LinearLayout(context)
         themeController = mock(KeyboardThemeController::class.java)
         settingsRepository = mock(SettingsRepository::class.java)
         val eng = mock(T9Engine::class.java)
@@ -38,13 +43,13 @@ class CandidateViewControllerTest {
         kv = KeyboardViews(
             imeRoot = mock(),
             candidateBar = mock(),
-            candidateContainer = mockCandidateContainer,
+            candidateContainer = candidateContainer,
             pinyinFloatingBar = mockFloatingBar,
             pinyinFloatingText = mockFloatingText,
             xiweiKeyboardView = mock(),
         )
 
-        handler = KeyboardActionHandler(mock(ImeActionSink::class.java)).apply { attachEngine(eng) }
+        handler = spy(KeyboardActionHandler(mock(ImeActionSink::class.java)).apply { attachEngine(eng) })
 
         controller = CandidateViewController(
             context = context,
@@ -64,7 +69,7 @@ class CandidateViewControllerTest {
 
         controller.refreshUi(handler)
 
-        verify(mockFloatingBar).visibility = View.GONE
+        assertEquals(View.GONE, mockFloatingBar.visibility)
     }
 
     @Test
@@ -77,8 +82,8 @@ class CandidateViewControllerTest {
 
         controller.refreshUi(handler)
 
-        verify(mockFloatingBar).visibility = View.VISIBLE
-        verify(mockFloatingText).text = "wo"
+        assertEquals(View.VISIBLE, mockFloatingBar.visibility)
+        assertEquals("wo", mockFloatingText.text.toString())
     }
 
     @Test
@@ -96,7 +101,7 @@ class CandidateViewControllerTest {
     }
 
     @Test
-    fun testCandidatesReuseTextViews() {
+    fun testCandidatesLayoutRendering() {
         `when`(engine.buffer).thenReturn("96")
         `when`(engine.getPreedit()).thenReturn("wo")
         `when`(settingsRepository.getCandidateCount()).thenReturn(30)
@@ -105,17 +110,67 @@ class CandidateViewControllerTest {
         )
         `when`(engine.getCompositions()).thenReturn(emptyList())
         `when`(engine.getInternalCandidates()).thenReturn(emptyList())
-        `when`(mockCandidateContainer.childCount).thenReturn(2)
-        `when`(mockCandidateContainer.getChildAt(0)).thenReturn(mock(android.widget.TextView::class.java))
-        `when`(mockCandidateContainer.getChildAt(1)).thenReturn(mock(android.widget.TextView::class.java))
 
         controller.refreshUi(handler)
 
-        // Views are reused when childCount matches candidate count
-        verify(mockCandidateContainer, never()).addView(
-            any(android.view.View::class.java),
-            any(android.view.ViewGroup.LayoutParams::class.java)
+        assertEquals(3, candidateContainer.childCount)
+        val tv0 = candidateContainer.getChildAt(0) as TextView
+        val tv1 = candidateContainer.getChildAt(1) as TextView
+        val tv2 = candidateContainer.getChildAt(2) as TextView
+
+        assertEquals("wo", tv0.text.toString())
+        assertEquals("我", tv1.text.toString())
+        assertEquals("你", tv2.text.toString())
+    }
+
+    @Test
+    fun testReadingsRenderedCorrectly() {
+        `when`(engine.buffer).thenReturn("64")
+        `when`(engine.getPreedit()).thenReturn("ni")
+        `when`(engine.readings).thenReturn(listOf("ni", "mi"))
+        `when`(engine.activeReading).thenReturn("ni")
+        `when`(settingsRepository.getCandidateCount()).thenReturn(30)
+        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(
+            listOf(Candidate("你", "64", 900))
         )
+        `when`(engine.getCompositions()).thenReturn(emptyList())
+        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
+
+        controller.refreshUi(handler)
+
+        assertEquals(4, candidateContainer.childCount)
+        
+        val tvPreedit = candidateContainer.getChildAt(0) as TextView
+        val tvReading1 = candidateContainer.getChildAt(1) as TextView
+        val tvReading2 = candidateContainer.getChildAt(2) as TextView
+        val tvCandidate = candidateContainer.getChildAt(3) as TextView
+
+        assertEquals("ni", tvPreedit.text.toString())
+        assertEquals("ni", tvReading1.text.toString())
+        assertEquals("mi", tvReading2.text.toString())
+        assertEquals("你", tvCandidate.text.toString())
+    }
+
+    @Test
+    fun testReadingClickTriggersHandler() {
+        `when`(engine.buffer).thenReturn("64")
+        `when`(engine.getPreedit()).thenReturn("ni")
+        `when`(engine.readings).thenReturn(listOf("ni", "mi"))
+        `when`(engine.activeReading).thenReturn("ni")
+        `when`(settingsRepository.getCandidateCount()).thenReturn(30)
+        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(emptyList())
+        `when`(engine.getCompositions()).thenReturn(emptyList())
+        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
+
+        controller.refreshUi(handler)
+
+        val tvReading2 = candidateContainer.getChildAt(2) as TextView
+        assertEquals("mi", tvReading2.text.toString())
+
+        tvReading2.performClick()
+
+        verify(handler).setActiveReading("mi")
+        verify(handler.actionSink).refreshUi()
     }
 
     @Test
@@ -128,22 +183,25 @@ class CandidateViewControllerTest {
         )
         `when`(engine.getCompositions()).thenReturn(emptyList())
         `when`(engine.getInternalCandidates()).thenReturn(emptyList())
-        `when`(mockCandidateContainer.childCount).thenReturn(1)
-        `when`(mockCandidateContainer.getChildAt(0)).thenReturn(mock(android.widget.TextView::class.java))
 
         controller.refreshUi(handler)
 
-        // setupKey was called - we can verify this indirectly
-        // by checking the child visibility was set to VISIBLE
-        verify(mockCandidateContainer.getChildAt(0)).visibility = View.VISIBLE
+        assertEquals(2, candidateContainer.childCount)
+        val tvCandidate = candidateContainer.getChildAt(1) as TextView
+        assertEquals("我", tvCandidate.text.toString())
+
+        tvCandidate.performClick()
+
+        verify(handler).onCandidateClick(0)
     }
 
     @Test
     fun testResetUi() {
         controller.resetUi()
 
-        verify(mockFloatingBar).visibility = View.GONE
-        verify(mockCandidateContainer).removeAllViews()
+        assertEquals(View.GONE, mockFloatingBar.visibility)
+        assertEquals(0, candidateContainer.childCount)
+        assertEquals(View.GONE, candidateContainer.visibility)
     }
 
     @Test
@@ -157,7 +215,7 @@ class CandidateViewControllerTest {
 
         controller.refreshUi(handler)
 
-        verify(mockFloatingBar).visibility = View.GONE
+        assertEquals(View.GONE, mockFloatingBar.visibility)
     }
 
     @Test
@@ -171,6 +229,6 @@ class CandidateViewControllerTest {
 
         controller.refreshUi(handler)
 
-        verify(mockFloatingBar).visibility = View.GONE
+        assertEquals(View.GONE, mockFloatingBar.visibility)
     }
 }

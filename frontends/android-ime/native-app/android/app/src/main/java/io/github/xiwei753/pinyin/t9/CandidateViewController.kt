@@ -1,10 +1,25 @@
 package io.github.xiwei753.pinyin.t9
 
 import android.content.Context
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+
+enum class CandidateItemType {
+    PREEDIT,
+    READING,
+    CANDIDATE,
+    PREPARING
+}
+
+data class CandidateItem(
+    val type: CandidateItemType,
+    val text: String,
+    val isActive: Boolean = false,
+    val payload: Any? = null
+)
 
 class CandidateViewController(
     private val context: Context,
@@ -69,72 +84,134 @@ class CandidateViewController(
             v.pinyinFloatingBar.visibility = View.GONE
         }
 
-        val candidates = state.candidatesSnapshot
-
-        if (candidates.isEmpty() && !isDictPreparing) {
-            v.candidateContainer.visibility = View.GONE
-        } else {
-            v.candidateContainer.visibility = View.VISIBLE
-        }
+        v.candidateContainer.removeAllViews()
 
         if (isDictPreparing) {
-            showPreparingState()
+            val text = "\u8BCD\u5E93\u51C6\u5907\u4E2D..."
+            val btn = createTextView(text, CandidateItemType.PREPARING, false, null, handler)
+            v.candidateContainer.addView(btn)
+            v.candidateContainer.visibility = View.VISIBLE
             return
         }
 
-        for ((index, candidate) in candidates.withIndex()) {
-            val btn: TextView = if (index < v.candidateContainer.childCount) {
-                v.candidateContainer.getChildAt(index) as TextView
-            } else {
-                TextView(context).apply {
-                    textSize = 18f
-                    setTextColor(palette.textColor)
-                    gravity = Gravity.CENTER
-                    setPadding(32, 16, 32, 16)
-                    background = context.getDrawable(R.drawable.candidate_bg)
-                    isClickable = true
-                    isFocusable = true
-                }.also {
-                    v.candidateContainer.addView(it, LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.MATCH_PARENT
-                    ).apply { setMargins(0, 0, 16, 0) })
-                }
+        val items = mutableListOf<CandidateItem>()
+        if (hasInput) {
+            if (preedit.isNotEmpty()) {
+                items.add(CandidateItem(CandidateItemType.PREEDIT, preedit))
             }
-            btn.visibility = View.VISIBLE
-            btn.text = candidate.text
-            val ci = index
-            btn.setOnClickListener { handler.onCandidateClick(ci) }
+            for (reading in state.readings) {
+                val isActive = (reading == state.activeReading)
+                items.add(CandidateItem(CandidateItemType.READING, reading, isActive = isActive, payload = reading))
+            }
         }
-        for (i in candidates.size until v.candidateContainer.childCount) {
-            v.candidateContainer.getChildAt(i).visibility = View.GONE
+
+        for ((index, candidate) in state.candidatesSnapshot.withIndex()) {
+            items.add(CandidateItem(CandidateItemType.CANDIDATE, candidate.text, payload = index))
+        }
+
+        if (items.isEmpty()) {
+            v.candidateContainer.visibility = View.GONE
+        } else {
+            v.candidateContainer.visibility = View.VISIBLE
+            for (item in items) {
+                val btn = createTextView(item.text, item.type, item.isActive, item.payload, handler)
+                v.candidateContainer.addView(btn)
+            }
         }
     }
 
-    private fun showPreparingState() {
-        for (i in 0 until v.candidateContainer.childCount) {
-            v.candidateContainer.getChildAt(i).visibility = View.GONE
+    private fun createTextView(
+        text: String,
+        type: CandidateItemType,
+        isActive: Boolean,
+        payload: Any?,
+        handler: KeyboardActionHandler
+    ): TextView {
+        val tv = TextView(context).apply {
+            textSize = 18f
+            gravity = Gravity.CENTER
+            this.text = text
+            isSingleLine = true
         }
-        val btn: TextView = if (v.candidateContainer.childCount > 0) {
-            (v.candidateContainer.getChildAt(0) as TextView).also { it.visibility = View.VISIBLE }
-        } else {
-            TextView(context).apply {
-                textSize = 18f
-                setTextColor(palette.textColor)
-                gravity = Gravity.CENTER
-                setPadding(32, 16, 32, 16)
-                background = context.getDrawable(R.drawable.candidate_bg)
-                isClickable = false
-                isFocusable = false
-            }.also {
-                v.candidateContainer.addView(it, LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT
-                ).apply { setMargins(0, 0, 16, 0) })
+
+        val density = context.resources.displayMetrics.density
+        val padH = (16 * density).toInt()
+        val padV = (8 * density).toInt()
+        tv.setPadding(padH, padV, padH, padV)
+
+        val lp = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.MATCH_PARENT
+        ).apply {
+            setMargins(0, 0, (8 * density).toInt(), 0)
+        }
+        tv.layoutParams = lp
+
+        when (type) {
+            CandidateItemType.PREEDIT -> {
+                tv.setTextColor(palette.textColor)
+                tv.background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 6f * density
+                    setColor(palette.preeditBgColor)
+                }
+                tv.isClickable = false
+                tv.isFocusable = false
+            }
+            CandidateItemType.READING -> {
+                if (isActive) {
+                    tv.setTextColor(palette.symTabActiveText)
+                    tv.background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = 6f * density
+                        setColor(palette.symTabActiveBg)
+                    }
+                } else {
+                    tv.setTextColor(palette.textColor)
+                    tv.background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = 6f * density
+                        setColor(palette.symTabInactiveBg)
+                    }
+                }
+                tv.isClickable = true
+                tv.isFocusable = true
+                tv.setOnClickListener {
+                    val reading = payload as? String
+                    if (reading != null) {
+                        handler.setActiveReading(reading)
+                        handler.actionSink.refreshUi()
+                    }
+                }
+            }
+            CandidateItemType.CANDIDATE -> {
+                tv.setTextColor(palette.textColor)
+                tv.background = getCandidateBg()
+                tv.isClickable = true
+                tv.isFocusable = true
+                tv.setOnClickListener {
+                    val index = payload as? Int
+                    if (index != null) {
+                        handler.onCandidateClick(index)
+                    }
+                }
+            }
+            CandidateItemType.PREPARING -> {
+                tv.setTextColor(palette.textColor)
+                tv.background = getCandidateBg()
+                tv.isClickable = false
+                tv.isFocusable = false
             }
         }
-        btn.text = "\u8BCD\u5E93\u51C6\u5907\u4E2D..."
-        btn.setOnClickListener(null)
+        return tv
+    }
+
+    private fun getCandidateBg(): android.graphics.drawable.Drawable? {
+        return try {
+            androidx.core.content.ContextCompat.getDrawable(context, R.drawable.candidate_bg)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun resetUi() {

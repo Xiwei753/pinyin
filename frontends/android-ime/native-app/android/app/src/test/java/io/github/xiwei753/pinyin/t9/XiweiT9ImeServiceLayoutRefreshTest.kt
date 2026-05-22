@@ -77,6 +77,11 @@ class XiweiT9ImeServiceLayoutRefreshTest {
         `when`(mockView.findViewById<XiweiKeyboardView>(R.id.xiwei_keyboard_view)).thenReturn(mockXiweiKeyboardView)
 
         service.onCreateInputView()
+
+        val mockController = mock(CandidateViewController::class.java)
+        val fieldController = XiweiT9ImeService::class.java.getDeclaredField("candidateViewController")
+        fieldController.isAccessible = true
+        fieldController.set(service, mockController)
         
         val fieldHandler = XiweiT9ImeService::class.java.getDeclaredField("handler")
         fieldHandler.isAccessible = true
@@ -132,9 +137,8 @@ class XiweiT9ImeServiceLayoutRefreshTest {
         val readingKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_READING }
         val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.LEFT_RAIL_PUNCT }
 
-        assertTrue("Should show readings when buffer is not empty", readingKeys.isNotEmpty())
-        assertTrue("Should not show punct when buffer is not empty", punctKeys.isEmpty())
-        assertTrue("Reading should contain 'ni'", readingKeys.any { it.label == "ni" })
+        assertTrue("Should contain zero reading keys in left rail", readingKeys.isEmpty())
+        assertEquals("All 4 left rail keys must be punct keys", 4, punctKeys.size)
     }
 
     @Test

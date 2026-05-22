@@ -33,42 +33,21 @@ class KeyboardLayoutBuilder {
         val availableScrollHeight = geo.leftRailScrollRect.height()
 
         var y = geo.leftRailScrollRect.top
-        if (isComposing) {
-            val readingHeight = availableScrollHeight / 4
-            val count = minOf(4, readings.size)
-            for (i in 0 until count) {
-                val readingText = readings[i]
-                val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + readingHeight)
-                leftRailKeys.add(
-                    KeyboardKey(
-                        id = "reading_$i",
-                        role = KeyboardKeyRole.LEFT_RAIL_READING,
-                        rect = r,
-                        label = readingText,
-                        action = "reading:$i",
-                        isLeftRail = true,
-                        isSelected = (readingText == activeReading),
-                    )
+        val puncts = listOf("，", "。", "？", "！")
+        val punctHeight = minOf(punctLabelHeight, availableScrollHeight / puncts.size)
+        for (punctText in puncts) {
+            val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + punctHeight)
+            leftRailKeys.add(
+                KeyboardKey(
+                    id = "punct_$punctText",
+                    role = KeyboardKeyRole.LEFT_RAIL_PUNCT,
+                    rect = r,
+                    label = punctText,
+                    action = "punct:$punctText",
+                    isLeftRail = true,
                 )
-                y += readingHeight
-            }
-        } else {
-            val puncts = listOf("，", "。", "？", "！")
-            val punctHeight = minOf(punctLabelHeight, availableScrollHeight / puncts.size)
-            for (punctText in puncts) {
-                val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + punctHeight)
-                leftRailKeys.add(
-                    KeyboardKey(
-                        id = "punct_$punctText",
-                        role = KeyboardKeyRole.LEFT_RAIL_PUNCT,
-                        rect = r,
-                        label = punctText,
-                        action = "punct:$punctText",
-                        isLeftRail = true,
-                    )
-                )
-                y += punctHeight
-            }
+            )
+            y += punctHeight
         }
 
         val bottomLeftKey = KeyboardKey(
