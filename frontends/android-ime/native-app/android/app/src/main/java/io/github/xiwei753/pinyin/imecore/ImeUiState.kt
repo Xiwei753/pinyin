@@ -1,7 +1,5 @@
 package io.github.xiwei753.pinyin.imecore
 
-import io.github.xiwei753.pinyin.t9.core.Candidate
-
 enum class RailKind { Punctuation, Readings, SymbolCategories, NumberAux }
 
 data class CompositionState(
@@ -11,9 +9,22 @@ data class CompositionState(
     val activeReading: String? = null,
 )
 
+data class CandidateSnapshotItem(
+    val text: String,
+    val code: String,
+    val sourcePinyin: String,
+    val score: Int,
+    val origin: String,
+)
+
+data class CandidateSelection(
+    val snapshot: CandidateSnapshotItem,
+    val commit: () -> Unit,
+)
+
 data class CandidateStripState(
     val visible: Boolean = false,
-    val candidates: List<Candidate> = emptyList(),
+    val candidates: List<CandidateSnapshotItem> = emptyList(),
     val isDictionaryPreparing: Boolean = false,
 )
 
@@ -76,6 +87,6 @@ data class ImeUiState(
     val preedit: String get() = composition.preedit
     val readings: List<String> get() = composition.readings
     val activeReading: String? get() = composition.activeReading
-    val candidatesSnapshot: List<Candidate> get() = candidateStrip.candidates
+    val candidatesSnapshot: List<CandidateSnapshotItem> get() = candidateStrip.candidates
     val currentSymbolCategory: String get() = symbolPanel.category
 }

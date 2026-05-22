@@ -5,9 +5,9 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import io.github.xiwei753.pinyin.imecore.CandidateStripState
+import io.github.xiwei753.pinyin.imecore.CandidateSnapshotItem
 import io.github.xiwei753.pinyin.imecore.ImeInputAction
 import io.github.xiwei753.pinyin.imecore.PreeditState
-import io.github.xiwei753.pinyin.t9.core.Candidate
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -66,7 +66,7 @@ class CandidateViewControllerTest {
 
     @Test
     fun testCandidatesLayoutRendering() {
-        controller.refreshFromState(state(candidates = listOf(Candidate("我", "96", 900), Candidate("你", "96", 500))))
+        controller.refreshFromState(state(candidates = listOf(candidate("我", "96", 900), candidate("你", "96", 500))))
 
         assertEquals(2, candidateContainer.childCount)
         val tv1 = candidateContainer.getChildAt(0) as TextView
@@ -78,7 +78,7 @@ class CandidateViewControllerTest {
 
     @Test
     fun testReadingsAreNOTInCandidateBar() {
-        controller.refreshFromState(state(candidates = listOf(Candidate("你", "64", 900)), readings = listOf("ni", "mi")))
+        controller.refreshFromState(state(candidates = listOf(candidate("你", "64", 900)), readings = listOf("ni", "mi")))
 
         assertEquals(1, candidateContainer.childCount)
         val tvCandidate = candidateContainer.getChildAt(0) as TextView
@@ -89,7 +89,7 @@ class CandidateViewControllerTest {
     fun testCandidateClickEmitsInputActionIndex() {
         var clickedAction: ImeInputAction? = null
         controller.onInputAction = { clickedAction = it }
-        controller.refreshFromState(state(candidates = listOf(Candidate("我", "96", 900))))
+        controller.refreshFromState(state(candidates = listOf(candidate("我", "96", 900))))
 
         val tvCandidate = candidateContainer.getChildAt(0) as TextView
         tvCandidate.performClick()
@@ -101,7 +101,7 @@ class CandidateViewControllerTest {
     fun testPreeditIsNotClickableAndDoesNotEmitCandidateAction() {
         var clickedAction: ImeInputAction? = null
         controller.onInputAction = { clickedAction = it }
-        controller.refreshFromState(state(preeditVisible = true, preedit = "wo", candidates = listOf(Candidate("我", "96", 900))))
+        controller.refreshFromState(state(preeditVisible = true, preedit = "wo", candidates = listOf(candidate("我", "96", 900))))
 
         mockFloatingBar.performClick()
         mockFloatingText.performClick()
@@ -117,7 +117,7 @@ class CandidateViewControllerTest {
             state(
                 preeditVisible = true,
                 preedit = "wo",
-                candidates = listOf(Candidate("我", "96", 900), Candidate("喔", "96", 800)),
+                candidates = listOf(candidate("我", "96", 900), candidate("喔", "96", 800)),
             )
         )
 
@@ -136,7 +136,7 @@ class CandidateViewControllerTest {
 
     @Test
     fun testRefreshFromStateHasNoHandlerDependency() {
-        controller.refreshFromState(state(candidates = listOf(Candidate("我", "96", 900))))
+        controller.refreshFromState(state(candidates = listOf(candidate("我", "96", 900))))
 
         val renderMethod = CandidateViewController::class.java.methods.single { it.name == "refreshFromState" }
         assertEquals(1, renderMethod.parameterTypes.size)
@@ -171,7 +171,7 @@ class CandidateViewControllerTest {
         preeditVisible: Boolean = false,
         preedit: String = "",
         readings: List<String> = emptyList(),
-        candidates: List<Candidate> = emptyList(),
+        candidates: List<CandidateSnapshotItem> = emptyList(),
     ): KeyboardUiState = KeyboardUiState(
         keyboardMode = mode,
         lastTextMode = KeyboardMode.ChineseT9,
@@ -200,5 +200,13 @@ class CandidateViewControllerTest {
         ),
         candidateStripState = CandidateStripState(candidates.isNotEmpty(), candidates),
         preeditState = PreeditState(preeditVisible, preedit),
+    )
+
+    private fun candidate(text: String, code: String, score: Int) = CandidateSnapshotItem(
+        text = text,
+        code = code,
+        sourcePinyin = code,
+        score = score,
+        origin = "TEST",
     )
 }

@@ -1,6 +1,7 @@
 package io.github.xiwei753.pinyin.t9
 
 import io.github.xiwei753.pinyin.imecore.CandidateStripState
+import io.github.xiwei753.pinyin.imecore.CandidateSnapshotItem
 import io.github.xiwei753.pinyin.imecore.CompositionState
 import io.github.xiwei753.pinyin.imecore.ImeUiState
 import io.github.xiwei753.pinyin.imecore.InputMode
@@ -10,7 +11,6 @@ import io.github.xiwei753.pinyin.imecore.PreeditState
 import io.github.xiwei753.pinyin.imecore.RailState
 import io.github.xiwei753.pinyin.imecore.SymbolPanelState
 import io.github.xiwei753.pinyin.imecore.ThemeTokens
-import io.github.xiwei753.pinyin.t9.core.Candidate
 
 data class KeyboardUiState(
     val keyboardMode: KeyboardMode,
@@ -19,7 +19,7 @@ data class KeyboardUiState(
     val preedit: String,
     val readings: List<String>,
     val activeReading: String?,
-    val candidatesSnapshot: List<Candidate>,
+    val candidatesSnapshot: List<CandidateSnapshotItem>,
     val currentSymCategory: String,
     val isComposing: Boolean,
     val themePalette: ThemePalette,

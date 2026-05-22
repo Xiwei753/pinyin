@@ -140,6 +140,36 @@ class ImeStateMachineTest {
     }
 
     @Test
+    fun uiCandidateSnapshotDoesNotExposeT9CandidateType() {
+        machine.dispatch(ImeInputAction.DigitPressed("9"))
+        machine.dispatch(ImeInputAction.DigitPressed("6"))
+
+        val item = machine.uiState().candidateStrip.candidates.first()
+
+        assertEquals(CandidateSnapshotItem::class.java.name, item::class.java.name)
+        assertEquals("我", item.text)
+    }
+
+    @Test
+    fun candidateSelectedCommitsInternalSelectionWithoutRequeryingEngine() {
+        val fake = SnapshotEngine(
+            listOf(
+                CandidateSelection(CandidateSnapshotItem("甲", "1", "jia", 10, "TEST")) { },
+                CandidateSelection(CandidateSnapshotItem("乙", "2", "yi", 20, "TEST")) { },
+            )
+        )
+        val localMachine = ImeStateMachine { 30 }
+        localMachine.attachEngine(fake)
+        fake.queryCount = 0
+
+        val effects = localMachine.dispatch(ImeInputAction.CandidateSelected(1))
+
+        assertEquals(0, fake.queryCount)
+        assertTrue(effects.contains(ImeSideEffect.CommitCandidate("乙")))
+        assertEquals(1, fake.commitCount)
+    }
+
+    @Test
     fun renderMultipleTimesDoesNotChangeOrRequeryCandidateSnapshot() {
         machine.dispatch(ImeInputAction.DigitPressed("9"))
         machine.dispatch(ImeInputAction.DigitPressed("6"))
@@ -188,4 +218,23 @@ class ImeStateMachineTest {
         sourcePinyin = pinyin,
         origin = CandidateOrigin.EXACT_SINGLE,
     )
+
+    private class SnapshotEngine(
+        private val selections: List<CandidateSelection>,
+    ) : T9InputEngine {
+        var queryCount = 0
+        var commitCount = 0
+        override val buffer: String = "96"
+        override val readings: List<String> = listOf("wo")
+        override val activeReading: String? = "wo"
+        override fun getPreedit(): String = "wo"
+        override fun inputDigit(digit: String) {}
+        override fun backspace() {}
+        override fun clear() {}
+        override fun getVisibleCandidates(limit: Int): List<CandidateSelection> {
+            queryCount++
+            return selections.map { selection -> selection.copy(commit = { commitCount++ }) }
+        }
+        override fun setActiveReading(reading: String): Boolean = false
+    }
 }

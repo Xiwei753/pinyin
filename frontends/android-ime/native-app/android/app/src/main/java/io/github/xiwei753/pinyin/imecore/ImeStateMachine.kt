@@ -1,7 +1,5 @@
 package io.github.xiwei753.pinyin.imecore
 
-import io.github.xiwei753.pinyin.t9.core.Candidate
-
 class ImeStateMachine(
     private val candidateLimitProvider: () -> Int = { 9 },
 ) {
@@ -17,7 +15,7 @@ class ImeStateMachine(
     var currentSymbolCategory: String = "punct"
         private set
 
-    private var candidatesSnapshot: List<Candidate> = emptyList()
+    private var candidateSelections: List<CandidateSelection> = emptyList()
     private var candidateLimit: Int = candidateLimitProvider()
     private var fallbackBuffer: String = ""
 
@@ -30,7 +28,7 @@ class ImeStateMachine(
     var englishPending = false
         private set
 
-    val currentCandidates: List<Candidate> get() = candidatesSnapshot
+    val currentCandidates: List<CandidateSnapshotItem> get() = candidateSelections.map { it.snapshot }
     val rawBuffer: String get() = engine?.buffer ?: fallbackBuffer
     val readings: List<String> get() = engine?.readings ?: emptyList()
     val activeReading: String? get() = engine?.activeReading
@@ -63,6 +61,7 @@ class ImeStateMachine(
             ImeInputAction.ToggleSymbol -> onToggleSymbol(effects)
             ImeInputAction.ToggleNumber -> onToggleNumber(effects)
             ImeInputAction.ToggleChineseEnglish -> onToggleChineseEnglish(effects)
+            is ImeInputAction.KeyboardModeSelected -> switchMode(action.mode, effects)
             is ImeInputAction.CandidateLimitChanged -> {
                 candidateLimit = action.limit
                 refreshCandidates()
@@ -91,7 +90,7 @@ class ImeStateMachine(
     }
 
     private fun refreshCandidates() {
-        candidatesSnapshot = if (mode == InputMode.ChineseT9) {
+        candidateSelections = if (mode == InputMode.ChineseT9) {
             engine?.getVisibleCandidates(candidateLimit) ?: emptyList()
         } else {
             emptyList()
@@ -101,6 +100,7 @@ class ImeStateMachine(
     fun uiState(isDictionaryPreparing: Boolean = false): ImeUiState {
         val composing = rawBuffer.isNotEmpty()
         val isTextMode = mode == InputMode.ChineseT9 || mode == InputMode.EnglishT9
+        val candidatesSnapshot = currentCandidates
         val candidateVisible = candidatesSnapshot.isNotEmpty() || isDictionaryPreparing
         val rail = when (mode) {
             InputMode.Symbol -> RailState(RailKind.SymbolCategories, listOf("标点", "数学", "括号", "其他"))
@@ -193,8 +193,8 @@ class ImeStateMachine(
             InputMode.ChineseT9 -> {
                 if (rawBuffer.isEmpty()) {
                     effects.add(ImeSideEffect.CommitText(" "))
-                } else if (candidatesSnapshot.isNotEmpty()) {
-                    commitCandidate(candidatesSnapshot[0], effects)
+                } else if (candidateSelections.isNotEmpty()) {
+                    commitCandidate(candidateSelections[0], effects)
                 }
             }
             InputMode.EnglishT9 -> {
@@ -232,7 +232,7 @@ class ImeStateMachine(
         when (mode) {
             InputMode.ChineseT9 -> {
                 if (rawBuffer.isEmpty()) effects.add(ImeSideEffect.CommitText(" "))
-                else if (candidatesSnapshot.isNotEmpty()) commitCandidate(candidatesSnapshot[0], effects)
+                else if (candidateSelections.isNotEmpty()) commitCandidate(candidateSelections[0], effects)
                 else if (preedit.isNotEmpty()) commitPreedit(effects)
             }
             InputMode.EnglishT9 -> {
@@ -313,8 +313,8 @@ class ImeStateMachine(
     }
 
     private fun onCandidateSelected(index: Int, effects: MutableList<ImeSideEffect>) {
-        if (mode != InputMode.ChineseT9 || index !in candidatesSnapshot.indices) return
-        commitCandidate(candidatesSnapshot[index], effects)
+        if (mode != InputMode.ChineseT9 || index !in candidateSelections.indices) return
+        commitCandidate(candidateSelections[index], effects)
     }
 
     private fun onReadingSelected(index: Int, effects: MutableList<ImeSideEffect>) {
@@ -326,16 +326,15 @@ class ImeStateMachine(
     }
 
     private fun commitFirstCandidateOrPreedit(effects: MutableList<ImeSideEffect>) {
-        if (candidatesSnapshot.isNotEmpty()) commitCandidate(candidatesSnapshot[0], effects)
+        if (candidateSelections.isNotEmpty()) commitCandidate(candidateSelections[0], effects)
         else if (preedit.isNotEmpty()) commitPreedit(effects)
     }
 
-    private fun commitCandidate(candidate: Candidate, effects: MutableList<ImeSideEffect>) {
-        engine?.commitCandidate(candidate)
-        candidatesSnapshot = emptyList()
+    private fun commitCandidate(candidate: CandidateSelection, effects: MutableList<ImeSideEffect>) {
+        candidate.commit()
+        candidateSelections = emptyList()
         fallbackBuffer = ""
-        effects.add(ImeSideEffect.RecordUserSelection(candidate))
-        effects.add(ImeSideEffect.CommitCandidate(candidate.text))
+        effects.add(ImeSideEffect.CommitCandidate(candidate.snapshot.text))
         effects.add(ImeSideEffect.RefreshUi)
     }
 
@@ -343,14 +342,14 @@ class ImeStateMachine(
         effects.add(ImeSideEffect.CommitText(preedit))
         engine?.clear()
         fallbackBuffer = ""
-        candidatesSnapshot = emptyList()
+        candidateSelections = emptyList()
         effects.add(ImeSideEffect.RefreshUi)
     }
 
     private fun clearComposing(effects: MutableList<ImeSideEffect>, finishComposing: Boolean) {
         engine?.clear()
         fallbackBuffer = ""
-        candidatesSnapshot = emptyList()
+        candidateSelections = emptyList()
         if (englishPending) {
             englishPending = false
             effects.add(ImeSideEffect.CancelEnglishTimeout)

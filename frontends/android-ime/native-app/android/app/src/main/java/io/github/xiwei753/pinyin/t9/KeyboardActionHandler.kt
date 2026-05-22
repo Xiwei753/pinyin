@@ -5,7 +5,7 @@ import io.github.xiwei753.pinyin.imecore.ImeSideEffect
 import io.github.xiwei753.pinyin.imecore.ImeStateMachine
 import io.github.xiwei753.pinyin.imecore.ImeUiState
 import io.github.xiwei753.pinyin.imecore.InputMode
-import io.github.xiwei753.pinyin.t9.core.Candidate
+import io.github.xiwei753.pinyin.imecore.CandidateSnapshotItem
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 
 class KeyboardActionHandler(
@@ -20,17 +20,15 @@ class KeyboardActionHandler(
 
     var keyboardMode: KeyboardMode
         get() = stateMachine.mode.toKeyboardMode()
-        private set(value) { switchKeyboardMode(value) }
+        private set(value) { switchMode(value) }
 
     var lastTextMode: KeyboardMode
         get() = stateMachine.lastTextMode.toKeyboardMode()
         set(value) {
-            val effects = mutableListOf<ImeSideEffect>()
-            stateMachine.switchMode(value.toInputMode(), effects)
-            execute(effects)
+            handle(ImeInputAction.KeyboardModeSelected(value.toInputMode()))
         }
 
-    val currentCandidates: List<Candidate> get() = stateMachine.currentCandidates
+    val currentCandidates: List<CandidateSnapshotItem> get() = stateMachine.currentCandidates
     val preedit: String get() = stateMachine.preedit
     val rawBuffer: String get() = stateMachine.rawBuffer
     val readings: List<String> get() = stateMachine.readings
@@ -58,20 +56,26 @@ class KeyboardActionHandler(
         }
     }
 
-    fun switchKeyboardMode(targetMode: KeyboardMode) {
-        val effects = mutableListOf<ImeSideEffect>()
-        stateMachine.switchMode(targetMode.toInputMode(), effects)
-        execute(effects)
+    private fun switchMode(targetMode: KeyboardMode) {
+        handle(ImeInputAction.KeyboardModeSelected(targetMode.toInputMode()))
     }
 
+    @Deprecated("Use handle(ImeInputAction.ToggleSymbol); this compatibility wrapper must stay logic-free.")
     fun toggleSymbolKey() = handle(ImeInputAction.ToggleSymbol)
+    @Deprecated("Use handle(ImeInputAction.ToggleNumber); this compatibility wrapper must stay logic-free.")
     fun toggleNumberKey() = handle(ImeInputAction.ToggleNumber)
+    @Deprecated("Use handle(ImeInputAction.DigitPressed); this compatibility wrapper must stay logic-free.")
     fun onDigitPressed(digit: String) = handle(ImeInputAction.DigitPressed(digit))
+    @Deprecated("Use handle(ImeInputAction.SeparatorPressed); this compatibility wrapper must stay logic-free.")
     fun onSeparator() = handle(ImeInputAction.SeparatorPressed)
+    @Deprecated("Use handle(ImeInputAction.ZeroPressed); this compatibility wrapper must stay logic-free.")
     fun onZero() = handle(ImeInputAction.ZeroPressed)
+    @Deprecated("Use handle(ImeInputAction.DeletePressed); this compatibility wrapper must stay logic-free.")
     fun onDelete() = handle(ImeInputAction.DeletePressed)
     fun onClearComposingForRetype() = handle(ImeInputAction.ClearComposing)
+    @Deprecated("Use handle(ImeInputAction.SpacePressed); this compatibility wrapper must stay logic-free.")
     fun onSpace() = handle(ImeInputAction.SpacePressed)
+    @Deprecated("Use handle(ImeInputAction.CandidateSelected); this compatibility wrapper must stay logic-free.")
     fun onCandidateClick(index: Int) = handle(ImeInputAction.CandidateSelected(index))
     fun updateCandidateLimit(limit: Int) = handle(ImeInputAction.CandidateLimitChanged(limit))
 
@@ -88,6 +92,7 @@ class KeyboardActionHandler(
         execute(effects)
     }
 
+    @Deprecated("Use handle(ImeInputAction.PunctuationCommitted); this compatibility wrapper must stay logic-free.")
     fun onPunctCommit(text: String) {
         handle(ImeInputAction.PunctuationCommitted(text))
     }
@@ -95,6 +100,8 @@ class KeyboardActionHandler(
     fun onEnter() = onEnterShortPress()
 
     fun onEnterShortPress() {
+        // Android adapter boundary: core EnterShortPressed describes default composing/newline behavior.
+        // This path additionally applies EditorInfo action policy and must not move into imecore.
         val hasComposing = when (keyboardMode) {
             KeyboardMode.ChineseT9 -> rawBuffer.isNotEmpty()
             KeyboardMode.EnglishT9 -> englishPending
@@ -129,12 +136,17 @@ class KeyboardActionHandler(
     fun onEnterLongPress() = handle(ImeInputAction.EnterLongPressed)
 
     @Deprecated("Candidate snapshot is owned by ImeStateMachine; use CandidateLimitChanged during input handling and uiState() during render.")
-    fun refreshCandidates(limit: Int): List<Candidate> {
+    fun refreshCandidates(limit: Int): List<CandidateSnapshotItem> {
         updateCandidateLimit(limit)
         return currentCandidates
     }
 
+    @Deprecated("Use handle(ImeInputAction.ToggleSymbol/ToggleNumber/...) or lifecycle helpers; this compatibility wrapper must stay logic-free.")
+    fun switchKeyboardMode(targetMode: KeyboardMode) = handle(ImeInputAction.KeyboardModeSelected(targetMode.toInputMode()))
+
     fun discardCompositionForLifecycle() = handle(ImeInputAction.LifecycleStartInput)
+
+    fun resetToChineseModeForLifecycle() = switchMode(KeyboardMode.ChineseT9)
 
     fun onHideKey() {
         if (keyboardMode == KeyboardMode.ChineseT9 && rawBuffer.isNotEmpty()) {
@@ -155,7 +167,6 @@ class KeyboardActionHandler(
                 ImeSideEffect.FinishComposingText -> actionSink.finishComposingText()
                 is ImeSideEffect.PerformEditorAction -> actionSink.performEditorAction(effect.action)
                 ImeSideEffect.RefreshUi -> actionSink.refreshUi()
-                is ImeSideEffect.RecordUserSelection -> {}
                 ImeSideEffect.CancelEnglishTimeout -> actionSink.cancelEnglishTimeout()
                 is ImeSideEffect.ScheduleEnglishTimeout -> actionSink.scheduleEnglishTimeout(englishTimeoutRunnable, effect.delayMs)
             }

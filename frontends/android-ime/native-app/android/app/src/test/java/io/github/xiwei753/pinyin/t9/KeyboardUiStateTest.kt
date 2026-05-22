@@ -1,6 +1,6 @@
 package io.github.xiwei753.pinyin.t9
 
-import io.github.xiwei753.pinyin.t9.core.Candidate
+import io.github.xiwei753.pinyin.imecore.CandidateSnapshotItem
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,7 +21,7 @@ class KeyboardUiStateTest {
             specialKeyPressedBgColor = 13
         )
 
-        val candidate = Candidate("test", "test", 0)
+        val candidate = CandidateSnapshotItem("test", "test", "test", 0, "TEST")
         val state = KeyboardUiState(
             keyboardMode = KeyboardMode.ChineseT9,
             lastTextMode = KeyboardMode.ChineseT9,

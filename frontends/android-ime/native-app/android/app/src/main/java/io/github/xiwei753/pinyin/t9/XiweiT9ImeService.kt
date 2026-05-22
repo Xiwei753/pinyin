@@ -45,8 +45,6 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     private val layoutBuilder = KeyboardLayoutBuilder()
     private val registry = SymbolKeyRegistry()
 
-    private var currentSymCategory: String = "punct"
-
     private val categoryToPage = mapOf(
         SymbolKeyRegistry.Category.FULLWIDTH_PUNCT to "punct",
         SymbolKeyRegistry.Category.HALFWIDTH_PUNCT to "punct",
@@ -239,7 +237,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
         if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
-        if (this::handler.isInitialized) handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+        if (this::handler.isInitialized) handler.resetToChineseModeForLifecycle()
         updateKeyboardPanel()
     }
 
@@ -473,9 +471,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             specialKeyPressedBgColor = ThemeColors.LIGHT_SPECIAL_KEY_PRESSED,
         )
         return if (this::handler.isInitialized) {
-            val coreState = handler.uiState(isDictPreparing)
-            currentSymCategory = coreState.currentSymbolCategory
-            coreState.toAndroidKeyboardUiState(palette)
+            handler.uiState(isDictPreparing).toAndroidKeyboardUiState(palette)
         } else {
             KeyboardUiState(
                 keyboardMode = KeyboardMode.ChineseT9,
@@ -485,7 +481,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 readings = emptyList(),
                 activeReading = null,
                 candidatesSnapshot = emptyList(),
-                currentSymCategory = currentSymCategory,
+                currentSymCategory = "punct",
                 isComposing = false,
                 themePalette = palette
             )
