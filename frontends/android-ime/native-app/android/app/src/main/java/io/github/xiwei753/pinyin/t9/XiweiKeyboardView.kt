@@ -174,7 +174,7 @@ class XiweiKeyboardView @JvmOverloads constructor(
             }
             action.startsWith("punct:") -> {
                 val punct = action.removePrefix("punct:")
-                onInputAction?.invoke(ImeInputAction.SymbolCommitted(punct)) ?: onKeyAction?.invoke("punct:$punct")
+                onInputAction?.invoke(ImeInputAction.PunctuationCommitted(punct)) ?: onKeyAction?.invoke("punct:$punct")
             }
             action.startsWith("reading:") -> {
                 val indexStr = action.removePrefix("reading:")

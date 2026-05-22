@@ -18,6 +18,7 @@ class ImeStateMachine(
         private set
 
     private var candidatesSnapshot: List<Candidate> = emptyList()
+    private var candidateLimit: Int = candidateLimitProvider()
     private var fallbackBuffer: String = ""
 
     private val englishMultiTapLetters = mapOf(
@@ -62,10 +63,16 @@ class ImeStateMachine(
             ImeInputAction.ToggleSymbol -> onToggleSymbol(effects)
             ImeInputAction.ToggleNumber -> onToggleNumber(effects)
             ImeInputAction.ToggleChineseEnglish -> onToggleChineseEnglish(effects)
+            is ImeInputAction.CandidateLimitChanged -> {
+                candidateLimit = action.limit
+                refreshCandidates()
+                effects.add(ImeSideEffect.RefreshUi)
+            }
             is ImeInputAction.SymbolCommitted -> {
                 effects.add(ImeSideEffect.CommitText(action.text))
                 effects.add(ImeSideEffect.RefreshUi)
             }
+            is ImeInputAction.PunctuationCommitted -> onPunctuationCommitted(action.text, effects)
             is ImeInputAction.SymbolCategorySelected -> {
                 currentSymbolCategory = action.category
                 effects.add(ImeSideEffect.RefreshUi)
@@ -83,13 +90,12 @@ class ImeStateMachine(
         return effects
     }
 
-    fun refreshCandidates(limit: Int = candidateLimitProvider()): List<Candidate> {
+    private fun refreshCandidates() {
         candidatesSnapshot = if (mode == InputMode.ChineseT9) {
-            engine?.getVisibleCandidates(limit) ?: emptyList()
+            engine?.getVisibleCandidates(candidateLimit) ?: emptyList()
         } else {
             emptyList()
         }
-        return candidatesSnapshot
     }
 
     fun uiState(isDictionaryPreparing: Boolean = false): ImeUiState {
@@ -235,6 +241,15 @@ class ImeStateMachine(
             }
             InputMode.Symbol, InputMode.Number -> effects.add(ImeSideEffect.CommitText(" "))
         }
+    }
+
+    private fun onPunctuationCommitted(text: String, effects: MutableList<ImeSideEffect>) {
+        when {
+            mode == InputMode.ChineseT9 && rawBuffer.isNotEmpty() -> commitFirstCandidateOrPreedit(effects)
+            mode == InputMode.EnglishT9 && englishPending -> commitEnglishChar(effects)
+        }
+        effects.add(ImeSideEffect.CommitText(text))
+        effects.add(ImeSideEffect.RefreshUi)
     }
 
     private fun onToggleSymbol(effects: MutableList<ImeSideEffect>) {

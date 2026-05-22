@@ -12,8 +12,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito.clearInvocations
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 
@@ -129,9 +131,53 @@ class ImeStateMachineTest {
     fun candidateSelectedDoesNotRequeryDictionary() {
         machine.dispatch(ImeInputAction.DigitPressed("9"))
         machine.dispatch(ImeInputAction.DigitPressed("6"))
+        clearInvocations(dictionary)
+
         machine.dispatch(ImeInputAction.CandidateSelected(0))
 
-        verify(dictionary, never()).getCandidates("96")
+        verify(dictionary, never()).getSingleSyllableCandidates(anyString())
+        verify(dictionary, never()).getPinyinExactCandidates(anyString())
+    }
+
+    @Test
+    fun renderMultipleTimesDoesNotChangeOrRequeryCandidateSnapshot() {
+        machine.dispatch(ImeInputAction.DigitPressed("9"))
+        machine.dispatch(ImeInputAction.DigitPressed("6"))
+        val before = machine.uiState().candidatesSnapshot
+        clearInvocations(dictionary)
+
+        val state1 = machine.uiState()
+        val state2 = machine.uiState()
+
+        assertEquals(before, state1.candidatesSnapshot)
+        assertEquals(before, state2.candidatesSnapshot)
+        verify(dictionary, never()).getSingleSyllableCandidates(anyString())
+        verify(dictionary, never()).getPinyinExactCandidates(anyString())
+    }
+
+    @Test
+    fun readingSelectedRefreshesCandidates() {
+        machine.dispatch(ImeInputAction.DigitPressed("9"))
+        machine.dispatch(ImeInputAction.DigitPressed("6"))
+        clearInvocations(dictionary)
+
+        machine.dispatch(ImeInputAction.ReadingSelected(0))
+
+        verify(dictionary, times(1)).getSingleSyllableCandidates("wo")
+    }
+
+    @Test
+    fun deletePressedRefreshesCandidatesAndClearComposingClearsSnapshot() {
+        machine.dispatch(ImeInputAction.DigitPressed("9"))
+        machine.dispatch(ImeInputAction.DigitPressed("6"))
+        assertTrue(machine.uiState().candidatesSnapshot.isNotEmpty())
+
+        machine.dispatch(ImeInputAction.DeletePressed)
+        assertEquals("9", machine.rawBuffer)
+
+        machine.dispatch(ImeInputAction.ClearComposing)
+        assertEquals("", machine.rawBuffer)
+        assertTrue(machine.uiState().candidatesSnapshot.isEmpty())
     }
 
     private fun candidate(text: String, pinyin: String): Candidate = Candidate(

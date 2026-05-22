@@ -53,13 +53,7 @@ class CandidateViewController(
         isDictPreparing = preparing
     }
 
-    fun refreshUi(handler: KeyboardActionHandler) {
-        val limit = settingsRepository.getCandidateCount()
-        handler.refreshCandidates(limit)
-        refreshFromState(handler.uiState(isDictPreparing).toAndroidKeyboardUiState(palette), handler)
-    }
-
-    fun refreshFromState(state: KeyboardUiState, handler: KeyboardActionHandler? = null) {
+    fun refreshFromState(state: KeyboardUiState) {
         if (state.preeditState.visible) {
             v.pinyinFloatingBar.visibility = View.VISIBLE
             v.pinyinFloatingText.text = state.preeditState.text
@@ -71,7 +65,7 @@ class CandidateViewController(
 
         if (state.candidateStripState.isDictionaryPreparing || isDictPreparing) {
             val text = "\u8BCD\u5E93\u51C6\u5907\u4E2D..."
-                val btn = createTextView(text, CandidateItemType.PREPARING, false, null, handler)
+            val btn = createTextView(text, CandidateItemType.PREPARING, false, null)
             v.candidateContainer.addView(btn)
             v.candidateContainer.visibility = View.VISIBLE
             return
@@ -87,7 +81,7 @@ class CandidateViewController(
         } else {
             v.candidateContainer.visibility = View.VISIBLE
             for (item in items) {
-                val btn = createTextView(item.text, item.type, item.isActive, item.payload, handler)
+                val btn = createTextView(item.text, item.type, item.isActive, item.payload)
                 v.candidateContainer.addView(btn)
             }
         }
@@ -98,7 +92,6 @@ class CandidateViewController(
         type: CandidateItemType,
         isActive: Boolean,
         payload: Any?,
-        handler: KeyboardActionHandler?,
     ): TextView {
         val tv = TextView(context).apply {
             textSize = palette.layoutTokens.preeditTextSize
@@ -129,11 +122,7 @@ class CandidateViewController(
                 tv.setOnClickListener {
                     val index = payload as? Int
                     if (index != null) {
-                        if (onInputAction != null) {
-                            onInputAction?.invoke(ImeInputAction.CandidateSelected(index))
-                        } else {
-                            handler?.onCandidateClick(index)
-                        }
+                        onInputAction?.invoke(ImeInputAction.CandidateSelected(index))
                     }
                 }
             }

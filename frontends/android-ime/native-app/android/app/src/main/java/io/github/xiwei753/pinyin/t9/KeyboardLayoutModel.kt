@@ -1,6 +1,7 @@
 package io.github.xiwei753.pinyin.t9
 
 import android.graphics.Rect
+import io.github.xiwei753.pinyin.imecore.RailKind
 
 data class KeyboardLayoutModel(
     val keys: List<KeyboardKey>,
@@ -33,7 +34,10 @@ class KeyboardLayoutBuilder {
                 bottomRowHeight = bottomRowHeight,
                 horizontalGap = horizontalGap,
                 verticalGap = verticalGap,
-                readings = state.railState.labels.takeIf { state.railState.kind.name == "Readings" } ?: state.readings,
+                readings = when (state.railState.kind) {
+                    RailKind.Readings -> state.railState.labels
+                    else -> state.readings
+                },
                 isComposing = state.isComposing,
                 keyboardMode = state.keyboardMode,
                 activeReading = state.activeReading,

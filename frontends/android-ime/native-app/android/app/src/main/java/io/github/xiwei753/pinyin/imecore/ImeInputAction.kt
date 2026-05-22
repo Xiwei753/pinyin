@@ -11,7 +11,9 @@ sealed interface ImeInputAction {
     data object ToggleSymbol : ImeInputAction
     data object ToggleNumber : ImeInputAction
     data object ToggleChineseEnglish : ImeInputAction
+    data class CandidateLimitChanged(val limit: Int) : ImeInputAction
     data class SymbolCommitted(val text: String) : ImeInputAction
+    data class PunctuationCommitted(val text: String) : ImeInputAction
     data class SymbolCategorySelected(val category: String) : ImeInputAction
     data class CandidateSelected(val index: Int) : ImeInputAction
     data class ReadingSelected(val index: Int) : ImeInputAction

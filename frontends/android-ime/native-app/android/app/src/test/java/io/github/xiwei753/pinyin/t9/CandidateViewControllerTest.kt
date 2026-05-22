@@ -4,27 +4,23 @@ import android.content.Context
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import org.junit.Assert.*
+import io.github.xiwei753.pinyin.imecore.CandidateStripState
+import io.github.xiwei753.pinyin.imecore.ImeInputAction
+import io.github.xiwei753.pinyin.imecore.PreeditState
+import io.github.xiwei753.pinyin.t9.core.Candidate
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito.*
-import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import io.github.xiwei753.pinyin.t9.core.Candidate
-import io.github.xiwei753.pinyin.t9.core.T9Engine
 
 @RunWith(RobolectricTestRunner::class)
 class CandidateViewControllerTest {
 
     private lateinit var context: Context
-    private lateinit var kv: KeyboardViews
-    private lateinit var themeController: KeyboardThemeController
-    private lateinit var settingsRepository: SettingsRepository
     private lateinit var controller: CandidateViewController
-    private lateinit var handler: KeyboardActionHandler
-    private lateinit var engine: T9Engine
     private lateinit var mockFloatingBar: View
     private lateinit var mockFloatingText: TextView
     private lateinit var candidateContainer: LinearLayout
@@ -35,12 +31,8 @@ class CandidateViewControllerTest {
         mockFloatingBar = View(context)
         mockFloatingText = TextView(context)
         candidateContainer = LinearLayout(context)
-        themeController = mock(KeyboardThemeController::class.java)
-        settingsRepository = mock(SettingsRepository::class.java)
-        val eng = mock(T9Engine::class.java)
-        engine = eng
 
-        kv = KeyboardViews(
+        val kv = KeyboardViews(
             imeRoot = mock(),
             candidateBar = mock(),
             candidateContainer = candidateContainer,
@@ -49,71 +41,33 @@ class CandidateViewControllerTest {
             xiweiKeyboardView = mock(),
         )
 
-        handler = spy(KeyboardActionHandler(mock(ImeActionSink::class.java)).apply { attachEngine(eng) })
-
         controller = CandidateViewController(
             context = context,
             v = kv,
-            themeController = themeController,
-            settingsRepository = settingsRepository,
+            themeController = mock(KeyboardThemeController::class.java),
+            settingsRepository = mock(SettingsRepository::class.java),
         )
     }
 
     @Test
-    fun testPreeditHiddenWhenBufferEmpty() {
-        `when`(engine.buffer).thenReturn("")
-        `when`(engine.getPreedit()).thenReturn("")
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(emptyList())
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
-
-        controller.refreshUi(handler)
+    fun testPreeditHiddenWhenStateHidden() {
+        controller.refreshFromState(state(preeditVisible = false, preedit = ""))
 
         assertEquals(View.GONE, mockFloatingBar.visibility)
     }
 
     @Test
-    fun testPreeditShownWhenBufferNotEmpty() {
-        `when`(engine.buffer).thenReturn("96")
-        `when`(engine.getPreedit()).thenReturn("wo")
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(emptyList())
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
-
-        controller.refreshUi(handler)
+    fun testPreeditShownFromState() {
+        controller.refreshFromState(state(preeditVisible = true, preedit = "wo"))
 
         assertEquals(View.VISIBLE, mockFloatingBar.visibility)
         assertEquals("wo", mockFloatingText.text.toString())
     }
 
     @Test
-    fun testCandidateCountPassesToEngine() {
-        `when`(engine.buffer).thenReturn("96")
-        `when`(engine.getPreedit()).thenReturn("wo")
-        `when`(settingsRepository.getCandidateCount()).thenReturn(15)
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(emptyList())
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
-
-        controller.refreshUi(handler)
-
-        verify(engine).getVisibleCandidates(15)
-    }
-
-    @Test
     fun testCandidatesLayoutRendering() {
-        `when`(engine.buffer).thenReturn("96")
-        `when`(engine.getPreedit()).thenReturn("wo")
-        `when`(settingsRepository.getCandidateCount()).thenReturn(30)
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(
-            listOf(Candidate("我", "96", 900), Candidate("你", "96", 500))
-        )
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
+        controller.refreshFromState(state(candidates = listOf(Candidate("我", "96", 900), Candidate("你", "96", 500))))
 
-        controller.refreshUi(handler)
-
-        // Only candidates should be in the container, NOT preedit or reading
         assertEquals(2, candidateContainer.childCount)
         val tv1 = candidateContainer.getChildAt(0) as TextView
         val tv2 = candidateContainer.getChildAt(1) as TextView
@@ -124,81 +78,48 @@ class CandidateViewControllerTest {
 
     @Test
     fun testReadingsAreNOTInCandidateBar() {
-        `when`(engine.buffer).thenReturn("64")
-        `when`(engine.getPreedit()).thenReturn("ni")
-        `when`(engine.readings).thenReturn(listOf("ni", "mi"))
-        `when`(engine.activeReading).thenReturn("ni")
-        `when`(settingsRepository.getCandidateCount()).thenReturn(30)
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(
-            listOf(Candidate("你", "64", 900))
-        )
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
+        controller.refreshFromState(state(candidates = listOf(Candidate("你", "64", 900)), readings = listOf("ni", "mi")))
 
-        controller.refreshUi(handler)
-
-        // Only Chinese candidates should be here
         assertEquals(1, candidateContainer.childCount)
-        
         val tvCandidate = candidateContainer.getChildAt(0) as TextView
         assertEquals("你", tvCandidate.text.toString())
     }
 
     @Test
-    fun testCandidateClickCallsHandler() {
-        `when`(engine.buffer).thenReturn("96")
-        `when`(engine.getPreedit()).thenReturn("wo")
-        `when`(settingsRepository.getCandidateCount()).thenReturn(30)
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(
-            listOf(Candidate("我", "96", 900))
-        )
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
+    fun testCandidateClickEmitsInputActionIndex() {
+        var clickedAction: ImeInputAction? = null
+        controller.onInputAction = { clickedAction = it }
+        controller.refreshFromState(state(candidates = listOf(Candidate("我", "96", 900))))
 
-        controller.refreshUi(handler)
-
-        assertEquals(1, candidateContainer.childCount)
         val tvCandidate = candidateContainer.getChildAt(0) as TextView
-        assertEquals("我", tvCandidate.text.toString())
-
         tvCandidate.performClick()
 
-        verify(handler).onCandidateClick(0)
+        assertEquals(ImeInputAction.CandidateSelected(0), clickedAction)
     }
 
     @Test
-    fun testPreeditIsNotClickableAndDoesNotCallHandler() {
-        `when`(engine.buffer).thenReturn("96")
-        `when`(engine.getPreedit()).thenReturn("wo")
-        `when`(settingsRepository.getCandidateCount()).thenReturn(30)
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(
-            listOf(Candidate("我", "96", 900))
-        )
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
-
-        controller.refreshUi(handler)
-
-        assertEquals(View.VISIBLE, mockFloatingBar.visibility)
+    fun testPreeditIsNotClickableAndDoesNotEmitCandidateAction() {
+        var clickedAction: ImeInputAction? = null
+        controller.onInputAction = { clickedAction = it }
+        controller.refreshFromState(state(preeditVisible = true, preedit = "wo", candidates = listOf(Candidate("我", "96", 900))))
 
         mockFloatingBar.performClick()
         mockFloatingText.performClick()
 
-        verify(handler, never()).onCandidateClick(anyInt())
+        assertEquals(null, clickedAction)
     }
 
     @Test
     fun testPreeditDisplayDoesNotShiftCandidateIndex() {
-        `when`(engine.buffer).thenReturn("96")
-        `when`(engine.getPreedit()).thenReturn("wo")
-        `when`(settingsRepository.getCandidateCount()).thenReturn(30)
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(
-            listOf(Candidate("我", "96", 900), Candidate("喔", "96", 800))
+        var clickedAction: ImeInputAction? = null
+        controller.onInputAction = { clickedAction = it }
+        controller.refreshFromState(
+            state(
+                preeditVisible = true,
+                preedit = "wo",
+                candidates = listOf(Candidate("我", "96", 900), Candidate("喔", "96", 800)),
+            )
         )
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
-
-        controller.refreshUi(handler)
 
         assertEquals(View.VISIBLE, mockFloatingBar.visibility)
         assertEquals(2, candidateContainer.childCount)
@@ -206,14 +127,20 @@ class CandidateViewControllerTest {
         val tvCandidate0 = candidateContainer.getChildAt(0) as TextView
         val tvCandidate1 = candidateContainer.getChildAt(1) as TextView
 
-        assertEquals("我", tvCandidate0.text.toString())
-        assertEquals("喔", tvCandidate1.text.toString())
-
         tvCandidate0.performClick()
-        verify(handler).onCandidateClick(0)
+        assertEquals(ImeInputAction.CandidateSelected(0), clickedAction)
 
         tvCandidate1.performClick()
-        verify(handler).onCandidateClick(1)
+        assertEquals(ImeInputAction.CandidateSelected(1), clickedAction)
+    }
+
+    @Test
+    fun testRefreshFromStateHasNoHandlerDependency() {
+        controller.refreshFromState(state(candidates = listOf(Candidate("我", "96", 900))))
+
+        val renderMethod = CandidateViewController::class.java.methods.single { it.name == "refreshFromState" }
+        assertEquals(1, renderMethod.parameterTypes.size)
+        assertEquals(KeyboardUiState::class.java, renderMethod.parameterTypes[0])
     }
 
     @Test
@@ -227,29 +154,51 @@ class CandidateViewControllerTest {
 
     @Test
     fun testPreeditHiddenOnSymbolMode() {
-        handler.switchKeyboardMode(KeyboardMode.Symbol)
-        `when`(engine.buffer).thenReturn("96")
-        `when`(engine.getPreedit()).thenReturn("wo")
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(emptyList())
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
-
-        controller.refreshUi(handler)
+        controller.refreshFromState(state(mode = KeyboardMode.Symbol, preeditVisible = false, preedit = "wo"))
 
         assertEquals(View.GONE, mockFloatingBar.visibility)
     }
 
     @Test
     fun testPreeditHiddenOnNumberMode() {
-        handler.switchKeyboardMode(KeyboardMode.Number)
-        `when`(engine.buffer).thenReturn("")
-        `when`(engine.getPreedit()).thenReturn("")
-        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(emptyList())
-        `when`(engine.getCompositions()).thenReturn(emptyList())
-        `when`(engine.getInternalCandidates()).thenReturn(emptyList())
-
-        controller.refreshUi(handler)
+        controller.refreshFromState(state(mode = KeyboardMode.Number, preeditVisible = false, preedit = ""))
 
         assertEquals(View.GONE, mockFloatingBar.visibility)
     }
+
+    private fun state(
+        mode: KeyboardMode = KeyboardMode.ChineseT9,
+        preeditVisible: Boolean = false,
+        preedit: String = "",
+        readings: List<String> = emptyList(),
+        candidates: List<Candidate> = emptyList(),
+    ): KeyboardUiState = KeyboardUiState(
+        keyboardMode = mode,
+        lastTextMode = KeyboardMode.ChineseT9,
+        rawBuffer = if (preedit.isNotEmpty()) "96" else "",
+        preedit = preedit,
+        readings = readings,
+        activeReading = readings.firstOrNull(),
+        candidatesSnapshot = candidates,
+        currentSymCategory = "punct",
+        isComposing = preedit.isNotEmpty(),
+        themePalette = ThemePalette(
+            bgColor = 0,
+            candidateBarColor = 0,
+            textColor = 0,
+            subColor = 0,
+            preeditBgColor = 0,
+            symTabActiveBg = 0,
+            symTabInactiveBg = 0,
+            symTabActiveText = 0,
+            symTabInactiveText = 0,
+            isDark = false,
+            keyBgColor = 0,
+            specialKeyBgColor = 0,
+            keyPressedBgColor = 0,
+            specialKeyPressedBgColor = 0,
+        ),
+        candidateStripState = CandidateStripState(candidates.isNotEmpty(), candidates),
+        preeditState = PreeditState(preeditVisible, preedit),
+    )
 }

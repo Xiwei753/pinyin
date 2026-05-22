@@ -25,12 +25,6 @@ class XiweiT9ImeServiceUiBehaviorTest {
         field.set(service, value)
     }
 
-    private fun getStringField(service: XiweiT9ImeService, name: String): String {
-        val field = XiweiT9ImeService::class.java.getDeclaredField(name)
-        field.isAccessible = true
-        return field.get(service) as String
-    }
-
     private fun injectQuietSettings(service: XiweiT9ImeService) {
         val repo = mock(SettingsRepository::class.java)
         `when`(repo.isDebugLoggingEnabled()).thenReturn(false)
@@ -49,7 +43,7 @@ class XiweiT9ImeServiceUiBehaviorTest {
     }
 
     @Test
-    fun testCandidateCountSettingPassesToController() {
+    fun testRefreshUiDoesNotRecalculateCandidatesDuringRender() {
         val service = createService()
         val engine = mock(T9Engine::class.java)
         `when`(engine.buffer).thenReturn("96")
@@ -78,6 +72,7 @@ class XiweiT9ImeServiceUiBehaviorTest {
             themeController = mockThemeCtrl,
             settingsRepository = repo,
         ))
+        clearInvocations(engine)
 
         try {
             val method = XiweiT9ImeService::class.java.getDeclaredMethod("refreshUi")
@@ -86,7 +81,7 @@ class XiweiT9ImeServiceUiBehaviorTest {
         } catch (e: java.lang.reflect.InvocationTargetException) {
         }
 
-        verify(engine).getVisibleCandidates(eq(15))
+        verify(engine, never()).getVisibleCandidates(anyInt())
     }
 
     @Test
@@ -167,7 +162,7 @@ class XiweiT9ImeServiceUiBehaviorTest {
         `when`(engine.getVisibleCandidates(anyInt())).thenReturn(listOf(candidate))
 
         val handler = KeyboardActionHandler(service).apply { attachEngine(engine) }
-        handler.refreshCandidates(30)
+        handler.handle(ImeInputAction.CandidateLimitChanged(30))
         val ic = mock(InputConnection::class.java)
         service.testInputConnection = ic
         injectQuietSettings(service)
@@ -248,7 +243,7 @@ class XiweiT9ImeServiceUiBehaviorTest {
 
         service.handleKeyboardAction("symtab:math")
 
-        assertEquals("math", getStringField(service, "currentSymCategory"))
+        assertEquals("math", handler.uiState().currentSymbolCategory)
         assertEquals(KeyboardMode.Symbol, handler.keyboardMode)
         assertEquals(KeyboardMode.EnglishT9, handler.lastTextMode)
     }

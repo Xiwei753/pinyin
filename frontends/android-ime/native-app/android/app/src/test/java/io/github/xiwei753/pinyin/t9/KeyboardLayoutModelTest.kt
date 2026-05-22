@@ -1,6 +1,8 @@
 package io.github.xiwei753.pinyin.t9
 
 import android.graphics.Rect
+import io.github.xiwei753.pinyin.imecore.RailKind
+import io.github.xiwei753.pinyin.imecore.RailState
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,6 +77,75 @@ class KeyboardLayoutModelTest {
         placeholderKeys.forEach {
             assertEquals("Placeholder should have 'none' action", "none", it.action)
         }
+    }
+
+    @Test
+    fun buildUsesRailKindReadingsForLeftRail() {
+        val model = builder.build(
+            state = state(railState = RailState(RailKind.Readings, listOf("wo", "yo")), isComposing = true, readings = emptyList()),
+            panelWidth = 1080,
+            panelHeight = 480,
+            rowHeight = 96,
+            bottomRowHeight = 88,
+            horizontalGap = 8,
+            verticalGap = 8,
+            categoryToPage = categoryToPage,
+            registry = registry,
+            density = 2.5f,
+        )
+
+        assertTrue(model.leftRailKeys.any { it.role == KeyboardKeyRole.RAIL_READING && it.label == "wo" })
+    }
+
+    @Test
+    fun buildUsesRailKindPunctuationForLeftRail() {
+        val model = builder.build(
+            state = state(railState = RailState(RailKind.Punctuation), isComposing = false),
+            panelWidth = 1080,
+            panelHeight = 480,
+            rowHeight = 96,
+            bottomRowHeight = 88,
+            horizontalGap = 8,
+            verticalGap = 8,
+            categoryToPage = categoryToPage,
+            registry = registry,
+            density = 2.5f,
+        )
+
+        assertTrue(model.leftRailKeys.any { it.role == KeyboardKeyRole.RAIL_PUNCT && it.label == "，" })
+    }
+
+    @Test
+    fun buildSymbolCategoriesAndNumberAuxFromStateModes() {
+        val symbolModel = builder.build(
+            state = state(keyboardMode = KeyboardMode.Symbol, railState = RailState(RailKind.SymbolCategories), currentSymCategory = "punct"),
+            panelWidth = 1080,
+            panelHeight = 480,
+            rowHeight = 96,
+            bottomRowHeight = 88,
+            horizontalGap = 8,
+            verticalGap = 8,
+            categoryToPage = categoryToPage,
+            registry = registry,
+            density = 2.5f,
+            symbolEntries = listOf(1 to "，"),
+        )
+        val numberModel = builder.build(
+            state = state(keyboardMode = KeyboardMode.Number, railState = RailState(RailKind.NumberAux)),
+            panelWidth = 1080,
+            panelHeight = 480,
+            rowHeight = 96,
+            bottomRowHeight = 88,
+            horizontalGap = 8,
+            verticalGap = 8,
+            categoryToPage = categoryToPage,
+            registry = registry,
+            density = 2.5f,
+        )
+
+        assertEquals(4, symbolModel.leftRailKeys.count { it.role == KeyboardKeyRole.RAIL_SYMBOL_CATEGORY })
+        assertTrue(numberModel.leftRailKeys.any { it.role == KeyboardKeyRole.RAIL_NUMBER_AUX && it.label == "." })
+        assertTrue(numberModel.leftRailKeys.any { it.role == KeyboardKeyRole.RAIL_NUMBER_AUX && it.label == "0" })
     }
 
     @Test
@@ -324,4 +395,40 @@ class KeyboardLayoutModelTest {
             assertEquals(expectedPunct[i], key.label)
         }
     }
+
+    private fun state(
+        keyboardMode: KeyboardMode = KeyboardMode.ChineseT9,
+        lastTextMode: KeyboardMode = KeyboardMode.ChineseT9,
+        railState: RailState = RailState(RailKind.Punctuation),
+        isComposing: Boolean = false,
+        readings: List<String> = emptyList(),
+        currentSymCategory: String = "punct",
+    ): KeyboardUiState = KeyboardUiState(
+        keyboardMode = keyboardMode,
+        lastTextMode = lastTextMode,
+        rawBuffer = if (isComposing) "96" else "",
+        preedit = if (isComposing) "wo" else "",
+        readings = readings,
+        activeReading = readings.firstOrNull(),
+        candidatesSnapshot = emptyList(),
+        currentSymCategory = currentSymCategory,
+        isComposing = isComposing,
+        themePalette = ThemePalette(
+            bgColor = 0,
+            candidateBarColor = 0,
+            textColor = 0,
+            subColor = 0,
+            preeditBgColor = 0,
+            symTabActiveBg = 0,
+            symTabInactiveBg = 0,
+            symTabActiveText = 0,
+            symTabInactiveText = 0,
+            isDark = false,
+            keyBgColor = 0,
+            specialKeyBgColor = 0,
+            keyPressedBgColor = 0,
+            specialKeyPressedBgColor = 0,
+        ),
+        railState = railState,
+    )
 }

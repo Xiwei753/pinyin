@@ -73,6 +73,7 @@ class KeyboardActionHandler(
     fun onClearComposingForRetype() = handle(ImeInputAction.ClearComposing)
     fun onSpace() = handle(ImeInputAction.SpacePressed)
     fun onCandidateClick(index: Int) = handle(ImeInputAction.CandidateSelected(index))
+    fun updateCandidateLimit(limit: Int) = handle(ImeInputAction.CandidateLimitChanged(limit))
 
     fun setActiveReading(reading: String): Boolean {
         val index = readings.indexOf(reading)
@@ -88,15 +89,7 @@ class KeyboardActionHandler(
     }
 
     fun onPunctCommit(text: String) {
-        val effects = mutableListOf<ImeSideEffect>()
-        if (keyboardMode == KeyboardMode.ChineseT9 && rawBuffer.isNotEmpty()) {
-            effects.addAll(stateMachine.dispatch(ImeInputAction.SpacePressed))
-        } else if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
-            stateMachine.commitEnglishChar(effects)
-        }
-        effects.add(ImeSideEffect.CommitText(text))
-        effects.add(ImeSideEffect.RefreshUi)
-        execute(effects)
+        handle(ImeInputAction.PunctuationCommitted(text))
     }
 
     fun onEnter() = onEnterShortPress()
@@ -135,7 +128,11 @@ class KeyboardActionHandler(
 
     fun onEnterLongPress() = handle(ImeInputAction.EnterLongPressed)
 
-    fun refreshCandidates(limit: Int): List<Candidate> = stateMachine.refreshCandidates(limit)
+    @Deprecated("Candidate snapshot is owned by ImeStateMachine; use CandidateLimitChanged during input handling and uiState() during render.")
+    fun refreshCandidates(limit: Int): List<Candidate> {
+        updateCandidateLimit(limit)
+        return currentCandidates
+    }
 
     fun discardCompositionForLifecycle() = handle(ImeInputAction.LifecycleStartInput)
 

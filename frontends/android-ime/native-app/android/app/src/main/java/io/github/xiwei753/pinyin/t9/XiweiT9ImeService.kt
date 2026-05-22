@@ -121,7 +121,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             hapticFeedbackManager = HapticFeedbackManager(this, settingsRepository)
         }
         if (!this::handler.isInitialized) {
-            handler = KeyboardActionHandler(this)
+            handler = KeyboardActionHandler(this) { settingsRepository.getCandidateCount() }
             T9DebugLogStore.initFileLogging(filesDir)
             DictionaryManager.registerListener(this)
             DictionaryManager.prepareAsync(this)
@@ -201,12 +201,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     internal fun handleInputAction(action: ImeInputAction) {
         if (!this::handler.isInitialized) return
         handler.handle(action)
-        if (action is ImeInputAction.SymbolCategorySelected) {
-            currentSymCategory = action.category
-        } else {
-            currentSymCategory = handler.uiState(isDictPreparing).currentSymbolCategory
-        }
-        updateKeyboardPanel()
+        renderCurrentState()
     }
 
     internal fun handleKeyboardAction(action: String) {
@@ -219,7 +214,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             action == "toggle:symbol" -> ImeInputAction.ToggleSymbol
             action == "toggle:english" -> ImeInputAction.ToggleChineseEnglish
             action == "toggle:number" -> ImeInputAction.ToggleNumber
-            action.startsWith("punct:") -> ImeInputAction.SymbolCommitted(action.removePrefix("punct:"))
+            action.startsWith("punct:") -> ImeInputAction.PunctuationCommitted(action.removePrefix("punct:"))
             action.startsWith("reading:") -> action.removePrefix("reading:").toIntOrNull()?.let { ImeInputAction.ReadingSelected(it) }
             action.startsWith("symtab:") -> ImeInputAction.SymbolCategorySelected(action.removePrefix("symtab:"))
             action.startsWith("symbol:commit:") -> ImeInputAction.SymbolCommitted(action.removePrefix("symbol:commit:"))
@@ -271,7 +266,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         xiweiKeyboardView.layoutParams?.height = metrics.shellHeight
 
         xiweiKeyboardView.keyboardMode = handler.keyboardMode
-        xiweiKeyboardView.activeSymCategory = currentSymCategory
+        xiweiKeyboardView.activeSymCategory = handler.uiState(isDictPreparing).currentSymbolCategory
         xiweiKeyboardView.lastTextMode = handler.lastTextMode
 
         rebuildLayoutModel()
@@ -346,17 +341,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     internal fun updateKeyboardPanel() {
         if (!this::handler.isInitialized || !this::keyboardViews.isInitialized) return
-        
-        if (handler.keyboardMode == KeyboardMode.Symbol || handler.keyboardMode == KeyboardMode.Number) {
-            keyboardViews.pinyinFloatingBar.visibility = View.GONE
-        }
-        
-        if (this::xiweiKeyboardView.isInitialized) {
-            xiweiKeyboardView.keyboardMode = handler.keyboardMode
-            xiweiKeyboardView.activeSymCategory = currentSymCategory
-            xiweiKeyboardView.lastTextMode = handler.lastTextMode
-            rebuildLayoutModel()
-        }
+        renderCurrentState()
     }
 
     // --- ImeActionSink implementation ---
@@ -488,8 +473,6 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             specialKeyPressedBgColor = ThemeColors.LIGHT_SPECIAL_KEY_PRESSED,
         )
         return if (this::handler.isInitialized) {
-            val limit = if (this::settingsRepository.isInitialized) settingsRepository.getCandidateCount() else 9
-            handler.refreshCandidates(limit)
             val coreState = handler.uiState(isDictPreparing)
             currentSymCategory = coreState.currentSymbolCategory
             coreState.toAndroidKeyboardUiState(palette)
@@ -511,12 +494,17 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     override fun refreshUi() {
         if (!this::keyboardViews.isInitialized || !this::handler.isInitialized || !this::candidateViewController.isInitialized) return
+        renderCurrentState()
+        logDebugInfo()
+    }
+
+    private fun renderCurrentState() {
+        if (!this::keyboardViews.isInitialized || !this::handler.isInitialized || !this::candidateViewController.isInitialized) return
         val state = buildKeyboardUiState()
         candidateViewController.refreshFromState(state)
         if (this::xiweiKeyboardView.isInitialized) {
             renderFromState(state)
         }
-        logDebugInfo()
     }
 
     override fun scheduleEnglishTimeout(runnable: Runnable, delayMs: Long) {
