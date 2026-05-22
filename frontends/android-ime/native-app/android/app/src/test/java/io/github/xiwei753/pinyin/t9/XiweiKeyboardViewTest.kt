@@ -346,7 +346,7 @@ class XiweiKeyboardViewTest {
         val pairs = makeSymbolEntries()
         for (density in listOf(1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f)) {
             val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = density)
-            val symbolKeys = model.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY || it.role == KeyboardKeyRole.PLACEHOLDER }
+            val symbolKeys = model.keys.filter { (it.role == KeyboardKeyRole.SYMBOL_KEY || it.role == KeyboardKeyRole.PLACEHOLDER) && it.id != "symbol_bottom_right_placeholder" }
             val rows = symbolKeys.chunked(5)
             for ((ri, row) in rows.withIndex()) {
                 assertEquals("Row $ri at density $density should have 5 cells", 5, row.size)
@@ -369,7 +369,7 @@ class XiweiKeyboardViewTest {
     fun symbolPlaceholderOnlyAtEndOfLastRow() {
         val pairs = listOf(1 to "A", 2 to "B", 3 to "C", 4 to "D", 5 to "E", 6 to "F", 7 to "G")
         val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
-        val placeholders = model.keys.filter { it.role == KeyboardKeyRole.PLACEHOLDER }
+        val placeholders = model.keys.filter { it.role == KeyboardKeyRole.PLACEHOLDER && it.id != "symbol_bottom_right_placeholder" }
         assertEquals("7 entries should produce 3 placeholders (row of 5 + row of 2 => 3 fillers)", 3, placeholders.size)
         val symbolKeys = model.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY }
         val lastSymbolIdx = model.keys.indexOfLast { it.role == KeyboardKeyRole.SYMBOL_KEY }
@@ -410,7 +410,7 @@ class XiweiKeyboardViewTest {
         val pairs = listOf(1 to "A")
         val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, pairs, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
         val renderer = KeyboardRenderer()
-        val placeholder = model.keys.find { it.role == KeyboardKeyRole.PLACEHOLDER }
+        val placeholder = model.keys.find { it.role == KeyboardKeyRole.PLACEHOLDER && it.id != "symbol_bottom_right_placeholder" }
         assertNotNull("Should have placeholder", placeholder)
         val cx = placeholder!!.rect.centerX().toFloat()
         val cy = placeholder.rect.centerY().toFloat()

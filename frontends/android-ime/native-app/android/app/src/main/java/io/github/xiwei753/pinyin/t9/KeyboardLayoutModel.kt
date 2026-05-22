@@ -508,11 +508,11 @@ class KeyboardLayoutBuilder {
         )
         keys.add(
             KeyboardKey(
-                id = "toggle_english",
-                role = KeyboardKeyRole.SPECIAL,
+                id = "symbol_bottom_right_placeholder",
+                role = KeyboardKeyRole.PLACEHOLDER,
                 rect = geo.keyEnglishToggleRect,
-                label = "中/英",
-                action = "toggle:english",
+                label = "",
+                action = "none",
                 isBottomRow = true,
             )
         )

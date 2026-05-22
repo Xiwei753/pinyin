@@ -78,6 +78,91 @@ class KeyboardLayoutModelTest {
     }
 
     @Test
+    fun symbolBottomLeftKeyLabelFollowsLastTextMode() {
+        val entries = listOf(1 to "，")
+
+        val chineseModel = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        val englishModel = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.EnglishT9, categoryToPage, registry, density = 2.5f)
+
+        assertEquals("中", chineseModel.bottomLeftKey!!.label)
+        assertEquals("英", englishModel.bottomLeftKey!!.label)
+        assertEquals("toggle:symbol", chineseModel.bottomLeftKey!!.action)
+        assertEquals("toggle:symbol", englishModel.bottomLeftKey!!.action)
+    }
+
+    @Test
+    fun symbolModeDoesNotGenerateDuplicateSymbolButton() {
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, listOf(1 to "，"), "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        val allKeys = model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)
+
+        assertEquals(0, allKeys.count { it.label == "符" })
+        assertEquals(1, allKeys.count { it.action == "toggle:symbol" })
+    }
+
+    @Test
+    fun symbolBottomRowActionsRemainNumberAndSpace() {
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, listOf(1 to "，"), "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+
+        val numberKey = model.keys.find { it.id == "toggle_number" }
+        val spaceKey = model.keys.find { it.id == "space" }
+
+        assertNotNull(numberKey)
+        assertEquals("123", numberKey!!.label)
+        assertEquals("toggle:number", numberKey.action)
+        assertNotNull(spaceKey)
+        assertEquals("space", spaceKey!!.action)
+    }
+
+    @Test
+    fun symbolBottomRightKeyIsDisabledPlaceholder() {
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, listOf(1 to "，"), "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+
+        val placeholder = model.keys.find { it.id == "symbol_bottom_right_placeholder" }
+
+        assertNotNull(placeholder)
+        assertEquals(KeyboardKeyRole.PLACEHOLDER, placeholder!!.role)
+        assertEquals("", placeholder.label)
+        assertEquals("none", placeholder.action)
+    }
+
+    @Test
+    fun buildSymbolBottomLeftKeyLabelDependsOnLastTextMode() {
+        val modelChinese = builder.buildSymbol(1080, 480, 96, 88, 8, 8, listOf(1 to "，"), "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        assertNotNull(modelChinese.bottomLeftKey)
+        assertEquals("中", modelChinese.bottomLeftKey!!.label)
+        assertEquals("toggle:symbol", modelChinese.bottomLeftKey!!.action)
+
+        val modelEnglish = builder.buildSymbol(1080, 480, 96, 88, 8, 8, listOf(1 to "，"), "punct", KeyboardMode.EnglishT9, categoryToPage, registry, density = 2.5f)
+        assertNotNull(modelEnglish.bottomLeftKey)
+        assertEquals("英", modelEnglish.bottomLeftKey!!.label)
+        assertEquals("toggle:symbol", modelEnglish.bottomLeftKey!!.action)
+    }
+
+    @Test
+    fun buildSymbolNoDuplicateSymbolButton() {
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, listOf(1 to "，"), "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        val allKeys = model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)
+
+        // Assert that there is no key with label "符" in Symbol mode layout.
+        val fuKeys = allKeys.filter { it.label == "符" }
+        assertTrue("Symbol mode should not generate duplicate '符' button", fuKeys.isEmpty())
+    }
+
+    @Test
+    fun buildSymbolKeyActionsAndSpace() {
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, listOf(1 to "，"), "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        val numberKey = model.keys.find { it.id == "toggle_number" }
+        val spaceKey = model.keys.find { it.id == "space" }
+
+        assertNotNull(numberKey)
+        assertEquals("123", numberKey!!.label)
+        assertEquals("toggle:number", numberKey.action)
+
+        assertNotNull(spaceKey)
+        assertEquals("space", spaceKey!!.action)
+    }
+
+    @Test
     fun allKeyRectsAreWithinKeyboardBounds() {
         val panelW = 1080
         val panelH = 480

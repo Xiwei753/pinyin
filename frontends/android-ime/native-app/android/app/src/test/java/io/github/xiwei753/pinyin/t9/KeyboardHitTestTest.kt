@@ -116,7 +116,7 @@ class KeyboardHitTestTest {
         val registry = SymbolKeyRegistry()
         val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, emptyMap(), registry, density = 2.5f)
 
-        val placeholders = model.keys.filter { it.role == KeyboardKeyRole.PLACEHOLDER }
+        val placeholders = model.keys.filter { it.role == KeyboardKeyRole.PLACEHOLDER && it.id != "symbol_bottom_right_placeholder" }
         if (placeholders.isNotEmpty()) {
             val ph = placeholders.first()
             val cx = ph.rect.centerX().toFloat()

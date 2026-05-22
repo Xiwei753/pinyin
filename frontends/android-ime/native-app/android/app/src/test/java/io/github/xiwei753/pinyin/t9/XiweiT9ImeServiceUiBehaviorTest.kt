@@ -3,6 +3,7 @@ package io.github.xiwei753.pinyin.t9
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import io.github.xiwei753.pinyin.t9.core.T9Engine
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -20,6 +21,18 @@ class XiweiT9ImeServiceUiBehaviorTest {
         val field = XiweiT9ImeService::class.java.getDeclaredField(name)
         field.isAccessible = true
         field.set(service, value)
+    }
+
+    private fun getStringField(service: XiweiT9ImeService, name: String): String {
+        val field = XiweiT9ImeService::class.java.getDeclaredField(name)
+        field.isAccessible = true
+        return field.get(service) as String
+    }
+
+    private fun injectQuietSettings(service: XiweiT9ImeService) {
+        val repo = mock(SettingsRepository::class.java)
+        `when`(repo.isDebugLoggingEnabled()).thenReturn(false)
+        injectField(service, "settingsRepository", repo)
     }
 
     private fun createMockKeyboardViews(): KeyboardViews {
@@ -105,6 +118,97 @@ class XiweiT9ImeServiceUiBehaviorTest {
         } catch (e: Exception) {
             fail("Service creation should not crash: ${e.message}")
         }
+    }
+
+    @Test
+    fun testSymbolCommitCommitsTextAndStaysInSymbolMode() {
+        val service = createService()
+        val handler = KeyboardActionHandler(service)
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        val ic = mock(InputConnection::class.java)
+        service.testInputConnection = ic
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleKeyboardAction("symbol:commit:@")
+
+        verify(ic).commitText("@", 1)
+        assertEquals(KeyboardMode.Symbol, handler.keyboardMode)
+        assertEquals(KeyboardMode.ChineseT9, handler.lastTextMode)
+    }
+
+    @Test
+    fun testSymbolBottomLeftReturnFromChineseMode() {
+        val service = createService()
+        val handler = KeyboardActionHandler(service)
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleKeyboardAction("toggle:symbol")
+
+        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun testSymbolBottomLeftReturnFromEnglishMode() {
+        val service = createService()
+        val handler = KeyboardActionHandler(service)
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleKeyboardAction("toggle:symbol")
+
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun testSymbolNumberKeyEntersNumberWithoutChangingLastTextMode() {
+        val service = createService()
+        val handler = KeyboardActionHandler(service)
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleKeyboardAction("toggle:number")
+
+        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, handler.lastTextMode)
+    }
+
+    @Test
+    fun testSymbolSpaceCommitsSpaceAndStaysInSymbolMode() {
+        val service = createService()
+        val handler = KeyboardActionHandler(service)
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        val ic = mock(InputConnection::class.java)
+        service.testInputConnection = ic
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleKeyboardAction("space")
+
+        verify(ic).commitText(" ", 1)
+        assertEquals(KeyboardMode.Symbol, handler.keyboardMode)
+    }
+
+    @Test
+    fun testSymbolCategoryTabOnlyChangesCategory() {
+        val service = createService()
+        val handler = KeyboardActionHandler(service)
+        handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleKeyboardAction("symtab:math")
+
+        assertEquals("math", getStringField(service, "currentSymCategory"))
+        assertEquals(KeyboardMode.Symbol, handler.keyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, handler.lastTextMode)
     }
 
     // --- Enter action fallback tests ---

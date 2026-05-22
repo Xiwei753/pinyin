@@ -192,64 +192,64 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             rebuildLayoutModel()
         }
 
-        xiweiKeyboardView.onKeyAction = { action ->
-            when {
-                action == "separator" -> handler.onSeparator()
-                action.startsWith("digit:") -> {
-                    val digit = action.removePrefix("digit:")
-                    handler.onDigitPressed(digit)
-                }
-                action == "del" -> handler.onDelete()
-                action == "retype" -> handler.onClearComposingForRetype()
-                action == "space" -> handler.onSpace()
-                action.startsWith("toggle:") -> {
-                    val toggle = action.removePrefix("toggle:")
-                    when (toggle) {
-                        "symbol" -> {
-                            handler.toggleSymbolKey()
-                            updateKeyboardPanel()
+        xiweiKeyboardView.onKeyAction = { action -> handleKeyboardAction(action) }
+    }
+
+    internal fun handleKeyboardAction(action: String) {
+        when {
+            action == "separator" -> handler.onSeparator()
+            action.startsWith("digit:") -> {
+                val digit = action.removePrefix("digit:")
+                handler.onDigitPressed(digit)
+            }
+            action == "del" -> handler.onDelete()
+            action == "retype" -> handler.onClearComposingForRetype()
+            action == "space" -> handler.onSpace()
+            action.startsWith("toggle:") -> {
+                val toggle = action.removePrefix("toggle:")
+                when (toggle) {
+                    "symbol" -> {
+                        handler.toggleSymbolKey()
+                        updateKeyboardPanel()
+                    }
+                    "english" -> {
+                        if (handler.keyboardMode == KeyboardMode.EnglishT9) {
+                            handler.switchKeyboardMode(KeyboardMode.ChineseT9)
+                        } else if (handler.keyboardMode == KeyboardMode.ChineseT9) {
+                            handler.switchKeyboardMode(KeyboardMode.EnglishT9)
+                        } else {
+                            handler.switchKeyboardMode(KeyboardMode.ChineseT9)
                         }
-                        "english" -> {
-                            if (handler.keyboardMode == KeyboardMode.EnglishT9) {
-                                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
-                            } else if (handler.keyboardMode == KeyboardMode.ChineseT9) {
-                                handler.switchKeyboardMode(KeyboardMode.EnglishT9)
-                            } else {
-                                handler.switchKeyboardMode(KeyboardMode.ChineseT9)
-                            }
-                            updateKeyboardPanel()
-                        }
-                        "number" -> {
-                            handler.toggleNumberKey()
-                            updateKeyboardPanel()
-                        }
+                        updateKeyboardPanel()
+                    }
+                    "number" -> {
+                        handler.toggleNumberKey()
+                        updateKeyboardPanel()
                     }
                 }
-                action.startsWith("punct:") -> {
-                    val punct = action.removePrefix("punct:")
-                    handler.onPunctCommit(punct)
-                }
-                action.startsWith("reading:") -> {
-                    val indexStr = action.removePrefix("reading:")
-                    val index = indexStr.toIntOrNull()
-                    if (index != null) {
-                        val readings = handler.readings
-                        if (index < readings.size) {
-                            handler.setActiveReading(readings[index])
-                        }
+            }
+            action.startsWith("punct:") -> {
+                val punct = action.removePrefix("punct:")
+                handler.onPunctCommit(punct)
+            }
+            action.startsWith("reading:") -> {
+                val indexStr = action.removePrefix("reading:")
+                val index = indexStr.toIntOrNull()
+                if (index != null) {
+                    val readings = handler.readings
+                    if (index < readings.size) {
+                        handler.setActiveReading(readings[index])
                     }
                 }
-                action.startsWith("symtab:") -> {
-                    val cat = action.removePrefix("symtab:")
-                    currentSymCategory = cat
-                    updateKeyboardPanel()
-                }
-                action.startsWith("symbol:commit:") -> {
-                    val text = action.removePrefix("symbol:commit:")
-                    handler.onDigitPressed(text)
-                    handler.switchKeyboardMode(handler.lastTextMode)
-                    updateKeyboardPanel()
-                }
+            }
+            action.startsWith("symtab:") -> {
+                val cat = action.removePrefix("symtab:")
+                currentSymCategory = cat
+                updateKeyboardPanel()
+            }
+            action.startsWith("symbol:commit:") -> {
+                val text = action.removePrefix("symbol:commit:")
+                handler.onDigitPressed(text)
             }
         }
     }
