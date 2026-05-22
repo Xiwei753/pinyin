@@ -90,7 +90,8 @@ class KeyboardLayoutBuilder {
         if (!isComposing) {
             // Empty buffer: display punctuation
             val puncts = listOf("，", "。", "？", "！")
-            val punctHeight = availableScrollHeight / puncts.size
+            val totalGapPunct = (puncts.size - 1) * verticalGap
+            val punctHeight = (availableScrollHeight - totalGapPunct) / puncts.size
             var y = geo.leftRailScrollRect.top
             for (punctText in puncts) {
                 val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + punctHeight)
@@ -104,13 +105,14 @@ class KeyboardLayoutBuilder {
                         isLeftRail = true,
                     )
                 )
-                y += punctHeight
+                y += punctHeight + verticalGap
             }
         } else {
             // Composing: display readings
             if (readings.isNotEmpty()) {
                 val displayCount = minOf(readings.size, 5) // Show up to 5 readings in rail
-                val itemHeight = availableScrollHeight / maxOf(displayCount, 1)
+                val totalGapRead = maxOf(displayCount - 1, 0) * verticalGap
+                val itemHeight = (availableScrollHeight - totalGapRead) / maxOf(displayCount, 1)
                 var y = geo.leftRailScrollRect.top
                 for (i in 0 until displayCount) {
                     val reading = readings[i]
@@ -126,7 +128,7 @@ class KeyboardLayoutBuilder {
                             isSelected = reading == activeReading
                         )
                     )
-                    y += itemHeight
+                    y += itemHeight + verticalGap
                 }
             }
         }
@@ -418,7 +420,11 @@ class KeyboardLayoutBuilder {
         val keys = mutableListOf<KeyboardKey>()
         val leftRailKeys = mutableListOf<KeyboardKey>()
 
-        val availableScrollHeight = geo.leftRailScrollRect.height()
+        val metrics = SymbolGridLayoutMetrics.fromDp(
+            density = density,
+            symbolPanelWidth = geo.symbolContentRect.width() - geo.leftRailWidth,
+            rowHeight = rowHeight,
+        )
 
         val tabCategories = listOf(
             "punct" to "标点",
@@ -426,10 +432,13 @@ class KeyboardLayoutBuilder {
             "bracket" to "括号",
             "other" to "其他",
         )
-        val tabHeight = availableScrollHeight / tabCategories.size
-        var y = geo.leftRailScrollRect.top
-        for ((cat, label) in tabCategories) {
-            val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + tabHeight)
+        val tabCellHeight = metrics.cellHeight
+        val tabVGap = metrics.verticalGap
+        val tabStartY = geo.symbolContentRect.top + metrics.contentInsetTop
+        for (i in tabCategories.indices) {
+            val (cat, label) = tabCategories[i]
+            val tabTop = tabStartY + i * (tabCellHeight + tabVGap)
+            val r = Rect(geo.leftRailScrollRect.left, tabTop, geo.leftRailScrollRect.right, tabTop + tabCellHeight)
             leftRailKeys.add(
                 KeyboardKey(
                     id = "sym_tab_$cat",
@@ -441,7 +450,6 @@ class KeyboardLayoutBuilder {
                     isSelected = activeCategory == cat
                 )
             )
-            y += tabHeight
         }
 
         val returnLabel = if (lastTextMode == KeyboardMode.EnglishT9) "英" else "中"
@@ -462,11 +470,6 @@ class KeyboardLayoutBuilder {
             getEntriesForPage(pageName, registry, categoryToPage)
         }
 
-        val metrics = SymbolGridLayoutMetrics.fromDp(
-            density = density,
-            symbolPanelWidth = geo.symbolContentRect.width() - geo.leftRailWidth,
-            rowHeight = rowHeight,
-        )
         val columns = metrics.columnCount
         val cellWidth = metrics.cellWidth
         val cellHeight = metrics.cellHeight

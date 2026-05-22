@@ -373,6 +373,144 @@ class KeyboardLayoutModelTest {
     }
 
     @Test
+    fun t9PunctItemsHaveVerticalGap() {
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
+        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_PUNCT }
+        assertEquals(4, punctKeys.size)
+        for (i in 0 until punctKeys.size - 1) {
+            val gap = punctKeys[i + 1].rect.top - punctKeys[i].rect.bottom
+            assertEquals("Gap between punct items should equal verticalGap", 8, gap)
+        }
+    }
+
+    @Test
+    fun t9PunctItemWidthEqualsBottomLeftButtonWidth() {
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
+        val punctKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_PUNCT }
+        val bottomLeftW = model.bottomLeftKey!!.rect.width()
+        for (key in punctKeys) {
+            assertEquals("Punct item width should equal bottom-left button width", bottomLeftW, key.rect.width())
+        }
+    }
+
+    @Test
+    fun t9ReadingItemsHaveVerticalGap() {
+        val readings = listOf("mi", "qu", "a", "xian", "sheng")
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, readings, true, KeyboardMode.ChineseT9)
+        val readingKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_READING }
+        assertTrue("Should have reading keys", readingKeys.size >= 2)
+        for (i in 0 until readingKeys.size - 1) {
+            val gap = readingKeys[i + 1].rect.top - readingKeys[i].rect.bottom
+            assertEquals("Gap between reading items should equal verticalGap", 8, gap)
+        }
+    }
+
+    @Test
+    fun t9ReadingItemWidthEqualsSideColumnWidth() {
+        val readings = listOf("mi", "qu", "a")
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, readings, true, KeyboardMode.ChineseT9)
+        val readingKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_READING }
+        assertTrue(readingKeys.isNotEmpty())
+        val w = readingKeys[0].rect.width()
+        for (key in readingKeys) {
+            assertEquals("All reading items should have same width", w, key.rect.width())
+        }
+    }
+
+    @Test
+    fun symbolCategoryTabHeightEqualsRowHeight() {
+        val entries = registry.getAllSymbolEntries()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        val tabKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_SYMBOL_CATEGORY }
+        assertEquals(4, tabKeys.size)
+        val h = tabKeys[0].rect.height()
+        for (key in tabKeys) {
+            assertEquals("All category tabs should have same height", h, key.rect.height())
+        }
+        assertEquals("Category tab height should equal rowHeight", 96, h)
+    }
+
+    @Test
+    fun symbolCategoryTabsAlignedWithGridRows() {
+        val entries = registry.getAllSymbolEntries()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        val tabKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_SYMBOL_CATEGORY }
+        val symbolKeys = model.keys.filter { it.role == KeyboardKeyRole.SYMBOL_KEY }
+        assertEquals(4, tabKeys.size)
+        assertTrue("Should have symbol keys", symbolKeys.isNotEmpty())
+
+        val gridRows = symbolKeys.groupBy { it.rect.top }.entries.sortedBy { it.key }
+        val firstGridRowTop = gridRows.first().key
+        val gridRowHeight = gridRows.first().value.first().rect.height()
+
+        val expectedIconInset = (4 * 2.5f).toInt()
+        assertEquals("First tab top should equal symbol grid contentInsetTop", expectedIconInset, tabKeys[0].rect.top)
+        assertEquals("Tab height should equal symbol grid row height", gridRowHeight, tabKeys[0].rect.height())
+    }
+
+    @Test
+    fun symbolCategoryTabWidthEqualsBottomLeftButtonWidth() {
+        val entries = registry.getAllSymbolEntries()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        val tabKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_SYMBOL_CATEGORY }
+        val bottomLeftW = model.bottomLeftKey!!.rect.width()
+        for (key in tabKeys) {
+            assertEquals("Category tab width should equal bottom-left button width", bottomLeftW, key.rect.width())
+        }
+    }
+
+    @Test
+    fun t9BottomLeftFuHeightEqualsBottomRowHeight() {
+        val bottomRowHeight = 88
+        val model = builder.buildT9(1080, 480, 96, bottomRowHeight, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
+        assertEquals("Bottom-left '符' height should equal bottomRowHeight", bottomRowHeight, model.bottomLeftKey!!.rect.height())
+    }
+
+    @Test
+    fun t9BottomLeftFuBottomAlignedWithSpace() {
+        val model = builder.buildT9(1080, 480, 96, 88, 8, 8, emptyList(), false, KeyboardMode.ChineseT9)
+        val spaceKey = model.keys.find { it.action == "space" }!!
+        assertEquals("Bottom-left '符' bottom should equal space bottom", spaceKey.rect.bottom, model.bottomLeftKey!!.rect.bottom)
+    }
+
+    @Test
+    fun symbolBottomLeftHeightEqualsBottomRowHeight() {
+        val entries = registry.getAllSymbolEntries()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        assertEquals("Bottom-left '中/英' height should equal bottomRowHeight", 88, model.bottomLeftKey!!.rect.height())
+    }
+
+    @Test
+    fun symbolBottomLeftBottomAlignedWithSpace() {
+        val entries = registry.getAllSymbolEntries()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        val spaceKey = model.keys.find { it.action == "space" }!!
+        assertEquals("Bottom-left bottom should equal space bottom", spaceKey.rect.bottom, model.bottomLeftKey!!.rect.bottom)
+    }
+
+    @Test
+    fun symbolCategoryTabGapMatchesVerticalGap() {
+        val entries = registry.getAllSymbolEntries()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        val tabKeys = model.leftRailKeys.filter { it.role == KeyboardKeyRole.RAIL_SYMBOL_CATEGORY }
+        assertEquals(4, tabKeys.size)
+        val vGap = tabKeys[1].rect.top - tabKeys[0].rect.bottom
+        for (i in 0 until tabKeys.size - 1) {
+            val gap = tabKeys[i + 1].rect.top - tabKeys[i].rect.bottom
+            assertEquals("All category tab gaps should be equal", vGap, gap)
+        }
+    }
+
+    @Test
+    fun symbolModeHasNoDuplicateChineseEnglishToggle() {
+        val entries = registry.getAllSymbolEntries()
+        val model = builder.buildSymbol(1080, 480, 96, 88, 8, 8, entries, "punct", KeyboardMode.ChineseT9, categoryToPage, registry, density = 2.5f)
+        val allKeys = model.keys + model.leftRailKeys + listOfNotNull(model.bottomLeftKey)
+        val toggleKeys = allKeys.filter { it.action == "toggle:english" || it.action == "toggle:chinese" }
+        assertEquals("Symbol mode should have no duplicate toggle", 0, toggleKeys.size)
+    }
+
+    @Test
     fun buildT9WithComposingFalseGeneratesPunctKeys() {
         val model = builder.buildT9(
             panelWidth = 1080,

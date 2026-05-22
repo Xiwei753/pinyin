@@ -4,6 +4,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
+import io.github.xiwei753.pinyin.imecore.LayoutTokens
 import org.junit.Assert.*
 import org.junit.Test
 import org.mockito.ArgumentCaptor
@@ -178,6 +179,79 @@ class KeyboardRendererTest {
 
         // Height is 100, Width is 100. Size should be minOf(100 * 0.45, 100 * 0.65) = 45.
         assertEquals(45f, capturedTextSize, 0.01f)
+    }
+
+    @Test
+    fun railedItemsUseLayoutTokensCornerRadius() {
+        val renderer = KeyboardRenderer()
+        val mockCanvas = mock(Canvas::class.java)
+        val palette = ThemePalette(
+            bgColor = 0, candidateBarColor = 0, textColor = 0, subColor = 0,
+            preeditBgColor = 0, symTabActiveBg = 0, symTabInactiveBg = 0,
+            symTabActiveText = 0, symTabInactiveText = 0, isDark = false,
+            keyBgColor = 0, specialKeyBgColor = 0, keyPressedBgColor = 0, specialKeyPressedBgColor = 0,
+            layoutTokens = LayoutTokens(keyCornerRadius = 8f),
+        )
+        val punctKey = KeyboardKey(id="punct_，", role=KeyboardKeyRole.RAIL_PUNCT, rect=Rect(0,0,100,100), label="，", action="punct:，")
+        val readingKey = KeyboardKey(id="reading_0", role=KeyboardKeyRole.RAIL_READING, rect=Rect(0,0,100,100), label="mi", action="reading:0")
+        val catKey = KeyboardKey(id="sym_tab_punct", role=KeyboardKeyRole.RAIL_SYMBOL_CATEGORY, rect=Rect(0,0,100,100), label="标点", action="symtab:punct")
+        val model = KeyboardLayoutModel(
+            keys = emptyList(),
+            leftRailKeys = listOf(punctKey, readingKey, catKey),
+            bottomLeftKey = null,
+            panelWidth = 1000,
+            panelHeight = 1000,
+        )
+
+        val capturedRadii = mutableListOf<Float>()
+        doAnswer { invocation ->
+            val radius = invocation.arguments[2] as Float
+            capturedRadii.add(radius)
+            null
+        }.`when`(mockCanvas).drawRoundRect(any(RectF::class.java), anyFloat(), anyFloat(), any(Paint::class.java))
+
+        renderer.drawKeyboard(mockCanvas, model, palette, 1f, KeyboardMode.ChineseT9, null)
+
+        assertTrue("Should have drawn at least 3 keys", capturedRadii.size >= 3)
+        for (r in capturedRadii) {
+            assertEquals("All rail items should use keyCornerRadius from LayoutTokens", 8f, r, 0.01f)
+        }
+    }
+
+    @Test
+    fun pressedStateDoesNotChangeKeyRect() {
+        val renderer = KeyboardRenderer()
+        val mockCanvas = mock(Canvas::class.java)
+        val palette = ThemePalette(
+            bgColor = 0, candidateBarColor = 0, textColor = 0, subColor = 0,
+            preeditBgColor = 0, symTabActiveBg = 0, symTabInactiveBg = 0,
+            symTabActiveText = 0, symTabInactiveText = 0, isDark = false,
+            keyBgColor = 0, specialKeyBgColor = 0, keyPressedBgColor = 0, specialKeyPressedBgColor = 0,
+        )
+        val punctKey = KeyboardKey(id="punct_，", role=KeyboardKeyRole.RAIL_PUNCT, rect=Rect(0,0,100,100), label="，", action="punct:，")
+        val model = KeyboardLayoutModel(emptyList(), listOf(punctKey), null, 1000, 1000)
+
+        val originalRect = Rect(punctKey.rect)
+        renderer.drawKeyboard(mockCanvas, model, palette, 1f, KeyboardMode.ChineseT9, null, pressedKeyId = "punct_，")
+        assertEquals("Pressed state should not change rect", originalRect, punctKey.rect)
+    }
+
+    @Test
+    fun selectedStateDoesNotChangeKeyRect() {
+        val renderer = KeyboardRenderer()
+        val mockCanvas = mock(Canvas::class.java)
+        val palette = ThemePalette(
+            bgColor = 0, candidateBarColor = 0, textColor = 0, subColor = 0,
+            preeditBgColor = 0, symTabActiveBg = 0, symTabInactiveBg = 0,
+            symTabActiveText = 0, symTabInactiveText = 0, isDark = false,
+            keyBgColor = 0, specialKeyBgColor = 0, keyPressedBgColor = 0, specialKeyPressedBgColor = 0,
+        )
+        val catKey = KeyboardKey(id="sym_tab_math", role=KeyboardKeyRole.RAIL_SYMBOL_CATEGORY, rect=Rect(0,0,100,100), label="数学", action="symtab:math", isSelected = true)
+        val model = KeyboardLayoutModel(emptyList(), listOf(catKey), null, 1000, 1000)
+
+        val originalRect = Rect(catKey.rect)
+        renderer.drawKeyboard(mockCanvas, model, palette, 1f, KeyboardMode.Symbol, null)
+        assertEquals("Selected state should not change rect", originalRect, catKey.rect)
     }
 
     @Test
