@@ -65,7 +65,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         try {
             userDictionary = UserDictionary.getInstance(applicationContext)
         } catch (e: Exception) {
-            android.util.Log.e("XiweiT9ImeService", "Failed to init user dictionary", e)
+            debugLogger.log("XiweiT9ImeService", "Failed to init user dictionary: " + e.stackTraceToString())
             userDictionary = null
         }
         ensureCoreInitialized()
@@ -133,14 +133,14 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     override fun onCreateInputView(): View {
         try {
-            Log.i("XiweiT9ImeService", "inflate start")
+            debugLogger.log("XiweiT9ImeService", "inflate start")
             val view = layoutInflater.inflate(R.layout.keyboard_view, null)
-            Log.i("XiweiT9ImeService", "inflate end")
+            debugLogger.log("XiweiT9ImeService", "inflate end")
             
-            Log.i("XiweiT9ImeService", "bind required views start")
+            debugLogger.log("XiweiT9ImeService", "bind required views start")
             keyboardViews = KeyboardViews.bind(view)
             xiweiKeyboardView = keyboardViews.xiweiKeyboardView
-            Log.i("XiweiT9ImeService", "bind required views end")
+            debugLogger.log("XiweiT9ImeService", "bind required views end")
             
             ensureCoreInitialized()
     
@@ -158,19 +158,19 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             candidateViewController.onInputAction = { handleInputAction(it) }
     
             setupKeyboardViewActions()
-            Log.i("XiweiT9ImeService", "xiweiKeyboardView init done")
-            Log.i("XiweiT9ImeService", "callbacks setup done")
+            debugLogger.log("XiweiT9ImeService", "xiweiKeyboardView init done")
+            debugLogger.log("XiweiT9ImeService", "callbacks setup done")
     
             applyThemeAndHeight()
-            Log.i("XiweiT9ImeService", "theme applied")
+            debugLogger.log("XiweiT9ImeService", "theme applied")
             
             updateKeyboardPanel()
-            Log.i("XiweiT9ImeService", "layout model built")
+            debugLogger.log("XiweiT9ImeService", "layout model built")
             
-            Log.i("XiweiT9ImeService", "input view returned")
+            debugLogger.log("XiweiT9ImeService", "input view returned")
             return view
         } catch (e: Throwable) {
-            Log.e("XiweiT9ImeService", "Failed to create input view", e)
+            debugLogger.log("XiweiT9ImeService", "Failed to create input view: " + e.stackTraceToString())
             throw e
         }
     }
