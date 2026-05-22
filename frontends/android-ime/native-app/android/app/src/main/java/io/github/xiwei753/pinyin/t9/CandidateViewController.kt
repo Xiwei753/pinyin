@@ -6,6 +6,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import io.github.xiwei753.pinyin.imecore.ImeInputAction
 
 enum class CandidateItemType {
     CANDIDATE,
@@ -26,6 +27,7 @@ class CandidateViewController(
     private val settingsRepository: SettingsRepository,
 ) {
     private var isDictPreparing = false
+    var onInputAction: ((ImeInputAction) -> Unit)? = null
     private var palette: ThemePalette = ThemePalette(
         bgColor = ThemeColors.LIGHT_BG,
         candidateBarColor = ThemeColors.LIGHT_CANDIDATE_BAR,
@@ -53,47 +55,30 @@ class CandidateViewController(
 
     fun refreshUi(handler: KeyboardActionHandler) {
         val limit = settingsRepository.getCandidateCount()
-        val candidates = handler.refreshCandidates(limit)
-        val isComposing = handler.rawBuffer.isNotEmpty()
-        val state = KeyboardUiState(
-            keyboardMode = handler.keyboardMode,
-            lastTextMode = handler.lastTextMode,
-            rawBuffer = handler.rawBuffer,
-            preedit = handler.preedit,
-            readings = handler.readings,
-            activeReading = handler.activeReading,
-            candidatesSnapshot = candidates,
-            currentSymCategory = "punct",
-            isComposing = isComposing,
-            themePalette = palette
-        )
-        refreshFromState(state, handler)
+        handler.refreshCandidates(limit)
+        refreshFromState(handler.uiState(isDictPreparing).toAndroidKeyboardUiState(palette), handler)
     }
 
-    fun refreshFromState(state: KeyboardUiState, handler: KeyboardActionHandler) {
-        val preedit = state.preedit
-        val hasInput = state.rawBuffer.isNotEmpty()
-        val isT9Mode = state.keyboardMode == KeyboardMode.ChineseT9 || state.keyboardMode == KeyboardMode.EnglishT9
-
-        if (isT9Mode && hasInput && preedit.isNotEmpty()) {
+    fun refreshFromState(state: KeyboardUiState, handler: KeyboardActionHandler? = null) {
+        if (state.preeditState.visible) {
             v.pinyinFloatingBar.visibility = View.VISIBLE
-            v.pinyinFloatingText.text = preedit
+            v.pinyinFloatingText.text = state.preeditState.text
         } else {
             v.pinyinFloatingBar.visibility = View.GONE
         }
 
         v.candidateContainer.removeAllViews()
 
-        if (isDictPreparing) {
+        if (state.candidateStripState.isDictionaryPreparing || isDictPreparing) {
             val text = "\u8BCD\u5E93\u51C6\u5907\u4E2D..."
-            val btn = createTextView(text, CandidateItemType.PREPARING, false, null, handler)
+                val btn = createTextView(text, CandidateItemType.PREPARING, false, null, handler)
             v.candidateContainer.addView(btn)
             v.candidateContainer.visibility = View.VISIBLE
             return
         }
 
         val items = mutableListOf<CandidateItem>()
-        for ((index, candidate) in state.candidatesSnapshot.withIndex()) {
+        for ((index, candidate) in state.candidateStripState.candidates.withIndex()) {
             items.add(CandidateItem(CandidateItemType.CANDIDATE, candidate.text, payload = index))
         }
 
@@ -113,18 +98,18 @@ class CandidateViewController(
         type: CandidateItemType,
         isActive: Boolean,
         payload: Any?,
-        handler: KeyboardActionHandler
+        handler: KeyboardActionHandler?,
     ): TextView {
         val tv = TextView(context).apply {
-            textSize = 18f
+            textSize = palette.layoutTokens.preeditTextSize
             gravity = Gravity.CENTER
             this.text = text
             isSingleLine = true
         }
 
         val density = context.resources.displayMetrics.density
-        val padH = (16 * density).toInt()
-        val padV = (8 * density).toInt()
+        val padH = (palette.layoutTokens.preeditBubblePadding * 2 * density).toInt()
+        val padV = (palette.layoutTokens.preeditBubblePadding * density).toInt()
         tv.setPadding(padH, padV, padH, padV)
 
         val lp = LinearLayout.LayoutParams(
@@ -144,7 +129,11 @@ class CandidateViewController(
                 tv.setOnClickListener {
                     val index = payload as? Int
                     if (index != null) {
-                        handler.onCandidateClick(index)
+                        if (onInputAction != null) {
+                            onInputAction?.invoke(ImeInputAction.CandidateSelected(index))
+                        } else {
+                            handler?.onCandidateClick(index)
+                        }
                     }
                 }
             }

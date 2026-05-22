@@ -1,5 +1,7 @@
 package io.github.xiwei753.pinyin.t9
 
+import io.github.xiwei753.pinyin.imecore.LayoutTokens
+
 data class ThemePalette(
     val bgColor: Int,
     val candidateBarColor: Int,
@@ -15,4 +17,5 @@ data class ThemePalette(
     val specialKeyBgColor: Int,
     val keyPressedBgColor: Int,
     val specialKeyPressedBgColor: Int,
+    val layoutTokens: LayoutTokens = LayoutTokens(),
 )

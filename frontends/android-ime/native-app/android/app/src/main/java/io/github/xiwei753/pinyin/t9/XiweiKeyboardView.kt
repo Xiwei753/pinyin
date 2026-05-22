@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
+import io.github.xiwei753.pinyin.imecore.ImeInputAction
 
 class XiweiKeyboardView @JvmOverloads constructor(
     context: Context,
@@ -24,6 +25,7 @@ class XiweiKeyboardView @JvmOverloads constructor(
     var longPressedKeyId: String? = null
 
     var onKeyAction: ((String) -> Unit)? = null
+    var onInputAction: ((ImeInputAction) -> Unit)? = null
     var onEnterShortPress: (() -> Unit)? = null
     var onEnterLongPress: (() -> Unit)? = null
     var onDeleteRepeat: (() -> Unit)? = null
@@ -151,35 +153,41 @@ class XiweiKeyboardView @JvmOverloads constructor(
     private fun dispatchAction(key: KeyboardKey) {
         val action = key.action
         when {
-            action == "separator" -> onKeyAction?.invoke("separator")
+            action == "separator" -> onInputAction?.invoke(ImeInputAction.SeparatorPressed) ?: onKeyAction?.invoke("separator")
             action.startsWith("digit:") -> {
                 val digit = action.removePrefix("digit:")
-                onKeyAction?.invoke("digit:$digit")
+                onInputAction?.invoke(ImeInputAction.DigitPressed(digit)) ?: onKeyAction?.invoke("digit:$digit")
             }
-            action == "del" -> onKeyAction?.invoke("del")
-            action == "retype" -> onKeyAction?.invoke("retype")
-            action == "enter" -> onEnterShortPress?.invoke()
-            action == "space" -> onKeyAction?.invoke("space")
+            action == "del" -> onInputAction?.invoke(ImeInputAction.DeletePressed) ?: onKeyAction?.invoke("del")
+            action == "retype" -> onInputAction?.invoke(ImeInputAction.ClearComposing) ?: onKeyAction?.invoke("retype")
+            action == "enter" -> onInputAction?.invoke(ImeInputAction.EnterShortPressed) ?: onEnterShortPress?.invoke()
+            action == "space" -> onInputAction?.invoke(ImeInputAction.SpacePressed) ?: onKeyAction?.invoke("space")
             action.startsWith("toggle:") -> {
                 val toggle = action.removePrefix("toggle:")
-                onKeyAction?.invoke("toggle:$toggle")
+                val inputAction = when (toggle) {
+                    "symbol" -> ImeInputAction.ToggleSymbol
+                    "number" -> ImeInputAction.ToggleNumber
+                    "english" -> ImeInputAction.ToggleChineseEnglish
+                    else -> null
+                }
+                if (inputAction != null) onInputAction?.invoke(inputAction) ?: onKeyAction?.invoke("toggle:$toggle")
             }
             action.startsWith("punct:") -> {
                 val punct = action.removePrefix("punct:")
-                onKeyAction?.invoke("punct:$punct")
+                onInputAction?.invoke(ImeInputAction.SymbolCommitted(punct)) ?: onKeyAction?.invoke("punct:$punct")
             }
             action.startsWith("reading:") -> {
                 val indexStr = action.removePrefix("reading:")
                 val index = indexStr.toIntOrNull() ?: return
-                onKeyAction?.invoke("reading:$index")
+                onInputAction?.invoke(ImeInputAction.ReadingSelected(index)) ?: onKeyAction?.invoke("reading:$index")
             }
             action.startsWith("symtab:") -> {
                 val cat = action.removePrefix("symtab:")
-                onKeyAction?.invoke("symtab:$cat")
+                onInputAction?.invoke(ImeInputAction.SymbolCategorySelected(cat)) ?: onKeyAction?.invoke("symtab:$cat")
             }
             action == "symbol:commit" -> {
                 val text = key.actionPayload ?: return
-                onKeyAction?.invoke("symbol:commit:$text")
+                onInputAction?.invoke(ImeInputAction.SymbolCommitted(text)) ?: onKeyAction?.invoke("symbol:commit:$text")
             }
         }
     }

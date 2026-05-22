@@ -8,6 +8,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
+import io.github.xiwei753.pinyin.imecore.ImeInputAction
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 import io.github.xiwei753.pinyin.t9.data.DictionaryManager
 import io.github.xiwei753.pinyin.t9.data.DictionaryState
@@ -144,7 +145,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             
             ensureCoreInitialized()
     
-            deleteRepeatController = DeleteRepeatController { handler.onDelete() }
+            deleteRepeatController = DeleteRepeatController { handleInputAction(ImeInputAction.DeletePressed) }
     
             themeController = KeyboardThemeController(settingsRepository, resources)
             heightController = KeyboardHeightController(settingsRepository, resources)
@@ -155,6 +156,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 themeController = themeController,
                 settingsRepository = settingsRepository,
             )
+            candidateViewController.onInputAction = { handleInputAction(it) }
     
             setupKeyboardViewActions()
             Log.i("XiweiT9ImeService", "xiweiKeyboardView init done")
@@ -179,79 +181,51 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         xiweiKeyboardView.onHapticSpecial = { hapticFeedbackManager.performSpecialKey(xiweiKeyboardView) }
         xiweiKeyboardView.onHapticLongPress = { hapticFeedbackManager.performLongPress(xiweiKeyboardView) }
 
-        xiweiKeyboardView.onDeleteRepeat = { handler.onDelete() }
+        xiweiKeyboardView.onDeleteRepeat = { handleInputAction(ImeInputAction.DeletePressed) }
 
         xiweiKeyboardView.onEnterShortPress = {
-            handler.onEnterShortPress()
+            handleInputAction(ImeInputAction.EnterShortPressed)
         }
         xiweiKeyboardView.onEnterLongPress = {
-            handler.onEnterLongPress()
+            handleInputAction(ImeInputAction.EnterLongPressed)
         }
 
         xiweiKeyboardView.requestRebuildLayout = {
             rebuildLayoutModel()
         }
 
+        xiweiKeyboardView.onInputAction = { action -> handleInputAction(action) }
         xiweiKeyboardView.onKeyAction = { action -> handleKeyboardAction(action) }
     }
 
-    internal fun handleKeyboardAction(action: String) {
-        when {
-            action == "separator" -> handler.onSeparator()
-            action.startsWith("digit:") -> {
-                val digit = action.removePrefix("digit:")
-                handler.onDigitPressed(digit)
-            }
-            action == "del" -> handler.onDelete()
-            action == "retype" -> handler.onClearComposingForRetype()
-            action == "space" -> handler.onSpace()
-            action.startsWith("toggle:") -> {
-                val toggle = action.removePrefix("toggle:")
-                when (toggle) {
-                    "symbol" -> {
-                        handler.toggleSymbolKey()
-                        updateKeyboardPanel()
-                    }
-                    "english" -> {
-                        if (handler.keyboardMode == KeyboardMode.EnglishT9) {
-                            handler.switchKeyboardMode(KeyboardMode.ChineseT9)
-                        } else if (handler.keyboardMode == KeyboardMode.ChineseT9) {
-                            handler.switchKeyboardMode(KeyboardMode.EnglishT9)
-                        } else {
-                            handler.switchKeyboardMode(KeyboardMode.ChineseT9)
-                        }
-                        updateKeyboardPanel()
-                    }
-                    "number" -> {
-                        handler.toggleNumberKey()
-                        updateKeyboardPanel()
-                    }
-                }
-            }
-            action.startsWith("punct:") -> {
-                val punct = action.removePrefix("punct:")
-                handler.onPunctCommit(punct)
-            }
-            action.startsWith("reading:") -> {
-                val indexStr = action.removePrefix("reading:")
-                val index = indexStr.toIntOrNull()
-                if (index != null) {
-                    val readings = handler.readings
-                    if (index < readings.size) {
-                        handler.setActiveReading(readings[index])
-                    }
-                }
-            }
-            action.startsWith("symtab:") -> {
-                val cat = action.removePrefix("symtab:")
-                currentSymCategory = cat
-                updateKeyboardPanel()
-            }
-            action.startsWith("symbol:commit:") -> {
-                val text = action.removePrefix("symbol:commit:")
-                handler.onDigitPressed(text)
-            }
+    internal fun handleInputAction(action: ImeInputAction) {
+        if (!this::handler.isInitialized) return
+        handler.handle(action)
+        if (action is ImeInputAction.SymbolCategorySelected) {
+            currentSymCategory = action.category
+        } else {
+            currentSymCategory = handler.uiState(isDictPreparing).currentSymbolCategory
         }
+        updateKeyboardPanel()
+    }
+
+    internal fun handleKeyboardAction(action: String) {
+        val inputAction = when {
+            action == "separator" -> ImeInputAction.SeparatorPressed
+            action.startsWith("digit:") -> ImeInputAction.DigitPressed(action.removePrefix("digit:"))
+            action == "del" -> ImeInputAction.DeletePressed
+            action == "retype" -> ImeInputAction.ClearComposing
+            action == "space" -> ImeInputAction.SpacePressed
+            action == "toggle:symbol" -> ImeInputAction.ToggleSymbol
+            action == "toggle:english" -> ImeInputAction.ToggleChineseEnglish
+            action == "toggle:number" -> ImeInputAction.ToggleNumber
+            action.startsWith("punct:") -> ImeInputAction.SymbolCommitted(action.removePrefix("punct:"))
+            action.startsWith("reading:") -> action.removePrefix("reading:").toIntOrNull()?.let { ImeInputAction.ReadingSelected(it) }
+            action.startsWith("symtab:") -> ImeInputAction.SymbolCategorySelected(action.removePrefix("symtab:"))
+            action.startsWith("symbol:commit:") -> ImeInputAction.SymbolCommitted(action.removePrefix("symbol:commit:"))
+            else -> null
+        }
+        if (inputAction != null) handleInputAction(inputAction)
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
@@ -330,52 +304,19 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             panelHeight = metrics.shellHeight
         }
 
-        return when (state.keyboardMode) {
-            KeyboardMode.ChineseT9, KeyboardMode.EnglishT9 -> {
-                layoutBuilder.buildT9(
-                    panelWidth = panelWidth,
-                    panelHeight = panelHeight,
-                    rowHeight = metrics.rowHeightPx,
-                    bottomRowHeight = metrics.bottomRowHeightPx,
-                    horizontalGap = hGap,
-                    verticalGap = vGap,
-                    readings = state.readings,
-                    isComposing = state.isComposing,
-                    keyboardMode = state.keyboardMode,
-                    activeReading = state.activeReading,
-                )
-            }
-            KeyboardMode.Number -> {
-                layoutBuilder.buildNumber(
-                    panelWidth = panelWidth,
-                    panelHeight = panelHeight,
-                    rowHeight = metrics.rowHeightPx,
-                    bottomRowHeight = metrics.bottomRowHeightPx,
-                    horizontalGap = hGap,
-                    verticalGap = vGap,
-                    keyboardMode = state.keyboardMode,
-                    lastTextMode = state.lastTextMode,
-                )
-            }
-            KeyboardMode.Symbol -> {
-                val pageName = state.currentSymCategory
-                val catEntries = getEntriesForPage(pageName)
-                layoutBuilder.buildSymbol(
-                    panelWidth = panelWidth,
-                    panelHeight = panelHeight,
-                    rowHeight = metrics.rowHeightPx,
-                    bottomRowHeight = metrics.bottomRowHeightPx,
-                    horizontalGap = hGap,
-                    verticalGap = vGap,
-                    symbolEntries = catEntries,
-                    activeCategory = pageName,
-                    lastTextMode = state.lastTextMode,
-                    categoryToPage = categoryToPage,
-                    registry = registry,
-                    density = density,
-                )
-            }
-        }
+        return layoutBuilder.build(
+            state = state,
+            panelWidth = panelWidth,
+            panelHeight = panelHeight,
+            rowHeight = metrics.rowHeightPx,
+            bottomRowHeight = metrics.bottomRowHeightPx,
+            horizontalGap = hGap,
+            verticalGap = vGap,
+            categoryToPage = categoryToPage,
+            registry = registry,
+            density = density,
+            symbolEntries = if (state.keyboardMode == KeyboardMode.Symbol) getEntriesForPage(state.currentSymCategory) else emptyList(),
+        )
     }
 
     private fun renderFromState(state: KeyboardUiState) {
@@ -530,9 +471,6 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     }
 
     private fun buildKeyboardUiState(): KeyboardUiState {
-        val limit = if (this::settingsRepository.isInitialized) settingsRepository.getCandidateCount() else 9
-        val candidates = if (this::handler.isInitialized) handler.refreshCandidates(limit) else emptyList()
-        val isComposing = if (this::handler.isInitialized) handler.rawBuffer.isNotEmpty() else false
         val palette = if (this::themeController.isInitialized) themeController.getThemePalette() else ThemePalette(
             bgColor = ThemeColors.LIGHT_BG,
             candidateBarColor = ThemeColors.LIGHT_CANDIDATE_BAR,
@@ -549,24 +487,32 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             keyPressedBgColor = ThemeColors.LIGHT_KEY_PRESSED,
             specialKeyPressedBgColor = ThemeColors.LIGHT_SPECIAL_KEY_PRESSED,
         )
-        return KeyboardUiState(
-            keyboardMode = if (this::handler.isInitialized) handler.keyboardMode else KeyboardMode.ChineseT9,
-            lastTextMode = if (this::handler.isInitialized) handler.lastTextMode else KeyboardMode.ChineseT9,
-            rawBuffer = if (this::handler.isInitialized) handler.rawBuffer else "",
-            preedit = if (this::handler.isInitialized) handler.preedit else "",
-            readings = if (this::handler.isInitialized) handler.readings else emptyList(),
-            activeReading = if (this::handler.isInitialized) handler.activeReading else null,
-            candidatesSnapshot = candidates,
-            currentSymCategory = currentSymCategory,
-            isComposing = isComposing,
-            themePalette = palette
-        )
+        return if (this::handler.isInitialized) {
+            val limit = if (this::settingsRepository.isInitialized) settingsRepository.getCandidateCount() else 9
+            handler.refreshCandidates(limit)
+            val coreState = handler.uiState(isDictPreparing)
+            currentSymCategory = coreState.currentSymbolCategory
+            coreState.toAndroidKeyboardUiState(palette)
+        } else {
+            KeyboardUiState(
+                keyboardMode = KeyboardMode.ChineseT9,
+                lastTextMode = KeyboardMode.ChineseT9,
+                rawBuffer = "",
+                preedit = "",
+                readings = emptyList(),
+                activeReading = null,
+                candidatesSnapshot = emptyList(),
+                currentSymCategory = currentSymCategory,
+                isComposing = false,
+                themePalette = palette
+            )
+        }
     }
 
     override fun refreshUi() {
         if (!this::keyboardViews.isInitialized || !this::handler.isInitialized || !this::candidateViewController.isInitialized) return
         val state = buildKeyboardUiState()
-        candidateViewController.refreshFromState(state, handler)
+        candidateViewController.refreshFromState(state)
         if (this::xiweiKeyboardView.isInitialized) {
             renderFromState(state)
         }

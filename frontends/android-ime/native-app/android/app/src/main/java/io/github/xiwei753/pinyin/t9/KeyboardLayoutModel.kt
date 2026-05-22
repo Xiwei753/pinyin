@@ -12,6 +12,59 @@ data class KeyboardLayoutModel(
 
 class KeyboardLayoutBuilder {
 
+    fun build(
+        state: KeyboardUiState,
+        panelWidth: Int,
+        panelHeight: Int,
+        rowHeight: Int,
+        bottomRowHeight: Int,
+        horizontalGap: Int,
+        verticalGap: Int,
+        categoryToPage: Map<SymbolKeyRegistry.Category, String>,
+        registry: SymbolKeyRegistry,
+        density: Float,
+        symbolEntries: List<Pair<Int, String>> = emptyList(),
+    ): KeyboardLayoutModel {
+        return when (state.keyboardMode) {
+            KeyboardMode.ChineseT9, KeyboardMode.EnglishT9 -> buildT9(
+                panelWidth = panelWidth,
+                panelHeight = panelHeight,
+                rowHeight = rowHeight,
+                bottomRowHeight = bottomRowHeight,
+                horizontalGap = horizontalGap,
+                verticalGap = verticalGap,
+                readings = state.railState.labels.takeIf { state.railState.kind.name == "Readings" } ?: state.readings,
+                isComposing = state.isComposing,
+                keyboardMode = state.keyboardMode,
+                activeReading = state.activeReading,
+            )
+            KeyboardMode.Number -> buildNumber(
+                panelWidth = panelWidth,
+                panelHeight = panelHeight,
+                rowHeight = rowHeight,
+                bottomRowHeight = bottomRowHeight,
+                horizontalGap = horizontalGap,
+                verticalGap = verticalGap,
+                keyboardMode = state.keyboardMode,
+                lastTextMode = state.lastTextMode,
+            )
+            KeyboardMode.Symbol -> buildSymbol(
+                panelWidth = panelWidth,
+                panelHeight = panelHeight,
+                rowHeight = rowHeight,
+                bottomRowHeight = bottomRowHeight,
+                horizontalGap = horizontalGap,
+                verticalGap = verticalGap,
+                symbolEntries = symbolEntries,
+                activeCategory = state.currentSymCategory,
+                lastTextMode = state.lastTextMode,
+                categoryToPage = categoryToPage,
+                registry = registry,
+                density = density,
+            )
+        }
+    }
+
     fun buildT9(
         panelWidth: Int,
         panelHeight: Int,

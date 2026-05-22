@@ -2,6 +2,8 @@ package io.github.xiwei753.pinyin.t9
 
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
+import io.github.xiwei753.pinyin.imecore.ImeInputAction
+import io.github.xiwei753.pinyin.t9.core.Candidate
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -135,6 +137,46 @@ class XiweiT9ImeServiceUiBehaviorTest {
         verify(ic).commitText("@", 1)
         assertEquals(KeyboardMode.Symbol, handler.keyboardMode)
         assertEquals(KeyboardMode.ChineseT9, handler.lastTextMode)
+    }
+
+    @Test
+    fun testInputActionSymbolCommittedCommitsText() {
+        val service = createService()
+        val handler = KeyboardActionHandler(service)
+        handler.switchKeyboardMode(KeyboardMode.Symbol)
+        val ic = mock(InputConnection::class.java)
+        service.testInputConnection = ic
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleInputAction(ImeInputAction.SymbolCommitted("@"))
+
+        verify(ic).commitText("@", 1)
+        assertEquals(KeyboardMode.Symbol, handler.keyboardMode)
+    }
+
+    @Test
+    fun testInputActionCandidateSelectedCommitsCurrentSnapshot() {
+        val service = createService()
+        val engine = mock(T9Engine::class.java)
+        val candidate = Candidate("我", "96", 900)
+        `when`(engine.buffer).thenReturn("96", "")
+        `when`(engine.getPreedit()).thenReturn("wo", "")
+        `when`(engine.readings).thenReturn(listOf("wo"))
+        `when`(engine.activeReading).thenReturn("wo")
+        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(listOf(candidate))
+
+        val handler = KeyboardActionHandler(service).apply { attachEngine(engine) }
+        handler.refreshCandidates(30)
+        val ic = mock(InputConnection::class.java)
+        service.testInputConnection = ic
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleInputAction(ImeInputAction.CandidateSelected(0))
+
+        verify(ic).commitText("我", 1)
+        verify(engine).commitCandidate(candidate)
     }
 
     @Test

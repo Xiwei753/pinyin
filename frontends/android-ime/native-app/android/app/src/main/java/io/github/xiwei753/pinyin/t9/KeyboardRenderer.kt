@@ -21,9 +21,9 @@ class KeyboardRenderer {
         strokeWidth = 1f
     }
 
-    private val cornerRadius = 14f
+    private val defaultCornerRadius = 14f
 
-    fun getCornerRadiusPx(density: Float): Float = cornerRadius * density
+    fun getCornerRadiusPx(density: Float): Float = defaultCornerRadius * density
 
     fun drawKeyboard(
         canvas: Canvas,
@@ -38,7 +38,7 @@ class KeyboardRenderer {
     ) {
         canvas.drawColor(palette.bgColor)
 
-        val radius = cornerRadius * density
+        val radius = palette.layoutTokens.keyCornerRadius * density
 
         val allKeys = mutableListOf<KeyboardKey>()
 
@@ -137,8 +137,8 @@ class KeyboardRenderer {
             KeyboardKeyRole.NORMAL -> {
                 if (key.subLabel != null) {
                     val centerX = rect.centerX().toFloat()
-                    val digitSize = rect.height() * 0.22f
-                    val lettersSize = rect.height() * 0.35f
+                    val digitSize = rect.height() * palette.layoutTokens.subKeyTextSize
+                    val lettersSize = rect.height() * palette.layoutTokens.mainKeyTextSize
 
                     subTextPaint.color = subColor
                     subTextPaint.textSize = digitSize
@@ -175,14 +175,14 @@ class KeyboardRenderer {
             }
             KeyboardKeyRole.RAIL_READING -> {
                 textPaint.color = textColor
-                textPaint.textSize = minOf(rect.height() * 0.45f, rect.width() * 0.65f)
+                textPaint.textSize = minOf(rect.height() * palette.layoutTokens.railTextSize, rect.width() * 0.65f)
                 val centerX = rect.centerX().toFloat()
                 val textY = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
                 canvas.drawText(key.label, centerX, textY, textPaint)
             }
             KeyboardKeyRole.SYMBOL_KEY -> {
                 textPaint.color = textColor
-                textPaint.textSize = rect.height() * 0.40f
+                textPaint.textSize = rect.height() * palette.layoutTokens.symbolTextSize
                 val centerX = rect.centerX().toFloat()
                 val textY = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
                 canvas.drawText(key.label, centerX, textY, textPaint)

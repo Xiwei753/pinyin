@@ -1,340 +1,105 @@
 package io.github.xiwei753.pinyin.t9
 
+import io.github.xiwei753.pinyin.imecore.ImeInputAction
+import io.github.xiwei753.pinyin.imecore.ImeSideEffect
+import io.github.xiwei753.pinyin.imecore.ImeStateMachine
+import io.github.xiwei753.pinyin.imecore.ImeUiState
+import io.github.xiwei753.pinyin.imecore.InputMode
 import io.github.xiwei753.pinyin.t9.core.Candidate
 import io.github.xiwei753.pinyin.t9.core.T9Engine
 
 class KeyboardActionHandler(
-    val actionSink: ImeActionSink
+    val actionSink: ImeActionSink,
+    private val candidateLimitProvider: () -> Int = { 30 },
 ) {
-    var engine: T9Engine? = null
-        private set
+    private val stateMachine = ImeStateMachine(candidateLimitProvider)
+    private val englishTimeoutRunnable = Runnable { commitEnglishChar() }
+    private var engineAdapter: T9EngineAdapter? = null
 
-    var keyboardMode: KeyboardMode = KeyboardMode.ChineseT9
-        private set
+    val engine: T9Engine? get() = engineAdapter?.rawEngine
 
-    var lastTextMode: KeyboardMode = KeyboardMode.ChineseT9
+    var keyboardMode: KeyboardMode
+        get() = stateMachine.mode.toKeyboardMode()
+        private set(value) { switchKeyboardMode(value) }
 
-    private var _currentCandidates: List<Candidate> = emptyList()
-    private var fallbackBuffer: String = ""
-
-    val currentCandidates: List<Candidate> get() = _currentCandidates
-
-    val preedit: String get() {
-        if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
-            val letters = englishMultiTapLetters[englishDigit]
-            if (letters != null && englishIndex < letters.length) {
-                return letters[englishIndex].toString()
-            }
+    var lastTextMode: KeyboardMode
+        get() = stateMachine.lastTextMode.toKeyboardMode()
+        set(value) {
+            val effects = mutableListOf<ImeSideEffect>()
+            stateMachine.switchMode(value.toInputMode(), effects)
+            execute(effects)
         }
-        return engine?.getPreedit() ?: fallbackBuffer
-    }
 
-    val rawBuffer: String get() = engine?.buffer ?: fallbackBuffer
-
-    val readings: List<String>
-        get() = engine?.readings ?: emptyList()
+    val currentCandidates: List<Candidate> get() = stateMachine.currentCandidates
+    val preedit: String get() = stateMachine.preedit
+    val rawBuffer: String get() = stateMachine.rawBuffer
+    val readings: List<String> get() = stateMachine.readings
+    var englishPending: Boolean
+        get() = stateMachine.englishPending
+        private set(_) {}
 
     var activeReading: String?
-        get() = engine?.activeReading
+        get() = stateMachine.activeReading
         set(value) {
-            engine?.let {
-                if (value != null) it.setActiveReading(value) else { /* can't set null */ }
-            }
+            if (value != null) setActiveReading(value)
         }
-
-    fun setActiveReading(reading: String): Boolean {
-        val success = engine?.setActiveReading(reading) ?: false
-        if (success) {
-            actionSink.refreshUi()
-        }
-        return success
-    }
-
-    private val englishMultiTapLetters = mapOf(
-        '2' to "abc", '3' to "def", '4' to "ghi", '5' to "jkl",
-        '6' to "mno", '7' to "pqrs", '8' to "tuv", '9' to "wxyz"
-    )
-    private var englishDigit = ' '
-    private var englishIndex = 0
-    var englishPending = false
-        private set
-    private val englishTimeoutRunnable = Runnable { commitEnglishChar() }
 
     fun attachEngine(newEngine: T9Engine) {
-        this.engine = newEngine
-        for (char in fallbackBuffer) {
-            newEngine.inputDigit(char.toString())
+        engineAdapter = T9EngineAdapter(newEngine)
+        stateMachine.attachEngine(engineAdapter!!)
+    }
+
+    fun uiState(isDictionaryPreparing: Boolean = false): ImeUiState = stateMachine.uiState(isDictionaryPreparing)
+
+    fun handle(action: ImeInputAction) {
+        when (action) {
+            ImeInputAction.EnterShortPressed -> onEnterShortPress()
+            else -> execute(stateMachine.dispatch(action))
         }
-        fallbackBuffer = ""
     }
 
     fun switchKeyboardMode(targetMode: KeyboardMode) {
-        if (keyboardMode == targetMode) return
-        val oldMode = keyboardMode
-        leavingCurrentMode()
-        if ((oldMode == KeyboardMode.ChineseT9 || oldMode == KeyboardMode.EnglishT9) &&
-            (targetMode == KeyboardMode.Symbol || targetMode == KeyboardMode.Number)) {
-            lastTextMode = oldMode
-        }
-        keyboardMode = targetMode
-        actionSink.refreshUi()
+        val effects = mutableListOf<ImeSideEffect>()
+        stateMachine.switchMode(targetMode.toInputMode(), effects)
+        execute(effects)
     }
 
-    fun toggleSymbolKey() {
-        when (keyboardMode) {
-            KeyboardMode.Symbol -> switchKeyboardMode(lastTextMode)
-            KeyboardMode.Number -> switchKeyboardMode(KeyboardMode.Symbol)
-            else -> switchKeyboardMode(KeyboardMode.Symbol)
-        }
-    }
+    fun toggleSymbolKey() = handle(ImeInputAction.ToggleSymbol)
+    fun toggleNumberKey() = handle(ImeInputAction.ToggleNumber)
+    fun onDigitPressed(digit: String) = handle(ImeInputAction.DigitPressed(digit))
+    fun onSeparator() = handle(ImeInputAction.SeparatorPressed)
+    fun onZero() = handle(ImeInputAction.ZeroPressed)
+    fun onDelete() = handle(ImeInputAction.DeletePressed)
+    fun onClearComposingForRetype() = handle(ImeInputAction.ClearComposing)
+    fun onSpace() = handle(ImeInputAction.SpacePressed)
+    fun onCandidateClick(index: Int) = handle(ImeInputAction.CandidateSelected(index))
 
-    fun toggleNumberKey() {
-        when (keyboardMode) {
-            KeyboardMode.Number -> switchKeyboardMode(lastTextMode)
-            KeyboardMode.Symbol -> switchKeyboardMode(KeyboardMode.Number)
-            else -> switchKeyboardMode(KeyboardMode.Number)
-        }
-    }
-
-    private fun leavingCurrentMode() {
-        when (keyboardMode) {
-            KeyboardMode.ChineseT9 -> {
-                if (rawBuffer.isNotEmpty()) {
-                    commitFirstCandidateOrPreedit()
-                }
-            }
-            KeyboardMode.EnglishT9 -> {
-                if (englishPending) {
-                    commitEnglishChar()
-                }
-            }
-            else -> {}
-        }
-        actionSink.finishComposingText()
-    }
-
-    private fun commitFirstCandidateOrPreedit() {
-        if (_currentCandidates.isNotEmpty()) {
-            onCandidateClick(0)
-        } else if (preedit.isNotEmpty()) {
-            actionSink.commitText(preedit)
-            engine?.clear()
-            fallbackBuffer = ""
-            _currentCandidates = emptyList()
-            actionSink.refreshUi()
-        }
-    }
-
-    fun onDigitPressed(digit: String) {
-        when (keyboardMode) {
-            KeyboardMode.EnglishT9 -> onEnglishDigit(digit)
-            KeyboardMode.ChineseT9 -> onChineseDigit(digit)
-            KeyboardMode.Number, KeyboardMode.Symbol -> {
-                actionSink.commitText(digit)
-                actionSink.refreshUi()
-            }
-        }
-    }
-
-    private fun onChineseDigit(digit: String) {
-        val eng = engine
-        if (eng != null) {
-            eng.inputDigit(digit)
-        } else {
-            if (digit.matches(Regex("^[1-9]$"))) {
-                fallbackBuffer += digit
-            }
-        }
-        actionSink.refreshUi()
-    }
-
-    private fun onEnglishDigit(digit: String) {
-        if (digit.length != 1) return
-        val d = digit[0]
-        val letters = englishMultiTapLetters[d]
-        if (letters == null) {
-            commitEnglishChar()
-            return
-        }
-        if (englishPending && d == englishDigit) {
-            englishIndex = (englishIndex + 1) % letters.length
-        } else {
-            commitEnglishChar()
-            englishDigit = d
-            englishIndex = 0
-        }
-        englishPending = true
-        actionSink.cancelEnglishTimeout()
-        actionSink.scheduleEnglishTimeout(englishTimeoutRunnable, 600L)
-        actionSink.refreshUi()
+    fun setActiveReading(reading: String): Boolean {
+        val index = readings.indexOf(reading)
+        if (index < 0) return false
+        handle(ImeInputAction.ReadingSelected(index))
+        return true
     }
 
     fun commitEnglishChar() {
-        if (!englishPending) return
-        englishPending = false
-        actionSink.cancelEnglishTimeout()
-        val letters = englishMultiTapLetters[englishDigit] ?: run { englishDigit = ' '; return }
-        if (englishIndex < letters.length) {
-            actionSink.commitText(letters[englishIndex].toString())
-        }
-        englishDigit = ' '
-        englishIndex = 0
-        actionSink.refreshUi()
-    }
-
-    fun onSeparator() {
-        if (keyboardMode == KeyboardMode.ChineseT9) {
-            val eng = engine
-            if (eng != null) {
-                if (eng.buffer.isNotEmpty()) {
-                    eng.inputDigit("1")
-                    actionSink.refreshUi()
-                }
-            } else {
-                if (fallbackBuffer.isNotEmpty()) {
-                    fallbackBuffer += "1"
-                    actionSink.refreshUi()
-                }
-            }
-        }
-    }
-
-    fun onZero() {
-        if (keyboardMode == KeyboardMode.EnglishT9) {
-            commitEnglishChar()
-            actionSink.commitText(" ")
-            return
-        }
-        if (keyboardMode == KeyboardMode.ChineseT9) {
-            val eng = engine
-            if (eng != null) {
-                if (eng.buffer.isEmpty()) {
-                    actionSink.commitText(" ")
-                } else if (_currentCandidates.isNotEmpty()) {
-                    val candidate = _currentCandidates[0]
-                    eng.commitCandidate(candidate)
-                    _currentCandidates = emptyList()
-                    actionSink.commitText(candidate.text)
-                    actionSink.refreshUi()
-                }
-            } else {
-                if (fallbackBuffer.isEmpty()) {
-                    actionSink.commitText(" ")
-                }
-            }
-        } else if (keyboardMode == KeyboardMode.Number) {
-            actionSink.commitText("0")
-        }
-    }
-
-    fun onClearComposingForRetype() {
-        engine?.clear()
-        fallbackBuffer = ""
-        _currentCandidates = emptyList()
-
-        if (englishPending) {
-            englishPending = false
-            actionSink.cancelEnglishTimeout()
-            englishDigit = ' '
-            englishIndex = 0
-        }
-
-        actionSink.refreshUi()
-    }
-
-    fun onSpace() {
-        when (keyboardMode) {
-            KeyboardMode.ChineseT9 -> {
-                val eng = engine
-                if (eng != null) {
-                    if (eng.buffer.isEmpty()) {
-                        actionSink.commitText(" ")
-                    } else if (_currentCandidates.isNotEmpty()) {
-                        val candidate = _currentCandidates[0]
-                        eng.commitCandidate(candidate)
-                        _currentCandidates = emptyList()
-                        actionSink.commitText(candidate.text)
-                        actionSink.refreshUi()
-                    } else {
-                        val text = eng.getPreedit()
-                        if (text.isNotEmpty()) {
-                            actionSink.commitText(text)
-                            eng.clear()
-                            fallbackBuffer = ""
-                            _currentCandidates = emptyList()
-                            actionSink.refreshUi()
-                        } else {
-                            actionSink.commitText(" ")
-                        }
-                    }
-                } else {
-                    if (fallbackBuffer.isNotEmpty()) {
-                        actionSink.commitText(fallbackBuffer)
-                        fallbackBuffer = ""
-                        _currentCandidates = emptyList()
-                        actionSink.refreshUi()
-                    } else {
-                        actionSink.commitText(" ")
-                    }
-                }
-            }
-            KeyboardMode.EnglishT9 -> {
-                if (englishPending) {
-                    commitEnglishChar()
-                }
-                actionSink.commitText(" ")
-            }
-            KeyboardMode.Symbol, KeyboardMode.Number -> {
-                actionSink.commitText(" ")
-            }
-        }
+        val effects = mutableListOf<ImeSideEffect>()
+        stateMachine.commitEnglishChar(effects)
+        execute(effects)
     }
 
     fun onPunctCommit(text: String) {
+        val effects = mutableListOf<ImeSideEffect>()
         if (keyboardMode == KeyboardMode.ChineseT9 && rawBuffer.isNotEmpty()) {
-            commitFirstCandidateOrPreedit()
+            effects.addAll(stateMachine.dispatch(ImeInputAction.SpacePressed))
         } else if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
-            commitEnglishChar()
+            stateMachine.commitEnglishChar(effects)
         }
-        actionSink.commitText(text)
-        actionSink.refreshUi()
+        effects.add(ImeSideEffect.CommitText(text))
+        effects.add(ImeSideEffect.RefreshUi)
+        execute(effects)
     }
 
-    fun onDelete() {
-        if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
-            if (englishIndex > 0) {
-                englishIndex--
-                actionSink.refreshUi()
-            } else {
-                commitEnglishChar()
-                actionSink.sendDelete()
-                actionSink.refreshUi()
-            }
-            return
-        }
-        if (keyboardMode == KeyboardMode.ChineseT9) {
-            val eng = engine
-            if (eng != null) {
-                if (eng.buffer.isNotEmpty()) {
-                    eng.backspace()
-                    actionSink.refreshUi()
-                    return
-                }
-            } else {
-                if (fallbackBuffer.isNotEmpty()) {
-                    fallbackBuffer = fallbackBuffer.substring(0, fallbackBuffer.length - 1)
-                    actionSink.refreshUi()
-                    return
-                }
-            }
-        }
-        actionSink.sendDelete()
-        actionSink.refreshUi()
-    }
-
-    fun onEnter() {
-        onEnterShortPress()
-    }
+    fun onEnter() = onEnterShortPress()
 
     fun onEnterShortPress() {
         val hasComposing = when (keyboardMode) {
@@ -344,118 +109,73 @@ class KeyboardActionHandler(
         }
 
         if (hasComposing) {
-            commitCurrentComposing()
+            if (keyboardMode == KeyboardMode.ChineseT9) handle(ImeInputAction.SpacePressed)
+            else commitEnglishChar()
         }
 
         val editorInfo = actionSink.getCurrentEditorInfo()
-
-        // SEND: perform action after committing composing
         if (EnterActionPolicy.shouldSend(editorInfo)) {
-            val action = EnterActionPolicy.getAction(editorInfo)
-            actionSink.performEditorAction(action)
+            actionSink.performEditorAction(EnterActionPolicy.getAction(editorInfo))
             actionSink.refreshUi()
             return
         }
-
-        // Had composing and not SEND: insert newline
         if (hasComposing) {
             actionSink.commitNewline()
             actionSink.refreshUi()
             return
         }
-
-        // SEARCH/GO/NEXT: still run the explicit action
         if (EnterActionPolicy.shouldRunExplicitAction(editorInfo)) {
-            val action = EnterActionPolicy.getAction(editorInfo)
-            actionSink.performEditorAction(action)
+            actionSink.performEditorAction(EnterActionPolicy.getAction(editorInfo))
             actionSink.refreshUi()
             return
         }
-
-        // Default (NONE/UNSPECIFIED/DONE): insert newline, do NOT close keyboard
         actionSink.commitNewline()
         actionSink.refreshUi()
     }
 
-    fun onEnterLongPress() {
-        when (keyboardMode) {
-            KeyboardMode.ChineseT9 -> {
-                if (rawBuffer.isNotEmpty()) {
-                    commitFirstCandidateOrPreedit()
-                }
-            }
-            KeyboardMode.EnglishT9 -> {
-                if (englishPending) {
-                    commitEnglishChar()
-                }
-            }
-            else -> {}
-        }
-        actionSink.commitNewline()
-        actionSink.refreshUi()
-    }
+    fun onEnterLongPress() = handle(ImeInputAction.EnterLongPressed)
 
-    private fun commitCurrentComposing() {
-        when (keyboardMode) {
-            KeyboardMode.ChineseT9 -> {
-                if (rawBuffer.isNotEmpty()) {
-                    commitFirstCandidateOrPreedit()
-                }
-            }
-            KeyboardMode.EnglishT9 -> {
-                if (englishPending) {
-                    commitEnglishChar()
-                }
-            }
-            else -> {}
-        }
-    }
+    fun refreshCandidates(limit: Int): List<Candidate> = stateMachine.refreshCandidates(limit)
 
-    fun onCandidateClick(index: Int) {
-        if (keyboardMode != KeyboardMode.ChineseT9) return
-        if (index < 0 || index >= _currentCandidates.size) return
-        val candidate = _currentCandidates[index]
-        engine?.commitCandidate(candidate)
-        _currentCandidates = emptyList()
-        fallbackBuffer = ""
-        actionSink.commitText(candidate.text)
-        actionSink.refreshUi()
-    }
-
-    fun refreshCandidates(limit: Int): List<Candidate> {
-        val eng = engine
-        _currentCandidates = if (eng != null && keyboardMode == KeyboardMode.ChineseT9) {
-            eng.getVisibleCandidates(limit)
-        } else {
-            emptyList()
-        }
-        return _currentCandidates
-    }
-
-    fun discardCompositionForLifecycle() {
-        engine?.clear()
-        fallbackBuffer = ""
-        _currentCandidates = emptyList()
-
-        if (englishPending) {
-            englishPending = false
-            actionSink.cancelEnglishTimeout()
-            englishDigit = ' '
-            englishIndex = 0
-        }
-
-        actionSink.finishComposingText()
-        actionSink.refreshUi()
-    }
+    fun discardCompositionForLifecycle() = handle(ImeInputAction.LifecycleStartInput)
 
     fun onHideKey() {
         if (keyboardMode == KeyboardMode.ChineseT9 && rawBuffer.isNotEmpty()) {
-            commitFirstCandidateOrPreedit()
+            handle(ImeInputAction.SpacePressed)
         } else if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
             commitEnglishChar()
         }
-        discardCompositionForLifecycle()
-        keyboardMode = KeyboardMode.ChineseT9
-        actionSink.refreshUi()
+        handle(ImeInputAction.LifecycleFinishInput)
     }
+
+    private fun execute(effects: List<ImeSideEffect>) {
+        for (effect in effects) {
+            when (effect) {
+                is ImeSideEffect.CommitText -> actionSink.commitText(effect.text)
+                is ImeSideEffect.CommitCandidate -> actionSink.commitText(effect.text)
+                ImeSideEffect.SendDelete -> actionSink.sendDelete()
+                ImeSideEffect.CommitNewline -> actionSink.commitNewline()
+                ImeSideEffect.FinishComposingText -> actionSink.finishComposingText()
+                is ImeSideEffect.PerformEditorAction -> actionSink.performEditorAction(effect.action)
+                ImeSideEffect.RefreshUi -> actionSink.refreshUi()
+                is ImeSideEffect.RecordUserSelection -> {}
+                ImeSideEffect.CancelEnglishTimeout -> actionSink.cancelEnglishTimeout()
+                is ImeSideEffect.ScheduleEnglishTimeout -> actionSink.scheduleEnglishTimeout(englishTimeoutRunnable, effect.delayMs)
+            }
+        }
+    }
+}
+
+fun KeyboardMode.toInputMode(): InputMode = when (this) {
+    KeyboardMode.ChineseT9 -> InputMode.ChineseT9
+    KeyboardMode.EnglishT9 -> InputMode.EnglishT9
+    KeyboardMode.Number -> InputMode.Number
+    KeyboardMode.Symbol -> InputMode.Symbol
+}
+
+fun InputMode.toKeyboardMode(): KeyboardMode = when (this) {
+    InputMode.ChineseT9 -> KeyboardMode.ChineseT9
+    InputMode.EnglishT9 -> KeyboardMode.EnglishT9
+    InputMode.Number -> KeyboardMode.Number
+    InputMode.Symbol -> KeyboardMode.Symbol
 }
