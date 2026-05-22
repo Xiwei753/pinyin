@@ -45,10 +45,11 @@ class XiweiT9ImeServiceBoundaryTest {
     @Test
     fun enterPolicyStaysInAndroidAdapter() {
         val handlerSource = sourceFile("io/github/xiwei753/pinyin/t9/KeyboardActionHandler.kt").readText()
+        val enterPolicySource = sourceFile("io/github/xiwei753/pinyin/t9/EnterActionPolicy.kt").readText()
         val coreSource = sourceFile("io/github/xiwei753/pinyin/imecore/ImeStateMachine.kt").readText()
 
-        assertTrue(handlerSource.contains("EnterActionPolicy.shouldSend"))
-        assertTrue(handlerSource.contains("Android adapter boundary"))
+        assertTrue(handlerSource.contains("performEditorActionOrNewline()"))
+        assertTrue(enterPolicySource.contains("EditorInfo"))
         assertFalse(coreSource.contains("EnterActionPolicy"))
         assertFalse(coreSource.contains("EditorInfo"))
     }

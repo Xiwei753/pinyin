@@ -67,9 +67,9 @@ class EnterActionPolicyTest {
     }
 
     @Test
-    fun shouldRunExplicitAction_done_returnsFalse() {
+    fun shouldRunExplicitAction_done_returnsTrue() {
         val info = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_DONE }
-        assertFalse(EnterActionPolicy.shouldRunExplicitAction(info))
+        assertTrue(EnterActionPolicy.shouldRunExplicitAction(info))
     }
 
     @Test
@@ -104,9 +104,9 @@ class EnterActionPolicyTest {
     }
 
     @Test
-    fun shouldInsertNewline_done_returnsTrue() {
+    fun shouldInsertNewline_done_returnsFalse() {
         val info = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_DONE }
-        assertTrue(EnterActionPolicy.shouldInsertNewline(info))
+        assertFalse(EnterActionPolicy.shouldInsertNewline(info))
     }
 
     @Test

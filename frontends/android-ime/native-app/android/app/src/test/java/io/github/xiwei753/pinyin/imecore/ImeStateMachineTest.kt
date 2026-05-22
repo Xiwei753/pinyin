@@ -95,6 +95,16 @@ class ImeStateMachineTest {
     }
 
     @Test
+    fun numberModeZeroCommitsDigitZero() {
+        machine.dispatch(ImeInputAction.KeyboardModeSelected(InputMode.Number))
+
+        val effects = machine.dispatch(ImeInputAction.ZeroPressed)
+
+        assertTrue(effects.contains(ImeSideEffect.CommitText("0")))
+        assertEquals(InputMode.Number, machine.mode)
+    }
+
+    @Test
     fun symbolModeBehaviorStaysPlatformIndependent() {
         machine.dispatch(ImeInputAction.ToggleSymbol)
         assertEquals(InputMode.Symbol, machine.mode)
@@ -210,6 +220,37 @@ class ImeStateMachineTest {
         assertTrue(machine.uiState().candidatesSnapshot.isEmpty())
     }
 
+    @Test
+    fun lifecycleStartInputResetsContextAndClearsEngineBuffer() {
+        val engine = MutableEngine(buffer = "96", preedit = "wo")
+        val localMachine = ImeStateMachine { 30 }
+        localMachine.attachEngine(engine)
+
+        localMachine.dispatch(ImeInputAction.LifecycleStartInput(InputMode.EnglishT9, InputMode.EnglishT9))
+
+        assertEquals(InputMode.EnglishT9, localMachine.mode)
+        assertEquals(InputMode.EnglishT9, localMachine.lastTextMode)
+        assertEquals("", localMachine.rawBuffer)
+        assertTrue(localMachine.currentCandidates.isEmpty())
+        assertTrue(engine.cleared)
+    }
+
+    @Test
+    fun lifecycleFinishInputResetsContextAndClearsSnapshot() {
+        val engine = MutableEngine(buffer = "96", preedit = "wo")
+        val localMachine = ImeStateMachine { 30 }
+        localMachine.attachEngine(engine)
+
+        localMachine.dispatch(ImeInputAction.ToggleSymbol)
+        localMachine.dispatch(ImeInputAction.LifecycleFinishInput)
+
+        assertEquals(InputMode.ChineseT9, localMachine.mode)
+        assertEquals(InputMode.ChineseT9, localMachine.lastTextMode)
+        assertEquals("punct", localMachine.currentSymbolCategory)
+        assertTrue(localMachine.currentCandidates.isEmpty())
+        assertEquals("", localMachine.rawBuffer)
+    }
+
     private fun candidate(text: String, pinyin: String): Candidate = Candidate(
         text = text,
         code = pinyin,
@@ -235,6 +276,32 @@ class ImeStateMachineTest {
             queryCount++
             return selections.map { selection -> selection.copy(commit = { commitCount++ }) }
         }
+        override fun setActiveReading(reading: String): Boolean = false
+    }
+
+    private class MutableEngine(
+        buffer: String,
+        preedit: String,
+    ) : T9InputEngine {
+        var mutableBuffer: String = buffer
+        private var mutablePreedit: String = preedit
+        var cleared: Boolean = false
+        override val buffer: String get() = mutableBuffer
+        override val readings: List<String> get() = emptyList()
+        override val activeReading: String? get() = null
+        override fun getPreedit(): String = mutablePreedit
+        override fun inputDigit(digit: String) {
+            mutableBuffer += digit
+        }
+        override fun backspace() {
+            mutableBuffer = mutableBuffer.dropLast(1)
+        }
+        override fun clear() {
+            mutableBuffer = ""
+            mutablePreedit = ""
+            cleared = true
+        }
+        override fun getVisibleCandidates(limit: Int): List<CandidateSelection> = emptyList()
         override fun setActiveReading(reading: String): Boolean = false
     }
 }

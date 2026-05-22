@@ -178,6 +178,8 @@
 - enter / delete / space / symbol / number / chinese/english 切换行为固定。
 - 密码框 / URL / 数字输入框等 `inputType` 适配。
 - 真实手机测试流程固定。
+- `EditorInfo` / `inputType` 判断只允许放在 Android adapter 层，例如 `EditorInputTypePolicy`，不进入 `imecore`。
+- 密码框、URL / Email、数字框、电话框默认不走中文候选，也不显示中文 preedit。
 
 ### 阶段 3：视觉重做
 

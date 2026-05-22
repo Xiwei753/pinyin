@@ -19,6 +19,9 @@ sealed interface ImeInputAction {
     data class CandidateSelected(val index: Int) : ImeInputAction
     data class ReadingSelected(val index: Int) : ImeInputAction
     data object ClearComposing : ImeInputAction
-    data object LifecycleStartInput : ImeInputAction
+    data class LifecycleStartInput(
+        val initialMode: InputMode,
+        val initialLastTextMode: InputMode = initialMode,
+    ) : ImeInputAction
     data object LifecycleFinishInput : ImeInputAction
 }

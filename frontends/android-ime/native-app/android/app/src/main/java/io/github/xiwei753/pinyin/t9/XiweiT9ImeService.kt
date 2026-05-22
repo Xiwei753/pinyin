@@ -198,8 +198,19 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     internal fun handleInputAction(action: ImeInputAction) {
         if (!this::handler.isInitialized) return
+        if (!isActionAllowedByPolicy(action)) return
         handler.handle(action)
         renderCurrentState()
+    }
+
+    private fun isActionAllowedByPolicy(action: ImeInputAction): Boolean {
+        val policy = EditorInputTypePolicy.resolve(currentEditorInfo)
+        if (policy.allowChineseCandidates) return true
+        return when (action) {
+            ImeInputAction.ToggleChineseEnglish -> false
+            is ImeInputAction.KeyboardModeSelected -> action.mode != io.github.xiwei753.pinyin.imecore.InputMode.ChineseT9
+            else -> true
+        }
     }
 
     internal fun handleKeyboardAction(action: String) {
@@ -225,30 +236,35 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         super.onStartInputView(info, restarting)
         currentEditorInfo = info
         applyThemeAndHeight()
-        if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
+        if (this::handler.isInitialized) applyEditorContext(info)
     }
 
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         super.onStartInput(info, restarting)
         currentEditorInfo = info
-        if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
+        if (this::handler.isInitialized) applyEditorContext(info)
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
-        if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
-        if (this::handler.isInitialized) handler.resetToChineseModeForLifecycle()
+        if (this::handler.isInitialized) handler.handle(ImeInputAction.LifecycleFinishInput)
         updateKeyboardPanel()
     }
 
     override fun onFinishInput() {
         super.onFinishInput()
-        if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
+        if (this::handler.isInitialized) handler.handle(ImeInputAction.LifecycleFinishInput)
     }
 
     override fun onWindowHidden() {
         super.onWindowHidden()
-        if (this::handler.isInitialized) handler.discardCompositionForLifecycle()
+        if (this::handler.isInitialized) handler.handle(ImeInputAction.LifecycleFinishInput)
+    }
+
+    private fun applyEditorContext(info: EditorInfo?) {
+        val policy = EditorInputTypePolicy.resolve(info)
+        handler.beginInputContext(policy.defaultKeyboardMode, policy.defaultLastTextMode)
+        renderCurrentState()
     }
 
     private fun applyThemeAndHeight() {
@@ -470,7 +486,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             keyPressedBgColor = ThemeColors.LIGHT_KEY_PRESSED,
             specialKeyPressedBgColor = ThemeColors.LIGHT_SPECIAL_KEY_PRESSED,
         )
-        return if (this::handler.isInitialized) {
+        val baseState = if (this::handler.isInitialized) {
             handler.uiState(isDictPreparing).toAndroidKeyboardUiState(palette)
         } else {
             KeyboardUiState(
@@ -486,6 +502,13 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 themePalette = palette
             )
         }
+        val policy = EditorInputTypePolicy.resolve(currentEditorInfo)
+        if (policy.allowChineseCandidates) return baseState
+        return baseState.copy(
+            candidateStripState = baseState.candidateStripState.copy(visible = false, candidates = emptyList()),
+            compositionState = baseState.compositionState.copy(preedit = "", readings = emptyList(), activeReading = null),
+            preeditState = baseState.preeditState.copy(visible = false, text = ""),
+        )
     }
 
     override fun refreshUi() {

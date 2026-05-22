@@ -13,6 +13,7 @@ import org.junit.Test
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.never
@@ -150,7 +151,7 @@ class KeyboardActionHandlerTest {
     fun testSymbolMode_enter_shortPress_commitsNewline() {
         handler.switchKeyboardMode(KeyboardMode.Symbol)
         handler.onEnter()
-        verify(sink).commitNewline()
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -178,7 +179,7 @@ class KeyboardActionHandlerTest {
     fun testNumberMode_enter_shortPress_commitsNewline() {
         handler.switchKeyboardMode(KeyboardMode.Number)
         handler.onEnter()
-        verify(sink).commitNewline()
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -584,11 +585,9 @@ class KeyboardActionHandlerTest {
 
     @Test
     fun testChineseT9_enterShortPress_emptyBuffer_noAction_commitsNewline() {
-        // getCurrentEditorInfo returns null by default => shouldInsertNewline
         handler.onEnterShortPress()
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).commitNewline()
-        verify(sink, never()).performEditorAction(anyInt())
+        verify(sink).performEditorActionOrNewline()
+        verify(sink, atLeastOnce()).refreshUi()
     }
 
     @Test
@@ -596,9 +595,7 @@ class KeyboardActionHandlerTest {
         val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_SEND }
         `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
         handler.onEnterShortPress()
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).performEditorAction(EditorInfo.IME_ACTION_SEND)
-        verify(sink, never()).commitNewline()
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -606,9 +603,7 @@ class KeyboardActionHandlerTest {
         val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_SEARCH }
         `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
         handler.onEnterShortPress()
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).performEditorAction(EditorInfo.IME_ACTION_SEARCH)
-        verify(sink, never()).commitNewline()
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -616,9 +611,7 @@ class KeyboardActionHandlerTest {
         val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_DONE }
         `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
         handler.onEnterShortPress()
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).commitNewline()
-        verify(sink, never()).performEditorAction(anyInt())
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -626,9 +619,7 @@ class KeyboardActionHandlerTest {
         val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_UNSPECIFIED }
         `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
         handler.onEnterShortPress()
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).commitNewline()
-        verify(sink, never()).performEditorAction(anyInt())
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -642,9 +633,7 @@ class KeyboardActionHandlerTest {
 
         handler.onEnterShortPress()
         verify(sink).commitText("我")
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).commitNewline()
-        verify(sink, never()).performEditorAction(anyInt())
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -660,9 +649,7 @@ class KeyboardActionHandlerTest {
 
         handler.onEnterShortPress()
         verify(sink).commitText("我")
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).performEditorAction(EditorInfo.IME_ACTION_SEND)
-        verify(sink, never()).commitNewline()
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -693,9 +680,7 @@ class KeyboardActionHandlerTest {
     fun testEnglishT9_enterShortPress_noPending_noAction_commitsNewline() {
         handler.switchKeyboardMode(KeyboardMode.EnglishT9)
         handler.onEnterShortPress()
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).commitNewline()
-        verify(sink, never()).performEditorAction(anyInt())
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -704,9 +689,7 @@ class KeyboardActionHandlerTest {
         val editorInfo = EditorInfo().apply { imeOptions = EditorInfo.IME_ACTION_SEND }
         `when`(sink.getCurrentEditorInfo()).thenReturn(editorInfo)
         handler.onEnterShortPress()
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).performEditorAction(EditorInfo.IME_ACTION_SEND)
-        verify(sink, never()).commitNewline()
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -717,9 +700,7 @@ class KeyboardActionHandlerTest {
 
         handler.onEnterShortPress()
         verify(sink).commitText("a")
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).commitNewline()
-        verify(sink, never()).performEditorAction(anyInt())
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test
@@ -732,9 +713,7 @@ class KeyboardActionHandlerTest {
 
         handler.onEnterShortPress()
         verify(sink).commitText("a")
-        verify(sink).getCurrentEditorInfo()
-        verify(sink).performEditorAction(EditorInfo.IME_ACTION_SEND)
-        verify(sink, never()).commitNewline()
+        verify(sink).performEditorActionOrNewline()
     }
 
     @Test

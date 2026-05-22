@@ -19,7 +19,8 @@ object EnterActionPolicy {
         val action = imeOptions and EditorInfo.IME_MASK_ACTION
         return action == EditorInfo.IME_ACTION_SEARCH ||
                 action == EditorInfo.IME_ACTION_GO ||
-                action == EditorInfo.IME_ACTION_NEXT
+                action == EditorInfo.IME_ACTION_NEXT ||
+                action == EditorInfo.IME_ACTION_DONE
     }
 
     fun shouldInsertNewline(editorInfo: EditorInfo?): Boolean {
@@ -28,8 +29,7 @@ object EnterActionPolicy {
         if (imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0) return true
         val action = imeOptions and EditorInfo.IME_MASK_ACTION
         return action == EditorInfo.IME_ACTION_NONE ||
-                action == EditorInfo.IME_ACTION_UNSPECIFIED ||
-                action == EditorInfo.IME_ACTION_DONE
+                action == EditorInfo.IME_ACTION_UNSPECIFIED
     }
 
     fun getAction(editorInfo: EditorInfo?): Int {

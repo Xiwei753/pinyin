@@ -323,6 +323,50 @@ class XiweiT9ImeServiceUiBehaviorTest {
     }
 
     @Test
+    fun testEnterAction_searchAction_performsSearch() {
+        val (service, ic) = setupServiceForEnterAction(
+            imeOptions = EditorInfo.IME_ACTION_SEARCH,
+        )
+        `when`(ic.performEditorAction(anyInt())).thenReturn(true)
+        service.performEditorActionOrNewline()
+        verify(ic).performEditorAction(EditorInfo.IME_ACTION_SEARCH)
+        verify(ic, never()).commitText("\n", 1)
+    }
+
+    @Test
+    fun testEnterAction_goAction_performsGo() {
+        val (service, ic) = setupServiceForEnterAction(
+            imeOptions = EditorInfo.IME_ACTION_GO,
+        )
+        `when`(ic.performEditorAction(anyInt())).thenReturn(true)
+        service.performEditorActionOrNewline()
+        verify(ic).performEditorAction(EditorInfo.IME_ACTION_GO)
+        verify(ic, never()).commitText("\n", 1)
+    }
+
+    @Test
+    fun testEnterAction_nextAction_performsNext() {
+        val (service, ic) = setupServiceForEnterAction(
+            imeOptions = EditorInfo.IME_ACTION_NEXT,
+        )
+        `when`(ic.performEditorAction(anyInt())).thenReturn(true)
+        service.performEditorActionOrNewline()
+        verify(ic).performEditorAction(EditorInfo.IME_ACTION_NEXT)
+        verify(ic, never()).commitText("\n", 1)
+    }
+
+    @Test
+    fun testEnterAction_doneAction_performsDone() {
+        val (service, ic) = setupServiceForEnterAction(
+            imeOptions = EditorInfo.IME_ACTION_DONE,
+        )
+        `when`(ic.performEditorAction(anyInt())).thenReturn(true)
+        service.performEditorActionOrNewline()
+        verify(ic).performEditorAction(EditorInfo.IME_ACTION_DONE)
+        verify(ic, never()).commitText("\n", 1)
+    }
+
+    @Test
     fun testEnterAction_sendAction_returnsFalse_fallsbackToNewline() {
         val (service, ic) = setupServiceForEnterAction(
             imeOptions = EditorInfo.IME_ACTION_SEND,
@@ -404,7 +448,8 @@ class XiweiT9ImeServiceUiBehaviorTest {
         handler.onEnter()
         // When buffer is non-empty and no candidates, preedit should be committed
         verify(mockSink).commitText("wo")
-        verify(mockSink, never()).performEditorActionOrNewline()
+        verify(mockSink).performEditorActionOrNewline()
+        verify(mockSink, atLeastOnce()).refreshUi()
     }
 
     @Test
@@ -424,7 +469,8 @@ class XiweiT9ImeServiceUiBehaviorTest {
 
         handler.onEnter()
         verify(mockSink).commitText("a")
-        verify(mockSink, never()).performEditorActionOrNewline()
+        verify(mockSink).performEditorActionOrNewline()
+        verify(mockSink, atLeastOnce()).refreshUi()
     }
 
     @Test

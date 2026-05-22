@@ -100,8 +100,6 @@ class KeyboardActionHandler(
     fun onEnter() = onEnterShortPress()
 
     fun onEnterShortPress() {
-        // Android adapter boundary: core EnterShortPressed describes default composing/newline behavior.
-        // This path additionally applies EditorInfo action policy and must not move into imecore.
         val hasComposing = when (keyboardMode) {
             KeyboardMode.ChineseT9 -> rawBuffer.isNotEmpty()
             KeyboardMode.EnglishT9 -> englishPending
@@ -112,24 +110,7 @@ class KeyboardActionHandler(
             if (keyboardMode == KeyboardMode.ChineseT9) handle(ImeInputAction.SpacePressed)
             else commitEnglishChar()
         }
-
-        val editorInfo = actionSink.getCurrentEditorInfo()
-        if (EnterActionPolicy.shouldSend(editorInfo)) {
-            actionSink.performEditorAction(EnterActionPolicy.getAction(editorInfo))
-            actionSink.refreshUi()
-            return
-        }
-        if (hasComposing) {
-            actionSink.commitNewline()
-            actionSink.refreshUi()
-            return
-        }
-        if (EnterActionPolicy.shouldRunExplicitAction(editorInfo)) {
-            actionSink.performEditorAction(EnterActionPolicy.getAction(editorInfo))
-            actionSink.refreshUi()
-            return
-        }
-        actionSink.commitNewline()
+        actionSink.performEditorActionOrNewline()
         actionSink.refreshUi()
     }
 
@@ -144,7 +125,16 @@ class KeyboardActionHandler(
     @Deprecated("Use handle(ImeInputAction.ToggleSymbol/ToggleNumber/...) or lifecycle helpers; this compatibility wrapper must stay logic-free.")
     fun switchKeyboardMode(targetMode: KeyboardMode) = handle(ImeInputAction.KeyboardModeSelected(targetMode.toInputMode()))
 
-    fun discardCompositionForLifecycle() = handle(ImeInputAction.LifecycleStartInput)
+    fun discardCompositionForLifecycle() = handle(ImeInputAction.LifecycleStartInput(InputMode.ChineseT9, InputMode.ChineseT9))
+
+    fun beginInputContext(initialMode: KeyboardMode, initialLastTextMode: KeyboardMode) {
+        handle(
+            ImeInputAction.LifecycleStartInput(
+                initialMode = initialMode.toInputMode(),
+                initialLastTextMode = initialLastTextMode.toInputMode(),
+            )
+        )
+    }
 
     fun resetToChineseModeForLifecycle() = switchMode(KeyboardMode.ChineseT9)
 

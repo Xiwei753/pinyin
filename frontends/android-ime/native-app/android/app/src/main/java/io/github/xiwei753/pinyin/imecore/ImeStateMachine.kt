@@ -79,14 +79,25 @@ class ImeStateMachine(
             is ImeInputAction.CandidateSelected -> onCandidateSelected(action.index, effects)
             is ImeInputAction.ReadingSelected -> onReadingSelected(action.index, effects)
             ImeInputAction.ClearComposing -> clearComposing(effects, finishComposing = false)
-            ImeInputAction.LifecycleStartInput -> clearComposing(effects, finishComposing = true)
+            is ImeInputAction.LifecycleStartInput -> onLifecycleStart(action, effects)
             ImeInputAction.LifecycleFinishInput -> {
                 clearComposing(effects, finishComposing = true)
                 mode = InputMode.ChineseT9
+                lastTextMode = InputMode.ChineseT9
+                currentSymbolCategory = "punct"
                 effects.add(ImeSideEffect.RefreshUi)
             }
         }
         return effects
+    }
+
+    private fun onLifecycleStart(action: ImeInputAction.LifecycleStartInput, effects: MutableList<ImeSideEffect>) {
+        clearComposing(effects, finishComposing = true)
+        mode = action.initialMode
+        lastTextMode = action.initialLastTextMode
+        currentSymbolCategory = "punct"
+        refreshCandidates()
+        effects.add(ImeSideEffect.RefreshUi)
     }
 
     private fun refreshCandidates() {
