@@ -131,6 +131,7 @@ class KeyboardActionHandler(
             KeyboardMode.ChineseT9 -> onChineseDigit(digit)
             KeyboardMode.Number, KeyboardMode.Symbol -> {
                 actionSink.commitText(digit)
+                actionSink.refreshUi()
             }
         }
     }
@@ -296,6 +297,7 @@ class KeyboardActionHandler(
             commitEnglishChar()
         }
         actionSink.commitText(text)
+        actionSink.refreshUi()
     }
 
     fun onDelete() {
@@ -306,6 +308,7 @@ class KeyboardActionHandler(
             } else {
                 commitEnglishChar()
                 actionSink.sendDelete()
+                actionSink.refreshUi()
             }
             return
         }
@@ -319,15 +322,14 @@ class KeyboardActionHandler(
                 }
             } else {
                 if (fallbackBuffer.isNotEmpty()) {
-                    if (fallbackBuffer.isNotEmpty()) {
-                        fallbackBuffer = fallbackBuffer.substring(0, fallbackBuffer.length - 1)
-                    }
+                    fallbackBuffer = fallbackBuffer.substring(0, fallbackBuffer.length - 1)
                     actionSink.refreshUi()
                     return
                 }
             }
         }
         actionSink.sendDelete()
+        actionSink.refreshUi()
     }
 
     fun onEnter() {
@@ -351,12 +353,14 @@ class KeyboardActionHandler(
         if (EnterActionPolicy.shouldSend(editorInfo)) {
             val action = EnterActionPolicy.getAction(editorInfo)
             actionSink.performEditorAction(action)
+            actionSink.refreshUi()
             return
         }
 
         // Had composing and not SEND: insert newline
         if (hasComposing) {
             actionSink.commitNewline()
+            actionSink.refreshUi()
             return
         }
 
@@ -364,11 +368,13 @@ class KeyboardActionHandler(
         if (EnterActionPolicy.shouldRunExplicitAction(editorInfo)) {
             val action = EnterActionPolicy.getAction(editorInfo)
             actionSink.performEditorAction(action)
+            actionSink.refreshUi()
             return
         }
 
         // Default (NONE/UNSPECIFIED/DONE): insert newline, do NOT close keyboard
         actionSink.commitNewline()
+        actionSink.refreshUi()
     }
 
     fun onEnterLongPress() {
@@ -386,6 +392,7 @@ class KeyboardActionHandler(
             else -> {}
         }
         actionSink.commitNewline()
+        actionSink.refreshUi()
     }
 
     private fun commitCurrentComposing() {

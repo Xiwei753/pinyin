@@ -164,4 +164,86 @@ class KeyboardLayoutModelTest {
         assertNotNull("Should have space key", spaceKey)
         assertEquals(KeyboardKeyRole.SPACE, spaceKey!!.role)
     }
+
+    @Test
+    fun buildT9WithComposingTrueGeneratesCorrectReadingKeys() {
+        val readings = listOf("mi", "qu", "a")
+        // Build with isComposing = true, activeReading = "qu"
+        val model = builder.buildT9(
+            panelWidth = 1080,
+            panelHeight = 480,
+            rowHeight = 96,
+            bottomRowHeight = 88,
+            horizontalGap = 8,
+            verticalGap = 8,
+            readings = readings,
+            isComposing = true,
+            keyboardMode = KeyboardMode.ChineseT9,
+            activeReading = "qu"
+        )
+
+        // Verify leftRailKeys contains only reading keys, no punct keys
+        assertEquals("Should have exactly 3 reading keys", 3, model.leftRailKeys.size)
+        
+        for (i in 0 until 3) {
+            val key = model.leftRailKeys[i]
+            assertEquals(KeyboardKeyRole.LEFT_RAIL_READING, key.role)
+            assertEquals("reading_$i", key.id)
+            assertEquals(readings[i], key.label)
+            assertEquals("reading:$i", key.action)
+            assertTrue(key.isLeftRail)
+            
+            // Height check: should be availableScrollHeight / 4
+            val geo = T9KeyboardGeometry.calculate(1080, 480, 96, 88, 8, 8)
+            val expectedHeight = geo.leftRailScrollRect.height() / 4
+            assertEquals("Key height should be availableScrollHeight / 4", expectedHeight, key.rect.height())
+        }
+
+        // Active reading selection check
+        assertFalse("mi is not active", model.leftRailKeys[0].isSelected)
+        assertTrue("qu is active", model.leftRailKeys[1].isSelected)
+        assertFalse("a is not active", model.leftRailKeys[2].isSelected)
+    }
+
+    @Test
+    fun buildT9WithMoreThanFourReadingsCapsAtFour() {
+        val readings = listOf("mi", "qu", "a", "xian", "sheng")
+        val model = builder.buildT9(
+            panelWidth = 1080,
+            panelHeight = 480,
+            rowHeight = 96,
+            bottomRowHeight = 88,
+            horizontalGap = 8,
+            verticalGap = 8,
+            readings = readings,
+            isComposing = true,
+            keyboardMode = KeyboardMode.ChineseT9
+        )
+
+        assertEquals("Should cap at 4 reading keys", 4, model.leftRailKeys.size)
+        assertEquals("mi", model.leftRailKeys[0].label)
+        assertEquals("qu", model.leftRailKeys[1].label)
+        assertEquals("a", model.leftRailKeys[2].label)
+        assertEquals("xian", model.leftRailKeys[3].label)
+    }
+
+    @Test
+    fun buildT9WithComposingFalseGeneratesPunctKeys() {
+        val model = builder.buildT9(
+            panelWidth = 1080,
+            panelHeight = 480,
+            rowHeight = 96,
+            bottomRowHeight = 88,
+            horizontalGap = 8,
+            verticalGap = 8,
+            readings = listOf("mi", "qu"),
+            isComposing = false,
+            keyboardMode = KeyboardMode.ChineseT9
+        )
+
+        assertEquals("Should have 4 punctuation keys when not composing", 4, model.leftRailKeys.size)
+        for (key in model.leftRailKeys) {
+            assertEquals(KeyboardKeyRole.LEFT_RAIL_PUNCT, key.role)
+        }
+    }
 }

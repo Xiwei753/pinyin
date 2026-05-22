@@ -39,9 +39,28 @@ class CandidateViewController(
     }
 
     fun refreshUi(handler: KeyboardActionHandler) {
-        val preedit = handler.preedit
-        val hasInput = handler.rawBuffer.isNotEmpty()
-        val isT9Mode = handler.keyboardMode == KeyboardMode.ChineseT9 || handler.keyboardMode == KeyboardMode.EnglishT9
+        val limit = settingsRepository.getCandidateCount()
+        val candidates = handler.refreshCandidates(limit)
+        val isComposing = handler.rawBuffer.isNotEmpty()
+        val state = KeyboardUiState(
+            keyboardMode = handler.keyboardMode,
+            lastTextMode = handler.lastTextMode,
+            rawBuffer = handler.rawBuffer,
+            preedit = handler.preedit,
+            readings = handler.readings,
+            activeReading = handler.activeReading,
+            candidatesSnapshot = candidates,
+            currentSymCategory = "punct",
+            isComposing = isComposing,
+            themePalette = palette
+        )
+        refreshFromState(state, handler)
+    }
+
+    fun refreshFromState(state: KeyboardUiState, handler: KeyboardActionHandler) {
+        val preedit = state.preedit
+        val hasInput = state.rawBuffer.isNotEmpty()
+        val isT9Mode = state.keyboardMode == KeyboardMode.ChineseT9 || state.keyboardMode == KeyboardMode.EnglishT9
 
         if (isT9Mode && hasInput && preedit.isNotEmpty()) {
             v.pinyinFloatingBar.visibility = View.VISIBLE
@@ -50,8 +69,7 @@ class CandidateViewController(
             v.pinyinFloatingBar.visibility = View.GONE
         }
 
-        val limit = settingsRepository.getCandidateCount()
-        val candidates = handler.refreshCandidates(limit)
+        val candidates = state.candidatesSnapshot
 
         if (candidates.isEmpty() && !isDictPreparing) {
             v.candidateContainer.visibility = View.GONE

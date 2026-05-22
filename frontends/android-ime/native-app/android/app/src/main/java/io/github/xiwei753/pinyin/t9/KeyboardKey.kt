@@ -25,4 +25,5 @@ data class KeyboardKey(
     val isLeftRail: Boolean = false,
     val isRightRail: Boolean = false,
     val isBottomRow: Boolean = false,
+    val isSelected: Boolean = false,
 )

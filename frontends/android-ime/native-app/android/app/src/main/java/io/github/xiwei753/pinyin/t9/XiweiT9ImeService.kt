@@ -305,7 +305,15 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     }
 
     private fun rebuildLayoutModel() {
-        if (!this::xiweiKeyboardView.isInitialized || !this::handler.isInitialized) return
+        if (!this::handler.isInitialized) return
+        val state = buildKeyboardUiState()
+        renderFromState(state)
+    }
+
+    private fun rebuildLayoutModel(state: KeyboardUiState): KeyboardLayoutModel {
+        if (!this::xiweiKeyboardView.isInitialized || !this::handler.isInitialized) {
+            return KeyboardLayoutModel(emptyList(), emptyList(), null, 0, 0)
+        }
 
         val metrics = heightController.calculateHeight()
         val density = resources.displayMetrics.density
@@ -322,10 +330,8 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             panelHeight = metrics.shellHeight
         }
 
-        val model = when (handler.keyboardMode) {
+        return when (state.keyboardMode) {
             KeyboardMode.ChineseT9, KeyboardMode.EnglishT9 -> {
-                val readings = handler.readings
-                val isComposing = handler.engine?.buffer?.isNotEmpty() == true
                 layoutBuilder.buildT9(
                     panelWidth = panelWidth,
                     panelHeight = panelHeight,
@@ -333,9 +339,10 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                     bottomRowHeight = metrics.bottomRowHeightPx,
                     horizontalGap = hGap,
                     verticalGap = vGap,
-                    readings = readings,
-                    isComposing = isComposing,
-                    keyboardMode = handler.keyboardMode,
+                    readings = state.readings,
+                    isComposing = state.isComposing,
+                    keyboardMode = state.keyboardMode,
+                    activeReading = state.activeReading,
                 )
             }
             KeyboardMode.Number -> {
@@ -346,12 +353,12 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                     bottomRowHeight = metrics.bottomRowHeightPx,
                     horizontalGap = hGap,
                     verticalGap = vGap,
-                    keyboardMode = handler.keyboardMode,
-                    lastTextMode = handler.lastTextMode,
+                    keyboardMode = state.keyboardMode,
+                    lastTextMode = state.lastTextMode,
                 )
             }
             KeyboardMode.Symbol -> {
-                val pageName = currentSymCategory
+                val pageName = state.currentSymCategory
                 val catEntries = getEntriesForPage(pageName)
                 layoutBuilder.buildSymbol(
                     panelWidth = panelWidth,
@@ -362,14 +369,23 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                     verticalGap = vGap,
                     symbolEntries = catEntries,
                     activeCategory = pageName,
-                    lastTextMode = handler.lastTextMode,
+                    lastTextMode = state.lastTextMode,
                     categoryToPage = categoryToPage,
                     registry = registry,
                     density = density,
                 )
             }
         }
+    }
 
+    private fun renderFromState(state: KeyboardUiState) {
+        if (!this::xiweiKeyboardView.isInitialized) return
+        xiweiKeyboardView.keyboardMode = state.keyboardMode
+        xiweiKeyboardView.activeSymCategory = state.currentSymCategory
+        xiweiKeyboardView.lastTextMode = state.lastTextMode
+        xiweiKeyboardView.palette = state.themePalette
+
+        val model = rebuildLayoutModel(state)
         xiweiKeyboardView.layoutModel = model
         xiweiKeyboardView.invalidate()
     }
@@ -513,11 +529,46 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         return currentInputConnection?.performEditorAction(action) ?: false
     }
 
+    private fun buildKeyboardUiState(): KeyboardUiState {
+        val limit = if (this::settingsRepository.isInitialized) settingsRepository.getCandidateCount() else 9
+        val candidates = if (this::handler.isInitialized) handler.refreshCandidates(limit) else emptyList()
+        val isComposing = if (this::handler.isInitialized) handler.rawBuffer.isNotEmpty() else false
+        val palette = if (this::themeController.isInitialized) themeController.getThemePalette() else ThemePalette(
+            bgColor = ThemeColors.LIGHT_BG,
+            candidateBarColor = ThemeColors.LIGHT_CANDIDATE_BAR,
+            textColor = ThemeColors.LIGHT_TEXT,
+            subColor = ThemeColors.LIGHT_SUB,
+            preeditBgColor = ThemeColors.LIGHT_PREEDIT_BG,
+            symTabActiveBg = ThemeColors.LIGHT_TAB_ACTIVE_BG,
+            symTabInactiveBg = ThemeColors.LIGHT_TAB_INACTIVE_BG,
+            symTabActiveText = ThemeColors.LIGHT_TAB_ACTIVE_TEXT,
+            symTabInactiveText = ThemeColors.LIGHT_TAB_INACTIVE_TEXT,
+            isDark = false,
+            keyBgColor = ThemeColors.LIGHT_KEY_BG,
+            specialKeyBgColor = ThemeColors.LIGHT_SPECIAL_KEY_BG,
+            keyPressedBgColor = ThemeColors.LIGHT_KEY_PRESSED,
+            specialKeyPressedBgColor = ThemeColors.LIGHT_SPECIAL_KEY_PRESSED,
+        )
+        return KeyboardUiState(
+            keyboardMode = if (this::handler.isInitialized) handler.keyboardMode else KeyboardMode.ChineseT9,
+            lastTextMode = if (this::handler.isInitialized) handler.lastTextMode else KeyboardMode.ChineseT9,
+            rawBuffer = if (this::handler.isInitialized) handler.rawBuffer else "",
+            preedit = if (this::handler.isInitialized) handler.preedit else "",
+            readings = if (this::handler.isInitialized) handler.readings else emptyList(),
+            activeReading = if (this::handler.isInitialized) handler.activeReading else null,
+            candidatesSnapshot = candidates,
+            currentSymCategory = currentSymCategory,
+            isComposing = isComposing,
+            themePalette = palette
+        )
+    }
+
     override fun refreshUi() {
         if (!this::keyboardViews.isInitialized || !this::handler.isInitialized || !this::candidateViewController.isInitialized) return
-        candidateViewController.refreshUi(handler)
+        val state = buildKeyboardUiState()
+        candidateViewController.refreshFromState(state, handler)
         if (this::xiweiKeyboardView.isInitialized) {
-            rebuildLayoutModel()
+            renderFromState(state)
         }
         logDebugInfo()
     }

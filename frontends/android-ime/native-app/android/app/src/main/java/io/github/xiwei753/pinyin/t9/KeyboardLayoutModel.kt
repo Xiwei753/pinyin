@@ -22,22 +22,22 @@ class KeyboardLayoutBuilder {
         readings: List<String>,
         isComposing: Boolean,
         keyboardMode: KeyboardMode,
+        activeReading: String? = null,
     ): KeyboardLayoutModel {
         val geo = T9KeyboardGeometry.calculate(panelWidth, panelHeight, rowHeight, bottomRowHeight, horizontalGap, verticalGap)
         val keys = mutableListOf<KeyboardKey>()
         val leftRailKeys = mutableListOf<KeyboardKey>()
 
         val punctLabelHeight = rowHeight / 2
-        val readingLabelHeight = rowHeight / 2
 
         val availableScrollHeight = geo.leftRailScrollRect.height()
 
         var y = geo.leftRailScrollRect.top
         if (isComposing) {
-            val readingHeight = minOf(readingLabelHeight, availableScrollHeight / maxOf(1, readings.size.coerceAtLeast(6)))
-            for (i in 0 until maxOf(6, readings.size)) {
-                if (y + readingHeight > geo.leftRailScrollRect.bottom + 5) break
-                val readingText = readings.getOrElse(i) { "" }
+            val readingHeight = availableScrollHeight / 4
+            val count = minOf(4, readings.size)
+            for (i in 0 until count) {
+                val readingText = readings[i]
                 val r = Rect(geo.leftRailScrollRect.left, y, geo.leftRailScrollRect.right, y + readingHeight)
                 leftRailKeys.add(
                     KeyboardKey(
@@ -47,6 +47,7 @@ class KeyboardLayoutBuilder {
                         label = readingText,
                         action = "reading:$i",
                         isLeftRail = true,
+                        isSelected = (readingText == activeReading),
                     )
                 )
                 y += readingHeight

@@ -103,6 +103,10 @@ class KeyboardRenderer {
             }
         }
 
+        if (key.isSelected) {
+            return palette.symTabActiveBg
+        }
+
         return when (key.role) {
             KeyboardKeyRole.SPECIAL, KeyboardKeyRole.LEFT_RAIL_PUNCT,
             KeyboardKeyRole.LEFT_RAIL_READING, KeyboardKeyRole.SYMBOL_TAB,
@@ -131,8 +135,8 @@ class KeyboardRenderer {
         radius: Float,
         density: Float,
     ) {
-        val textColor = when (key.role) {
-            KeyboardKeyRole.SYMBOL_TAB -> palette.textColor
+        val textColor = when {
+            key.isSelected -> palette.symTabActiveText
             else -> palette.textColor
         }
         val subColor = palette.subColor
@@ -179,7 +183,7 @@ class KeyboardRenderer {
             }
             KeyboardKeyRole.LEFT_RAIL_READING -> {
                 textPaint.color = textColor
-                textPaint.textSize = minOf(rect.height() * 0.38f, rect.width() * 0.40f)
+                textPaint.textSize = minOf(rect.height() * 0.45f, rect.width() * 0.65f)
                 val centerX = rect.centerX().toFloat()
                 val textY = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
                 canvas.drawText(key.label, centerX, textY, textPaint)

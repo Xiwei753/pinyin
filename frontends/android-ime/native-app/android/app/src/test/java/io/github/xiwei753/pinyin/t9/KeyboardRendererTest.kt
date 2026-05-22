@@ -3,6 +3,7 @@ package io.github.xiwei753.pinyin.t9
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RectF
 import org.junit.Assert.*
 import org.junit.Test
 import org.mockito.ArgumentCaptor
@@ -139,5 +140,90 @@ class KeyboardRendererTest {
 
         // It should be near the center (50) minus descent/ascent offset.
         assertTrue("Digit should be drawn near the center. drawnY=$drawnY", drawnY > 30f && drawnY < 70f)
+    }
+
+    @Test
+    fun testReadingTextSizeIsLargeEnough() {
+        val renderer = KeyboardRenderer()
+        val mockCanvas = mock(Canvas::class.java)
+        val palette = ThemePalette(
+            bgColor = 0, candidateBarColor = 0, textColor = 0, subColor = 0,
+            preeditBgColor = 0, symTabActiveBg = 0, symTabInactiveBg = 0,
+            symTabActiveText = 0, symTabInactiveText = 0, isDark = false,
+            keyBgColor = 0, specialKeyBgColor = 0, keyPressedBgColor = 0, specialKeyPressedBgColor = 0
+        )
+        
+        val readingKey = KeyboardKey(
+            id = "reading_0",
+            role = KeyboardKeyRole.LEFT_RAIL_READING,
+            rect = Rect(0, 0, 100, 100),
+            label = "mi",
+            action = "reading:0",
+        )
+        val model = KeyboardLayoutModel(emptyList(), listOf(readingKey), null, 1000, 1000)
+
+        var capturedTextSize = 0f
+
+        doAnswer { invocation ->
+            val text = invocation.arguments[0] as String
+            if (text == "mi") {
+                val paint = invocation.arguments[3] as Paint
+                capturedTextSize = paint.textSize
+                println("Reading text size: $capturedTextSize")
+            }
+            null
+        }.`when`(mockCanvas).drawText(anyString(), anyFloat(), anyFloat(), any(Paint::class.java))
+
+        renderer.drawKeyboard(mockCanvas, model, palette, 1f, KeyboardMode.ChineseT9, null)
+
+        // Height is 100, Width is 100. Size should be minOf(100 * 0.45, 100 * 0.65) = 45.
+        assertEquals(45f, capturedTextSize, 0.01f)
+    }
+
+    @Test
+    fun testSelectedKeyDrawsActiveColors() {
+        val renderer = KeyboardRenderer()
+        val mockCanvas = mock(Canvas::class.java)
+        val palette = ThemePalette(
+            bgColor = 0, candidateBarColor = 0, textColor = 0xAA000000.toInt(), subColor = 0,
+            preeditBgColor = 0, symTabActiveBg = 0xFFFF0000.toInt(), symTabInactiveBg = 0,
+            symTabActiveText = 0xFF00FF00.toInt(), symTabInactiveText = 0, isDark = false,
+            keyBgColor = 0xBB000000.toInt(), specialKeyBgColor = 0, keyPressedBgColor = 0, specialKeyPressedBgColor = 0
+        )
+        
+        val selectedKey = KeyboardKey(
+            id = "reading_0",
+            role = KeyboardKeyRole.LEFT_RAIL_READING,
+            rect = Rect(0, 0, 100, 100),
+            label = "mi",
+            action = "reading:0",
+            isSelected = true,
+        )
+        val model = KeyboardLayoutModel(emptyList(), listOf(selectedKey), null, 1000, 1000)
+
+        var capturedBgColor = 0
+        var capturedTextColor = 0
+
+        // Capture background color
+        doAnswer { invocation ->
+            val paint = invocation.arguments[3] as Paint
+            capturedBgColor = paint.color
+            null
+        }.`when`(mockCanvas).drawRoundRect(any(RectF::class.java), anyFloat(), anyFloat(), any(Paint::class.java))
+
+        // Capture text color
+        doAnswer { invocation ->
+            val text = invocation.arguments[0] as String
+            if (text == "mi") {
+                val paint = invocation.arguments[3] as Paint
+                capturedTextColor = paint.color
+            }
+            null
+        }.`when`(mockCanvas).drawText(anyString(), anyFloat(), anyFloat(), any(Paint::class.java))
+
+        renderer.drawKeyboard(mockCanvas, model, palette, 1f, KeyboardMode.ChineseT9, null)
+
+        assertEquals("Background color should be symTabActiveBg", palette.symTabActiveBg, capturedBgColor)
+        assertEquals("Text color should be symTabActiveText", palette.symTabActiveText, capturedTextColor)
     }
 }
