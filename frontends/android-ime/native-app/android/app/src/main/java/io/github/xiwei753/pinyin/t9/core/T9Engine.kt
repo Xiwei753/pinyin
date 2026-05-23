@@ -66,6 +66,7 @@ class T9Engine(
         if (reading in currentReadings) {
             lockedSyllables.add(reading)
             lastVisibleBuffer = ""
+            invalidatePreeditCache()
             return true
         } else if (lockedSyllables.isNotEmpty()) {
             val previous = lockedSyllables.toList()
@@ -74,6 +75,7 @@ class T9Engine(
             if (reading in currentReadings) {
                 lockedSyllables.add(reading)
                 lastVisibleBuffer = ""
+                invalidatePreeditCache()
                 return true
             } else {
                 lockedSyllables.clear()
@@ -88,6 +90,7 @@ class T9Engine(
             if (reading in currentReadings) {
                 lockedSyllables.add(reading)
                 lastVisibleBuffer = ""
+                invalidatePreeditCache()
                 return true
             } else {
                 lockedSyllables.addAll(previous)
@@ -114,6 +117,10 @@ class T9Engine(
     private var lastLockedSyllables = listOf<String>()
     private var lastVisibleBuffer = ""
     private var lastInternalCandidates = listOf<Candidate>()
+    private var lastPreeditBuffer = ""
+    private var lastPreeditLockedSyllables = listOf<String>()
+    private var lastPreeditDictVersion = -1
+    private var lastPreeditValue = ""
 
     fun getCompositions(): List<PinyinComposition> {
         return pinyinComposer.getCompositions(buffer)
@@ -127,6 +134,7 @@ class T9Engine(
         if (digit.matches(Regex("^[1-9]$"))) {
             buffer += digit
             lockedSyllables.clear()
+            invalidatePreeditCache()
         }
     }
 
@@ -136,12 +144,14 @@ class T9Engine(
             while (lockedSyllables.isNotEmpty() && getValidCompositions().isEmpty()) {
                 lockedSyllables.removeLast()
             }
+            invalidatePreeditCache()
         }
     }
 
     fun clear() {
         buffer = ""
         lockedSyllables.clear()
+        invalidatePreeditCache()
         lastBuffer = ""
         lastCandidates = emptyList()
         lastLimit = -1
@@ -152,16 +162,76 @@ class T9Engine(
 
     fun getPreedit(): String {
         if (buffer.isEmpty()) return ""
-        val visible = getVisibleCandidates(2)
+        val currentDictVersion = dictionary.dictionaryVersion
+        if (buffer == lastPreeditBuffer && lockedSyllables == lastPreeditLockedSyllables && currentDictVersion == lastPreeditDictVersion && lastPreeditValue.isNotEmpty()) {
+            return lastPreeditValue
+        }
+        val visible = getVisibleCandidates()
         val bestCandidate = visible.firstOrNull()
 
-        if (bestCandidate != null && bestCandidate.text != buffer) {
-            return bestCandidate.sourcePinyin
+        val result = if (bestCandidate != null && bestCandidate.text != buffer) {
+            bestCandidate.sourcePinyin
+        } else {
+            val compositions = getValidCompositions()
+            val first = compositions.firstOrNull()
+            if (first == null || first.pinyinString.isEmpty()) "" else first.pinyinString
         }
+
+        lastPreeditBuffer = buffer
+        lastPreeditLockedSyllables = lockedSyllables.toList()
+        lastPreeditDictVersion = currentDictVersion
+        lastPreeditValue = result
+        return result
+    }
+
+    fun getPreeditHint(): String {
+        if (buffer.isEmpty()) return ""
         val compositions = getValidCompositions()
-        val first = compositions.firstOrNull()
-        if (first == null || first.pinyinString.isEmpty()) return ""
+        if (compositions.isEmpty()) return ""
+
+        val exactPhrase = generateExactPhraseCandidates(compositions.take(6), 1).firstOrNull()
+        if (exactPhrase != null && exactPhrase.sourcePinyin.isNotEmpty()) {
+            return exactPhrase.sourcePinyin
+        }
+
+        val exactSingles = generateExactSingleCandidates(compositions.take(6), 1).firstOrNull()
+        if (exactSingles != null && exactSingles.sourcePinyin.isNotEmpty()) {
+            return exactSingles.sourcePinyin
+        }
+
+        val first = compositions.firstOrNull() ?: return ""
         return first.pinyinString
+    }
+
+    fun createDetachedCandidateEngine(bufferSnapshot: String = buffer, lockedSyllablesSnapshot: List<String> = lockedSyllables.toList()): T9Engine? {
+        val clone = T9Engine(dictionary, userDictionary, logger)
+        clone.restoreState(bufferSnapshot, lockedSyllablesSnapshot)
+        return clone
+    }
+
+    internal fun restoreState(bufferSnapshot: String, lockedSyllablesSnapshot: List<String>) {
+        buffer = bufferSnapshot
+        lockedSyllables.clear()
+        lockedSyllables.addAll(lockedSyllablesSnapshot)
+        invalidatePreeditCache()
+        lastBuffer = ""
+        lastCandidates = emptyList()
+        lastLimit = -1
+        lastDictVersion = -1
+        lastVisibleCandidates = emptyList()
+        lastVisibleLimit = -1
+        lastVisibleDictVersion = -1
+        lastVisibleLockedSyllables = emptyList()
+        lastLockedSyllables = emptyList()
+        lastVisibleBuffer = ""
+        lastInternalCandidates = emptyList()
+    }
+
+    private fun invalidatePreeditCache() {
+        lastPreeditBuffer = ""
+        lastPreeditLockedSyllables = emptyList()
+        lastPreeditDictVersion = -1
+        lastPreeditValue = ""
     }
 
     fun getVisibleCandidates(limit: Int = 30): List<Candidate> {

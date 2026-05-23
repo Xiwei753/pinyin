@@ -2,6 +2,7 @@ package io.github.xiwei753.pinyin.imecore
 
 class ImeStateMachine(
     private val candidateLimitProvider: () -> Int = { 9 },
+    private val deferCandidateComputation: Boolean = false,
 ) {
     var engine: T9InputEngine? = null
         private set
@@ -18,6 +19,8 @@ class ImeStateMachine(
     private var candidateSelections: List<CandidateSelection> = emptyList()
     private var candidateLimit: Int = candidateLimitProvider()
     private var fallbackBuffer: String = ""
+    private var pendingCandidateRequest: CandidateRequest? = null
+    private var nextCandidateRequestId: Long = 0L
 
     private val englishMultiTapLetters = mapOf(
         '2' to "abc", '3' to "def", '4' to "ghi", '5' to "jkl",
@@ -38,7 +41,8 @@ class ImeStateMachine(
                 val letters = englishMultiTapLetters[englishDigit]
                 if (letters != null && englishIndex < letters.length) return letters[englishIndex].toString()
             }
-            return engine?.getPreedit() ?: fallbackBuffer
+            val currentEngine = engine ?: return fallbackBuffer
+            return if (deferCandidateComputation) currentEngine.getPreeditHint() else currentEngine.getPreedit()
         }
 
     fun attachEngine(newEngine: T9InputEngine) {
@@ -46,6 +50,21 @@ class ImeStateMachine(
         for (char in fallbackBuffer) newEngine.inputDigit(char.toString())
         fallbackBuffer = ""
         refreshCandidates()
+    }
+
+    fun drainPendingCandidateRequest(): CandidateRequest? {
+        val request = pendingCandidateRequest
+        pendingCandidateRequest = null
+        return request
+    }
+
+    fun applyCandidateResult(result: CandidateResult): Boolean {
+        if (!deferCandidateComputation) return false
+        if (result.requestId != nextCandidateRequestId) return false
+        candidateSelections = result.candidates.map { snapshot ->
+            CandidateSelection(snapshot) { engine?.commitCandidate(snapshot) }
+        }
+        return true
     }
 
     fun dispatch(action: ImeInputAction): List<ImeSideEffect> {
@@ -101,11 +120,33 @@ class ImeStateMachine(
     }
 
     private fun refreshCandidates() {
-        candidateSelections = if (mode == InputMode.ChineseT9) {
-            engine?.getVisibleCandidates(candidateLimit) ?: emptyList()
-        } else {
-            emptyList()
+        if (mode != InputMode.ChineseT9) {
+            candidateSelections = emptyList()
+            pendingCandidateRequest = null
+            nextCandidateRequestId++
+            return
         }
+
+        if (rawBuffer.isEmpty()) {
+            candidateSelections = emptyList()
+            pendingCandidateRequest = null
+            nextCandidateRequestId++
+            return
+        }
+
+        val currentEngine = engine
+        if (deferCandidateComputation) {
+            val request = CandidateRequest(
+                requestId = ++nextCandidateRequestId,
+                buffer = rawBuffer,
+                lockedSyllables = currentEngine?.lockedSyllables?.toList() ?: emptyList(),
+                limit = candidateLimit,
+            )
+            pendingCandidateRequest = request
+            return
+        }
+
+        candidateSelections = currentEngine?.getVisibleCandidates(candidateLimit) ?: emptyList()
     }
 
     fun uiState(isDictionaryPreparing: Boolean = false): ImeUiState {
@@ -345,6 +386,8 @@ class ImeStateMachine(
         candidate.commit()
         candidateSelections = emptyList()
         fallbackBuffer = ""
+        pendingCandidateRequest = null
+        nextCandidateRequestId++
         effects.add(ImeSideEffect.CommitCandidate(candidate.snapshot.text))
         effects.add(ImeSideEffect.RefreshUi)
     }
@@ -354,6 +397,8 @@ class ImeStateMachine(
         engine?.clear()
         fallbackBuffer = ""
         candidateSelections = emptyList()
+        pendingCandidateRequest = null
+        nextCandidateRequestId++
         effects.add(ImeSideEffect.RefreshUi)
     }
 
@@ -361,6 +406,8 @@ class ImeStateMachine(
         engine?.clear()
         fallbackBuffer = ""
         candidateSelections = emptyList()
+        pendingCandidateRequest = null
+        nextCandidateRequestId++
         if (englishPending) {
             englishPending = false
             effects.add(ImeSideEffect.CancelEnglishTimeout)

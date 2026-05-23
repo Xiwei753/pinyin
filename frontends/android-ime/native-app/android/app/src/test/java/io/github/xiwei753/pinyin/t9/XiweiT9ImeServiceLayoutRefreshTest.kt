@@ -89,7 +89,10 @@ class XiweiT9ImeServiceLayoutRefreshTest {
         
         engine = mock(T9Engine::class.java)
         `when`(engine.getPreedit()).thenReturn("")
+        `when`(engine.getPreeditHint()).thenReturn("")
         `when`(engine.buffer).thenReturn("")
+        `when`(engine.getVisibleCandidates(anyInt())).thenReturn(emptyList())
+        `when`(engine.createDetachedCandidateEngine(anyString(), anyList())).thenReturn(engine)
         handler.attachEngine(engine)
 
         // Let's ensure the initial view bindings triggered layout update, and clear the invocations
@@ -128,6 +131,7 @@ class XiweiT9ImeServiceLayoutRefreshTest {
     fun testInputDigitShowsReadingsAndTriggersRefresh() {
         `when`(engine.buffer).thenReturn("64")
         `when`(engine.getPreedit()).thenReturn("ni")
+        `when`(engine.getPreeditHint()).thenReturn("ni")
         `when`(engine.readings).thenReturn(listOf("ni"))
 
         // Call onDigitPressed which should trigger refreshUi and rebuildLayoutModel
@@ -145,6 +149,7 @@ class XiweiT9ImeServiceLayoutRefreshTest {
     fun testOnDeleteClearsBufferAndReturnsToPunct() {
         `when`(engine.buffer).thenReturn("6").thenReturn("")
         `when`(engine.getPreedit()).thenReturn("")
+        `when`(engine.getPreeditHint()).thenReturn("")
         `when`(engine.readings).thenReturn(emptyList())
 
         handler.onDelete()
@@ -158,6 +163,7 @@ class XiweiT9ImeServiceLayoutRefreshTest {
     fun testSetActiveReadingTriggersRefresh() {
         `when`(engine.buffer).thenReturn("64")
         `when`(engine.getPreedit()).thenReturn("ni")
+        `when`(engine.getPreeditHint()).thenReturn("ni")
         `when`(engine.readings).thenReturn(listOf("ni", "mi"))
         `when`(engine.setActiveReading(anyString())).thenReturn(true)
 
@@ -172,6 +178,7 @@ class XiweiT9ImeServiceLayoutRefreshTest {
         // mock candidate click when not empty
         `when`(engine.buffer).thenReturn("64")
         `when`(engine.getPreedit()).thenReturn("ni")
+        `when`(engine.getPreeditHint()).thenReturn("ni")
         `when`(engine.readings).thenReturn(listOf("ni"))
         
         val dummyCandidate = io.github.xiwei753.pinyin.t9.core.Candidate("ni", "你", 100)

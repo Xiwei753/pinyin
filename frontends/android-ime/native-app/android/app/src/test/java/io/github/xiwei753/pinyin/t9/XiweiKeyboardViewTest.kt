@@ -36,6 +36,26 @@ class XiweiKeyboardViewTest {
     }
 
     @Test
+    fun hapticFiresBeforeInputActionDispatch() {
+        val view = createView()
+        view.layoutModel = buildT9Layout()
+        view.palette = lightPalette()
+
+        val events = mutableListOf<String>()
+        view.onHapticTap = { events.add("haptic") }
+        view.onInputAction = { events.add("input") }
+
+        val key2 = view.layoutModel!!.keys.find { it.id == "key_2" }!!
+        val cx = key2.rect.centerX().toFloat()
+        val cy = key2.rect.centerY().toFloat()
+
+        view.onTouchEvent(makeTouchEvent(MotionEvent.ACTION_DOWN, cx, cy))
+        view.onTouchEvent(makeTouchEvent(MotionEvent.ACTION_UP, cx, cy))
+
+        assertEquals(listOf("haptic", "input"), events)
+    }
+
+    @Test
     fun actionDownThenActionCancelDoesNotCrash() {
         val view = createView()
         view.layoutModel = buildT9Layout()

@@ -155,7 +155,7 @@ class XiweiT9ImeServiceUiBehaviorTest {
         val service = createService()
         val engine = mock(T9Engine::class.java)
         val candidate = Candidate("我", "96", 900)
-        `when`(engine.buffer).thenReturn("96", "")
+        `when`(engine.buffer).thenReturn("96")
         `when`(engine.getPreedit()).thenReturn("wo", "")
         `when`(engine.readings).thenReturn(listOf("wo"))
         `when`(engine.activeReading).thenReturn("wo")

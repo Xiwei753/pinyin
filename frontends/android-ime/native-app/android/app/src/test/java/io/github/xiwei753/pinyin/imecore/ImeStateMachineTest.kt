@@ -33,7 +33,7 @@ class ImeStateMachineTest {
         `when`(dictionary.getExactCandidates(anyString())).thenReturn(emptyList())
         `when`(dictionary.getPrefixCandidates(anyString())).thenReturn(emptyList())
         `when`(dictionary.getSingleSyllableCandidates("wo")).thenReturn(listOf(candidate("我", "wo")))
-        machine = ImeStateMachine { 30 }
+        machine = ImeStateMachine(candidateLimitProvider = { 30 })
         machine.attachEngine(T9EngineAdapter(T9Engine(dictionary)))
     }
 
@@ -168,7 +168,7 @@ class ImeStateMachineTest {
                 CandidateSelection(CandidateSnapshotItem("乙", "2", "yi", 20, "TEST")) { },
             )
         )
-        val localMachine = ImeStateMachine { 30 }
+        val localMachine = ImeStateMachine(candidateLimitProvider = { 30 })
         localMachine.attachEngine(fake)
         fake.queryCount = 0
 
@@ -193,6 +193,67 @@ class ImeStateMachineTest {
         assertEquals(before, state2.candidatesSnapshot)
         verify(dictionary, never()).getSingleSyllableCandidates(anyString())
         verify(dictionary, never()).getPinyinExactCandidates(anyString())
+    }
+
+    @Test
+    fun staleCandidateResultCannotOverwriteNewerResult() {
+        val localMachine = ImeStateMachine({ 30 }, deferCandidateComputation = true)
+        val engine = MutableEngine(buffer = "", preedit = "")
+        localMachine.attachEngine(engine)
+
+        localMachine.dispatch(ImeInputAction.DigitPressed("9"))
+        val request1 = localMachine.drainPendingCandidateRequest()!!
+
+        localMachine.dispatch(ImeInputAction.DigitPressed("6"))
+        localMachine.drainPendingCandidateRequest()!!
+
+        localMachine.dispatch(ImeInputAction.DigitPressed("4"))
+        val request3 = localMachine.drainPendingCandidateRequest()!!
+
+        val appliedNewer = localMachine.applyCandidateResult(
+            CandidateResult(
+                requestId = request3.requestId,
+                candidates = listOf(CandidateSnapshotItem("乙", "964", "wo", 20, "TEST")),
+            )
+        )
+        assertTrue(appliedNewer)
+        assertEquals("乙", localMachine.currentCandidates.first().text)
+
+        val appliedStale = localMachine.applyCandidateResult(
+            CandidateResult(
+                requestId = request1.requestId,
+                candidates = listOf(CandidateSnapshotItem("甲", "96", "wo", 10, "TEST")),
+            )
+        )
+        assertFalse(appliedStale)
+        assertEquals("乙", localMachine.currentCandidates.first().text)
+    }
+
+    @Test
+    fun asyncCandidateClickUsesCachedSnapshotWithoutRequeryingEngine() {
+        val engine = SnapshotEngine(
+            listOf(
+                CandidateSelection(CandidateSnapshotItem("甲", "96", "wo", 10, "TEST")) { },
+            )
+        )
+        val machine = ImeStateMachine({ 30 }, deferCandidateComputation = true)
+        machine.attachEngine(engine)
+
+        machine.dispatch(ImeInputAction.DigitPressed("9"))
+        val request = machine.drainPendingCandidateRequest()!!
+        val applied = machine.applyCandidateResult(
+            CandidateResult(
+                requestId = request.requestId,
+                candidates = listOf(CandidateSnapshotItem("甲", "96", "wo", 10, "TEST")),
+            )
+        )
+        assertTrue(applied)
+
+        val effects = machine.dispatch(ImeInputAction.CandidateSelected(0))
+
+        assertTrue(effects.contains(ImeSideEffect.CommitCandidate("甲")))
+        assertEquals(1, engine.commitCount)
+        assertEquals(0, engine.queryCount)
     }
 
     @Test
@@ -227,7 +288,7 @@ class ImeStateMachineTest {
     @Test
     fun lifecycleStartInputResetsContextAndClearsEngineBuffer() {
         val engine = MutableEngine(buffer = "96", preedit = "wo")
-        val localMachine = ImeStateMachine { 30 }
+        val localMachine = ImeStateMachine(candidateLimitProvider = { 30 })
         localMachine.attachEngine(engine)
 
         localMachine.dispatch(ImeInputAction.LifecycleStartInput(InputMode.EnglishT9, InputMode.EnglishT9))
@@ -242,7 +303,7 @@ class ImeStateMachineTest {
     @Test
     fun lifecycleFinishInputResetsContextAndClearsSnapshot() {
         val engine = MutableEngine(buffer = "96", preedit = "wo")
-        val localMachine = ImeStateMachine { 30 }
+        val localMachine = ImeStateMachine(candidateLimitProvider = { 30 })
         localMachine.attachEngine(engine)
 
         localMachine.dispatch(ImeInputAction.ToggleSymbol)
@@ -270,15 +331,20 @@ class ImeStateMachineTest {
         var queryCount = 0
         var commitCount = 0
         override val buffer: String = "96"
+        override val lockedSyllables: List<String> = emptyList()
         override val readings: List<String> = listOf("wo")
         override val activeReading: String? = "wo"
         override fun getPreedit(): String = "wo"
+        override fun getPreeditHint(): String = "wo"
         override fun inputDigit(digit: String) {}
         override fun backspace() {}
         override fun clear() {}
         override fun getVisibleCandidates(limit: Int): List<CandidateSelection> {
             queryCount++
             return selections.map { selection -> selection.copy(commit = { commitCount++ }) }
+        }
+        override fun commitCandidate(candidate: CandidateSnapshotItem) {
+            commitCount++
         }
         override fun setActiveReading(reading: String): Boolean = false
     }
@@ -291,9 +357,11 @@ class ImeStateMachineTest {
         private var mutablePreedit: String = preedit
         var cleared: Boolean = false
         override val buffer: String get() = mutableBuffer
+        override val lockedSyllables: List<String> get() = emptyList()
         override val readings: List<String> get() = emptyList()
         override val activeReading: String? get() = null
         override fun getPreedit(): String = mutablePreedit
+        override fun getPreeditHint(): String = mutablePreedit
         override fun inputDigit(digit: String) {
             mutableBuffer += digit
         }
@@ -306,6 +374,7 @@ class ImeStateMachineTest {
             cleared = true
         }
         override fun getVisibleCandidates(limit: Int): List<CandidateSelection> = emptyList()
+        override fun commitCandidate(candidate: CandidateSnapshotItem) {}
         override fun setActiveReading(reading: String): Boolean = false
     }
 }

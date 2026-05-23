@@ -75,6 +75,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         super.onDestroy()
         DictionaryManager.unregisterListener(this)
         cancelEnglishTimeout()
+        if (this::handler.isInitialized) handler.destroy()
         deleteRepeatController.destroy()
         if (this::xiweiKeyboardView.isInitialized) {
             xiweiKeyboardView.destroy()
@@ -120,7 +121,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             hapticFeedbackManager = HapticFeedbackManager(this, settingsRepository)
         }
         if (!this::handler.isInitialized) {
-            handler = KeyboardActionHandler(this) { settingsRepository.getCandidateCount() }
+            handler = KeyboardActionHandler(this, { settingsRepository.getCandidateCount() }, deferCandidateComputation = true)
             T9DebugLogStore.initFileLogging(filesDir)
             DictionaryManager.registerListener(this)
             DictionaryManager.prepareAsync(this)

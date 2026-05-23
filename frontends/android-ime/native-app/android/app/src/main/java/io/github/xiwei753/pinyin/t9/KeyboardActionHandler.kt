@@ -11,10 +11,12 @@ import io.github.xiwei753.pinyin.t9.core.T9Engine
 class KeyboardActionHandler(
     val actionSink: ImeActionSink,
     private val candidateLimitProvider: () -> Int = { 30 },
+    private val deferCandidateComputation: Boolean = false,
 ) {
-    private val stateMachine = ImeStateMachine(candidateLimitProvider)
+    private val stateMachine = ImeStateMachine(candidateLimitProvider, deferCandidateComputation)
     private val englishTimeoutRunnable = Runnable { commitEnglishChar() }
     private var engineAdapter: T9EngineAdapter? = null
+    private val candidateScheduler: CandidateScheduler? = if (deferCandidateComputation) AsyncCandidateScheduler() else null
 
     val engine: T9Engine? get() = engineAdapter?.rawEngine
 
@@ -45,6 +47,7 @@ class KeyboardActionHandler(
     fun attachEngine(newEngine: T9Engine) {
         engineAdapter = T9EngineAdapter(newEngine)
         stateMachine.attachEngine(engineAdapter!!)
+        schedulePendingCandidateRefresh()
     }
 
     fun uiState(isDictionaryPreparing: Boolean = false): ImeUiState = stateMachine.uiState(isDictionaryPreparing)
@@ -54,6 +57,7 @@ class KeyboardActionHandler(
             ImeInputAction.EnterShortPressed -> onEnterShortPress()
             else -> execute(stateMachine.dispatch(action))
         }
+        schedulePendingCandidateRefresh()
     }
 
     private fun switchMode(targetMode: KeyboardMode) {
@@ -147,6 +151,10 @@ class KeyboardActionHandler(
         handle(ImeInputAction.LifecycleFinishInput)
     }
 
+    fun destroy() {
+        candidateScheduler?.shutdown()
+    }
+
     private fun execute(effects: List<ImeSideEffect>) {
         for (effect in effects) {
             when (effect) {
@@ -161,6 +169,27 @@ class KeyboardActionHandler(
                 is ImeSideEffect.ScheduleEnglishTimeout -> actionSink.scheduleEnglishTimeout(englishTimeoutRunnable, effect.delayMs)
             }
         }
+    }
+
+    private fun schedulePendingCandidateRefresh() {
+        if (!deferCandidateComputation) return
+        val request = stateMachine.drainPendingCandidateRequest() ?: return
+        val rawEngine = engineAdapter?.rawEngine ?: return
+        val detachedEngine = rawEngine.createDetachedCandidateEngine(request.buffer, request.lockedSyllables) ?: return
+        candidateScheduler?.submit(
+            request = request,
+            compute = {
+                val candidates = detachedEngine.getVisibleCandidates(request.limit).map { candidate ->
+                    CandidateSnapshotMapper.toSnapshotItem(candidate)
+                }
+                io.github.xiwei753.pinyin.imecore.CandidateResult(request.requestId, candidates)
+            },
+            onResult = { result ->
+                if (stateMachine.applyCandidateResult(result)) {
+                    actionSink.refreshUi()
+                }
+            }
+        )
     }
 }
 

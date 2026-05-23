@@ -3,6 +3,7 @@ package io.github.xiwei753.pinyin.t9
 import android.view.inputmethod.EditorInfo
 import android.text.InputType
 import io.github.xiwei753.pinyin.imecore.CandidateSelection
+import io.github.xiwei753.pinyin.imecore.CandidateSnapshotItem
 import io.github.xiwei753.pinyin.imecore.ImeStateMachine
 import io.github.xiwei753.pinyin.imecore.T9InputEngine
 import org.junit.Assert.assertEquals
@@ -227,9 +228,11 @@ class XiweiT9ImeServiceInputPolicyTest {
         private var mutablePreedit: String = preedit
         var cleared: Boolean = false
         override val buffer: String get() = mutableBuffer
+        override val lockedSyllables: List<String> get() = emptyList()
         override val readings: List<String> get() = listOf("wo")
         override val activeReading: String? get() = if (mutableBuffer.isEmpty()) null else "wo"
         override fun getPreedit(): String = mutablePreedit
+        override fun getPreeditHint(): String = mutablePreedit
         override fun inputDigit(digit: String) {
             mutableBuffer += digit
         }
@@ -242,6 +245,7 @@ class XiweiT9ImeServiceInputPolicyTest {
             cleared = true
         }
         override fun getVisibleCandidates(limit: Int): List<CandidateSelection> = emptyList()
+        override fun commitCandidate(candidate: CandidateSnapshotItem) {}
         override fun setActiveReading(reading: String): Boolean = false
     }
 }
