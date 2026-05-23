@@ -380,8 +380,17 @@ class T9Engine(
         return distinctSorted.sortedWith(Comparator { c1, c2 ->
             if (c1.text == currentBuffer) return@Comparator 1
             if (c2.text == currentBuffer) return@Comparator -1
+
+            // EXACT_PHRASE always beats everything else
             if (c1.origin == CandidateOrigin.EXACT_PHRASE && c2.origin != CandidateOrigin.EXACT_PHRASE) return@Comparator -1
             if (c2.origin == CandidateOrigin.EXACT_PHRASE && c1.origin != CandidateOrigin.EXACT_PHRASE) return@Comparator 1
+
+            // Spaced dynamic composition shouldn't beat anything that isn't a fallback
+            val isC1SpacedDynamic = c1.origin == CandidateOrigin.DYNAMIC_COMPOSITION && c1.text.contains(" ")
+            val isC2SpacedDynamic = c2.origin == CandidateOrigin.DYNAMIC_COMPOSITION && c2.text.contains(" ")
+            if (isC1SpacedDynamic && !isC2SpacedDynamic) return@Comparator 1
+            if (isC2SpacedDynamic && !isC1SpacedDynamic) return@Comparator -1
+
             c2.score.compareTo(c1.score)
         })
     }
