@@ -174,4 +174,12 @@ class T9KeyboardGeometryTest {
         val geo = T9KeyboardGeometry.calculate(1080, panelH, 96, 88, 8, 8)
         assertEquals("Left rail bottom must be equal to panel height when fixing height", panelH, geo.leftRailRect.bottom)
     }
+
+    @Test
+    fun testLeftRailKeysDoNotOverlapWithMainKeys() {
+        val geo = T9KeyboardGeometry.calculate(1080, 480, 96, 88, 8, 8)
+        assertTrue("Left rail rect should not overlap with main key 1", !android.graphics.Rect.intersects(geo.leftRailRect, geo.key1Rect))
+        assertTrue("Left rail rect should not overlap with main key 4", !android.graphics.Rect.intersects(geo.leftRailRect, geo.key4Rect))
+        assertTrue("Left rail rect should not overlap with main key 7", !android.graphics.Rect.intersects(geo.leftRailRect, geo.key7Rect))
+    }
 }

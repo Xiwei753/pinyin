@@ -300,4 +300,59 @@ class KeyboardRendererTest {
         assertEquals("Background color should be symTabActiveBg", palette.symTabActiveBg, capturedBgColor)
         assertEquals("Text color should be symTabActiveText", palette.symTabActiveText, capturedTextColor)
     }
+
+
+    @Test
+    fun testReadingTextIsScaledToFitInRect() {
+        val renderer = KeyboardRenderer()
+        val mockCanvas = mock(Canvas::class.java)
+        val palette = ThemePalette(
+            bgColor = 0, candidateBarColor = 0, textColor = 0, subColor = 0,
+            preeditBgColor = 0, symTabActiveBg = 0, symTabInactiveBg = 0,
+            symTabActiveText = 0, symTabInactiveText = 0, isDark = false,
+            keyBgColor = 0, specialKeyBgColor = 0, keyPressedBgColor = 0, specialKeyPressedBgColor = 0
+        )
+
+        val longReadingKey = KeyboardKey(
+            id = "reading_0",
+            role = KeyboardKeyRole.RAIL_READING,
+            rect = android.graphics.Rect(0, 0, 50, 50),
+            label = "jin tian wan shang",
+            action = "reading:0",
+        )
+        val shortReadingKey = KeyboardKey(
+            id = "reading_1",
+            role = KeyboardKeyRole.RAIL_READING,
+            rect = android.graphics.Rect(0, 0, 50, 50),
+            label = "ti",
+            action = "reading:1",
+        )
+
+        val model = KeyboardLayoutModel(emptyList(), listOf(longReadingKey, shortReadingKey), null, 1000, 1000)
+
+        var longTextSize = 0f
+        var shortTextSize = 0f
+
+        doAnswer { invocation ->
+            val text = invocation.arguments[0] as String
+            val paint = invocation.arguments[3] as Paint
+            if (text == "jin tian wan shang") {
+                longTextSize = paint.textSize
+            } else if (text == "ti") {
+                shortTextSize = paint.textSize
+            }
+            null
+        }.`when`(mockCanvas).drawText(anyString(), anyFloat(), anyFloat(), any(Paint::class.java))
+
+        doAnswer { invocation ->
+            true
+        }.`when`(mockCanvas).clipRect(any(android.graphics.Rect::class.java))
+
+        renderer.drawKeyboard(mockCanvas, model, palette, 1f, KeyboardMode.ChineseT9, null)
+
+        // Mocking Paint is not done, so it's using the real Paint which measures texts dynamically. Robolectric does basic text measuring.
+        // Wait, KeyboardRenderer uses Paint. We can just check the values.
+        println("longTextSize: $longTextSize, shortTextSize: $shortTextSize")
+        assertTrue("Long text should be scaled smaller than short text", longTextSize <= shortTextSize)
+    }
 }

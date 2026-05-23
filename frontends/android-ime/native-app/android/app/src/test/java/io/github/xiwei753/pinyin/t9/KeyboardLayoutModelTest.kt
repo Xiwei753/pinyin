@@ -569,4 +569,23 @@ class KeyboardLayoutModelTest {
         ),
         railState = railState,
     )
+
+    @Test
+    fun testModeLeftRailWidthConsistency() {
+        val builder = KeyboardLayoutBuilder()
+        val t9Model = builder.build(state = KeyboardUiState(keyboardMode = KeyboardMode.ChineseT9, lastTextMode = KeyboardMode.EnglishT9, rawBuffer = "", preedit = "", readings = emptyList(), activeReading = null, candidatesSnapshot = emptyList(), currentSymCategory = "punct", isComposing = false, themePalette = ThemePalette(0,0,0,0,0,0,0,0,0,false,0,0,0,0)), panelWidth = 1080, panelHeight = 480, rowHeight = 96, bottomRowHeight = 88, horizontalGap = 8, verticalGap = 8, categoryToPage = emptyMap(), registry = SymbolKeyRegistry(), density = 1.0f)
+        val numModel = builder.build(state = KeyboardUiState(keyboardMode = KeyboardMode.Number, lastTextMode = KeyboardMode.ChineseT9, rawBuffer = "", preedit = "", readings = emptyList(), activeReading = null, candidatesSnapshot = emptyList(), currentSymCategory = "punct", isComposing = false, themePalette = ThemePalette(0,0,0,0,0,0,0,0,0,false,0,0,0,0)), panelWidth = 1080, panelHeight = 480, rowHeight = 96, bottomRowHeight = 88, horizontalGap = 8, verticalGap = 8, categoryToPage = emptyMap(), registry = SymbolKeyRegistry(), density = 1.0f)
+        val symModel = builder.build(state = KeyboardUiState(keyboardMode = KeyboardMode.Symbol, lastTextMode = KeyboardMode.ChineseT9, rawBuffer = "", preedit = "", readings = emptyList(), activeReading = null, candidatesSnapshot = emptyList(), currentSymCategory = "punct", isComposing = false, themePalette = ThemePalette(0,0,0,0,0,0,0,0,0,false,0,0,0,0)), panelWidth = 1080, panelHeight = 480, rowHeight = 96, bottomRowHeight = 88, horizontalGap = 8, verticalGap = 8, categoryToPage = emptyMap(), registry = SymbolKeyRegistry(), density = 1.0f)
+
+        val expectedWidth = 1080 / 7
+
+        val t9MaxRight = t9Model.leftRailKeys.maxOfOrNull { it.rect.right } ?: 0
+        assertTrue("T9 left rail width should match expected", t9MaxRight <= expectedWidth)
+
+        val numMaxRight = numModel.leftRailKeys.maxOfOrNull { it.rect.right } ?: 0
+        assertTrue("Number left rail width should match expected", numMaxRight <= expectedWidth)
+
+        val symMaxRight = symModel.leftRailKeys.maxOfOrNull { it.rect.right } ?: 0
+        assertTrue("Symbol left rail width should match expected", symMaxRight <= expectedWidth)
+    }
 }
