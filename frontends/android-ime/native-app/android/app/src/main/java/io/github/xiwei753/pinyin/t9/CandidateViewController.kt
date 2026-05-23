@@ -61,28 +61,48 @@ class CandidateViewController(
             v.pinyinFloatingBar.visibility = View.GONE
         }
 
-        v.candidateContainer.removeAllViews()
-
         if (state.candidateStripState.isDictionaryPreparing || isDictPreparing) {
-            val text = "\u8BCD\u5E93\u51C6\u5907\u4E2D..."
+            val text = "词库准备中..."
             val btn = createTextView(text, CandidateItemType.PREPARING, false, null)
+            v.candidateContainer.removeAllViews()
             v.candidateContainer.addView(btn)
             v.candidateContainer.visibility = View.VISIBLE
             return
         }
 
-        val items = mutableListOf<CandidateItem>()
-        for ((index, candidate) in state.candidateStripState.candidates.withIndex()) {
-            items.add(CandidateItem(CandidateItemType.CANDIDATE, candidate.text, payload = index))
+        val items = state.candidateStripState.candidates.mapIndexed { index, candidate ->
+            CandidateItem(CandidateItemType.CANDIDATE, candidate.text, payload = index)
         }
 
         if (items.isEmpty()) {
             v.candidateContainer.visibility = View.GONE
         } else {
             v.candidateContainer.visibility = View.VISIBLE
-            for (item in items) {
-                val btn = createTextView(item.text, item.type, item.isActive, item.payload)
-                v.candidateContainer.addView(btn)
+            val childCount = v.candidateContainer.childCount
+
+            for (i in items.indices) {
+                val item = items[i]
+                if (i < childCount) {
+                    val tv = v.candidateContainer.getChildAt(i) as? TextView
+                    if (tv != null) {
+                        tv.text = item.text
+                        tv.setOnClickListener {
+                            val index = item.payload as? Int
+                            if (index != null) {
+                                onInputAction?.invoke(ImeInputAction.CandidateSelected(index))
+                            }
+                        }
+                        tv.visibility = View.VISIBLE
+                    }
+                } else {
+                    val btn = createTextView(item.text, item.type, item.isActive, item.payload)
+                    v.candidateContainer.addView(btn)
+                }
+            }
+
+            for (i in items.size until childCount) {
+                val tv = v.candidateContainer.getChildAt(i)
+                tv.visibility = View.GONE
             }
         }
     }
