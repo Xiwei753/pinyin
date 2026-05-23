@@ -54,14 +54,18 @@ class CandidateViewControllerTest {
         controller.refreshFromState(state(preeditVisible = false, preedit = ""))
 
         assertEquals(View.GONE, mockFloatingBar.visibility)
+        assertEquals(View.GONE, candidateContainer.visibility)
     }
 
     @Test
-    fun testPreeditShownFromState() {
+    fun testPreeditShownInCandidateContainer() {
         controller.refreshFromState(state(preeditVisible = true, preedit = "wo"))
 
-        assertEquals(View.VISIBLE, mockFloatingBar.visibility)
-        assertEquals("wo", mockFloatingText.text.toString())
+        assertEquals(View.GONE, mockFloatingBar.visibility)
+        assertEquals(View.VISIBLE, candidateContainer.visibility)
+        assertEquals(1, candidateContainer.childCount)
+        val chip = candidateContainer.getChildAt(0) as TextView
+        assertEquals("wo", chip.text.toString())
     }
 
     @Test
@@ -74,6 +78,27 @@ class CandidateViewControllerTest {
 
         assertEquals("我", tv1.text.toString())
         assertEquals("你", tv2.text.toString())
+    }
+
+    @Test
+    fun testPreeditAsFirstChipBeforeCandidates() {
+        controller.refreshFromState(
+            state(
+                preeditVisible = true,
+                preedit = "wo",
+                candidates = listOf(candidate("我", "96", 900), candidate("喔", "96", 800)),
+            )
+        )
+
+        assertEquals(View.GONE, mockFloatingBar.visibility)
+        assertEquals(View.VISIBLE, candidateContainer.visibility)
+        assertEquals(3, candidateContainer.childCount)
+        val preeditChip = candidateContainer.getChildAt(0) as TextView
+        assertEquals("wo", preeditChip.text.toString())
+        val tv1 = candidateContainer.getChildAt(1) as TextView
+        assertEquals("我", tv1.text.toString())
+        val tv2 = candidateContainer.getChildAt(2) as TextView
+        assertEquals("喔", tv2.text.toString())
     }
 
     @Test
@@ -98,13 +123,19 @@ class CandidateViewControllerTest {
     }
 
     @Test
-    fun testPreeditIsNotClickableAndDoesNotEmitCandidateAction() {
+    fun testPreeditChipIsNotClickableAndDoesNotEmitCandidateAction() {
         var clickedAction: ImeInputAction? = null
         controller.onInputAction = { clickedAction = it }
-        controller.refreshFromState(state(preeditVisible = true, preedit = "wo", candidates = listOf(candidate("我", "96", 900))))
+        controller.refreshFromState(
+            state(
+                preeditVisible = true,
+                preedit = "wo",
+                candidates = listOf(candidate("我", "96", 900)),
+            )
+        )
 
-        mockFloatingBar.performClick()
-        mockFloatingText.performClick()
+        val preeditChip = candidateContainer.getChildAt(0) as TextView
+        preeditChip.performClick()
 
         assertEquals(null, clickedAction)
     }
@@ -121,15 +152,15 @@ class CandidateViewControllerTest {
             )
         )
 
-        assertEquals(View.VISIBLE, mockFloatingBar.visibility)
-        assertEquals(2, candidateContainer.childCount)
+        assertEquals("preedit chip at index 0", "wo", (candidateContainer.getChildAt(0) as TextView).text)
+        assertEquals("first candidate at index 1", "我", (candidateContainer.getChildAt(1) as TextView).text)
+        assertEquals("second candidate at index 2", "喔", (candidateContainer.getChildAt(2) as TextView).text)
 
-        val tvCandidate0 = candidateContainer.getChildAt(0) as TextView
-        val tvCandidate1 = candidateContainer.getChildAt(1) as TextView
-
+        val tvCandidate0 = candidateContainer.getChildAt(1) as TextView
         tvCandidate0.performClick()
         assertEquals(ImeInputAction.CandidateSelected(0), clickedAction)
 
+        val tvCandidate1 = candidateContainer.getChildAt(2) as TextView
         tvCandidate1.performClick()
         assertEquals(ImeInputAction.CandidateSelected(1), clickedAction)
     }
@@ -164,6 +195,54 @@ class CandidateViewControllerTest {
         controller.refreshFromState(state(mode = KeyboardMode.Number, preeditVisible = false, preedit = ""))
 
         assertEquals(View.GONE, mockFloatingBar.visibility)
+    }
+
+    @Test
+    fun testNoPhantomPinyinCandidateInCandidateList() {
+        controller.refreshFromState(
+            state(
+                preeditVisible = true,
+                preedit = "bu tai xing",
+                candidates = listOf(candidate("不太行", "288249464", 9000)),
+            )
+        )
+
+        assertEquals(2, candidateContainer.childCount)
+        val preeditChip = candidateContainer.getChildAt(0) as TextView
+        assertEquals("bu tai xing", preeditChip.text.toString())
+        val realCand = candidateContainer.getChildAt(1) as TextView
+        assertEquals("不太行", realCand.text.toString())
+
+        var clickedAction: ImeInputAction? = null
+        controller.onInputAction = { clickedAction = it }
+        preeditChip.performClick()
+        assertEquals("preedit chip must not emit CandidateSelected", null, clickedAction)
+
+        realCand.performClick()
+        assertEquals("clicking first real candidate must emit CandidateSelected(0)", ImeInputAction.CandidateSelected(0), clickedAction)
+    }
+
+    @Test
+    fun testCandidateBarHeightStableWithAndWithoutPreedit() {
+        controller.refreshFromState(state(preeditVisible = true, preedit = "wo"))
+        val heightWithPreedit = candidateContainer.height
+        candidateContainer.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.AT_MOST),
+            android.view.View.MeasureSpec.makeMeasureSpec(48, android.view.View.MeasureSpec.AT_MOST),
+        )
+        val measuredHeightWithPreedit = candidateContainer.measuredHeight
+
+        controller.refreshFromState(state(candidates = listOf(candidate("我", "96", 900))))
+        candidateContainer.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.AT_MOST),
+            android.view.View.MeasureSpec.makeMeasureSpec(48, android.view.View.MeasureSpec.AT_MOST),
+        )
+        val measuredHeightWithCandidates = candidateContainer.measuredHeight
+
+        assertEquals(
+            "candidate bar height should be consistent",
+            measuredHeightWithPreedit, measuredHeightWithCandidates,
+        )
     }
 
     private fun state(

@@ -487,7 +487,96 @@ class XiweiKeyboardViewTest {
         assertEquals("separator", hit!!.action)
     }
 
-    // --- helpers ---
+    // ── Multi-touch / digit-down-commit tests ──
+
+    @Test
+    fun digitDownCommitNoDoubleCommitOnUp() {
+        val view = createView()
+        view.layoutModel = buildT9Layout()
+        view.palette = lightPalette()
+
+        val actions = mutableListOf<String>()
+        view.onKeyAction = { actions.add(it) }
+
+        val key2 = view.layoutModel!!.keys.find { it.id == "key_2" }!!
+        val cx = key2.rect.centerX().toFloat()
+        val cy = key2.rect.centerY().toFloat()
+
+        view.onTouchEvent(makeTouchEvent(MotionEvent.ACTION_DOWN, cx, cy))
+        assertEquals("digit:2 dispatched on DOWN", listOf("digit:2"), actions)
+
+        view.onTouchEvent(makeTouchEvent(MotionEvent.ACTION_UP, cx, cy))
+        assertEquals("UP must not re-commit digit:2", 1, actions.size)
+    }
+
+    @Test
+    fun hapticOrderActionDownHapticBeforeInput() {
+        val view = createView()
+        view.layoutModel = buildT9Layout()
+        view.palette = lightPalette()
+
+        val events = mutableListOf<String>()
+        view.onHapticTap = { events.add("haptic") }
+        view.onInputAction = { events.add("input") }
+
+        val key2 = view.layoutModel!!.keys.find { it.id == "key_2" }!!
+        val cx = key2.rect.centerX().toFloat()
+        val cy = key2.rect.centerY().toFloat()
+
+        view.onTouchEvent(makeTouchEvent(MotionEvent.ACTION_DOWN, cx, cy))
+
+        assertEquals(listOf("haptic", "input"), events)
+    }
+
+    @Test
+    fun deleteLongPressRepeatStillWorks() {
+        val view = createView()
+        view.layoutModel = buildT9Layout()
+        view.palette = lightPalette()
+
+        val longPressActions = mutableListOf<String>()
+        val deleteActions = mutableListOf<String>()
+        view.onHapticLongPress = { longPressActions.add("haptic") }
+        view.onDeleteRepeat = { deleteActions.add("delete") }
+        view.onInputAction = { }
+
+        val delKey = view.layoutModel!!.keys.find { it.action == "del" }!!
+        val cx = delKey.rect.centerX().toFloat()
+        val cy = delKey.rect.centerY().toFloat()
+
+        view.onTouchEvent(makeTouchEvent(MotionEvent.ACTION_DOWN, cx, cy))
+        view.simulateLongPress()
+
+        assertTrue("delete long press haptic must fire", longPressActions.isNotEmpty())
+
+        view.onTouchEvent(makeTouchEvent(MotionEvent.ACTION_UP, cx, cy))
+    }
+
+    @Test
+    fun enterLongPressOnlyTriggersLongPress() {
+        val view = createView()
+        view.layoutModel = buildT9Layout()
+        view.palette = lightPalette()
+
+        val shortPressActions = mutableListOf<String>()
+        val longPressActions = mutableListOf<String>()
+        view.onEnterShortPress = { shortPressActions.add("short") }
+        view.onEnterLongPress = { longPressActions.add("long") }
+
+        val enterKey = view.layoutModel!!.keys.find { it.action == "enter" }!!
+        val cx = enterKey.rect.centerX().toFloat()
+        val cy = enterKey.rect.centerY().toFloat()
+
+        view.onTouchEvent(makeTouchEvent(MotionEvent.ACTION_DOWN, cx, cy))
+        view.simulateLongPress()
+        view.onTouchEvent(makeTouchEvent(MotionEvent.ACTION_UP, cx, cy))
+
+        assertTrue("Long press should have been triggered", longPressActions.isNotEmpty())
+        assertEquals("Long press should trigger exactly once", 1, longPressActions.size)
+        assertTrue("Short press should NOT have been triggered", shortPressActions.isEmpty())
+    }
+
+    // ── helpers ──
 
     private fun buildT9Layout(): KeyboardLayoutModel {
         val builder = KeyboardLayoutBuilder()

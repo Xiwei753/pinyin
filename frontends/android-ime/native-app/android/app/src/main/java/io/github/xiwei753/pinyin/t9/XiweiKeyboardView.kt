@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.os.Handler
 import android.os.Looper
+import android.util.SparseArray
 import android.view.MotionEvent
 import android.view.View
 import io.github.xiwei753.pinyin.imecore.ImeInputAction
@@ -43,9 +44,17 @@ class XiweiKeyboardView @JvmOverloads constructor(
     private var deleteRepeatRunnable: Runnable? = null
 
     private var longPressRunnable: Runnable? = null
-    private var trackedKey: KeyboardKey? = null
-    private var longPressFired = false
     private var longPressCheckPending = false
+    private var longPressPointerId = -1
+
+    private val pointerMap = SparseArray<PointerState>()
+
+    private class PointerState {
+        var key: KeyboardKey? = null
+        var longPressFired = false
+        var committed = false
+        var pressedKeyId: String? = null
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -73,81 +82,137 @@ class XiweiKeyboardView @JvmOverloads constructor(
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val model = layoutModel ?: return false
-        val x = event.x
-        val y = event.y
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                val key = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, x, y, 0)
-                if (key == null) return false
-                if (key.role == KeyboardKeyRole.PLACEHOLDER) return false
-                if (key.role == KeyboardKeyRole.RAIL_READING && key.label.isEmpty()) return false
+                val idx = 0
+                val pointerId = event.getPointerId(idx)
+                val x = event.getX(idx)
+                val y = event.getY(idx)
+                handlePointerDown(model, pointerId, x, y)
+                return true
+            }
 
-                trackedKey = key
-                longPressFired = false
-                longPressCheckPending = true
-
-                pressedKeyId = key.id
-                invalidate()
-
-                when (key.role) {
-                    KeyboardKeyRole.SPECIAL, KeyboardKeyRole.RAIL_SYMBOL_CATEGORY -> onHapticSpecial?.invoke()
-                    else -> onHapticTap?.invoke()
-                }
-
-                longPressRunnable = Runnable {
-                    if (longPressCheckPending && trackedKey != null) {
-                        longPressFired = true
-                        val lk = trackedKey!!
-                        longPressedKeyId = lk.id
-                        invalidate()
-
-                        onHapticLongPress?.invoke()
-
-                        if (lk.id == "enter") {
-                            onEnterLongPress?.invoke()
-                        } else if (lk.id == "del") {
-                            startDeleteRepeat()
-                        }
-                    }
-                }
-                mainHandler.postDelayed(longPressRunnable!!, 400L)
-
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                val idx = event.actionIndex
+                val pointerId = event.getPointerId(idx)
+                val x = event.getX(idx)
+                val y = event.getY(idx)
+                handlePointerDown(model, pointerId, x, y)
                 return true
             }
 
             MotionEvent.ACTION_MOVE -> {
-                if (trackedKey == null) return false
-                val currentKey = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, x, y, 0)
-                if (currentKey?.id != trackedKey?.id) {
-                    cancelKeyboardLongPress()
-                    pressedKeyId = null
-                    longPressedKeyId = null
-                    trackedKey = null
-                    invalidate()
+                for (i in 0 until event.pointerCount) {
+                    val pointerId = event.getPointerId(i)
+                    val ps = pointerMap.get(pointerId) ?: continue
+                    val x = event.getX(i)
+                    val y = event.getY(i)
+                    val currentKey = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, x, y, 0)
+                    if (currentKey?.id != ps.key?.id) {
+                        if (ps.pressedKeyId != null) {
+                            ps.key = null
+                            ps.committed = false
+                            ps.longPressFired = false
+                            ps.pressedKeyId = null
+                        }
+                        cancelLongPressForPointer(pointerId)
+                    }
                 }
+                updatePressedKeyId()
+                invalidate()
                 return true
             }
 
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                cancelKeyboardLongPress()
-                stopDeleteRepeat()
+            MotionEvent.ACTION_POINTER_UP -> {
+                val idx = event.actionIndex
+                val pointerId = event.getPointerId(idx)
+                handlePointerUp(pointerId)
+                return true
+            }
 
-                val key = trackedKey
-                trackedKey = null
+            MotionEvent.ACTION_UP -> {
+                val idx = 0
+                val pointerId = event.getPointerId(idx)
+                handlePointerUp(pointerId)
+                return true
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                cancelAllPointers()
+                stopDeleteRepeat()
                 pressedKeyId = null
                 longPressedKeyId = null
                 invalidate()
-
-                if (key != null && !longPressFired) {
-                    dispatchAction(key)
-                }
-
                 return true
             }
         }
 
         return false
+    }
+
+    private fun handlePointerDown(model: KeyboardLayoutModel, pointerId: Int, x: Float, y: Float) {
+        val key = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, x, y, 0)
+        if (key == null) return
+        if (key.role == KeyboardKeyRole.PLACEHOLDER) return
+        if (key.role == KeyboardKeyRole.RAIL_READING && key.label.isEmpty()) return
+
+        val ps = PointerState()
+        ps.key = key
+        ps.pressedKeyId = key.id
+        pointerMap.put(pointerId, ps)
+        updatePressedKeyId()
+        invalidate()
+
+        val isDigitDown = isDigitKey(key)
+
+        when (key.role) {
+            KeyboardKeyRole.SPECIAL, KeyboardKeyRole.RAIL_SYMBOL_CATEGORY -> onHapticSpecial?.invoke()
+            else -> onHapticTap?.invoke()
+        }
+
+        if (isDigitDown) {
+            ps.committed = true
+            dispatchDigitAction(key)
+        } else {
+            scheduleLongPressForPointer(pointerId, key)
+        }
+    }
+
+    private fun handlePointerUp(pointerId: Int) {
+        val ps = pointerMap.get(pointerId) ?: return
+        val key = ps.key
+        cancelLongPressForPointer(pointerId)
+
+        if (key != null && !ps.longPressFired && ps.committed && isDigitKey(key)) {
+            // Digit keys: already committed on DOWN, nothing on UP
+        } else if (key != null && !ps.longPressFired && !ps.committed) {
+            dispatchAction(key)
+        }
+
+        pointerMap.remove(pointerId)
+        updatePressedKeyId()
+        longPressedKeyId = if (pointerId == longPressPointerId) {
+            cancelKeyboardLongPress()
+            null
+        } else longPressedKeyId
+        invalidate()
+    }
+
+    private fun isDigitKey(key: KeyboardKey): Boolean {
+        return key.action.startsWith("digit:") || key.action == "separator"
+    }
+
+    private fun dispatchDigitAction(key: KeyboardKey) {
+        when {
+            key.action == "separator" -> {
+                onInputAction?.invoke(ImeInputAction.SeparatorPressed) ?: onKeyAction?.invoke("separator")
+            }
+            key.action.startsWith("digit:") -> {
+                val digit = key.action.removePrefix("digit:")
+                onInputAction?.invoke(ImeInputAction.DigitPressed(digit)) ?: onKeyAction?.invoke("digit:$digit")
+            }
+        }
     }
 
     private fun dispatchAction(key: KeyboardKey) {
@@ -192,12 +257,66 @@ class XiweiKeyboardView @JvmOverloads constructor(
         }
     }
 
-    private fun cancelKeyboardLongPress() {
-        if (longPressCheckPending) {
-            longPressRunnable?.let { mainHandler.removeCallbacks(it) }
-            longPressRunnable = null
-            longPressCheckPending = false
+    private fun scheduleLongPressForPointer(pointerId: Int, key: KeyboardKey) {
+        cancelKeyboardLongPress()
+        longPressPointerId = pointerId
+        longPressCheckPending = true
+
+        longPressRunnable = Runnable {
+            if (longPressCheckPending) {
+                val ps = pointerMap.get(pointerId)
+                if (ps != null && ps.key?.id == key.id) {
+                    ps.longPressFired = true
+                    longPressedKeyId = key.id
+                    invalidate()
+
+                    onHapticLongPress?.invoke()
+
+                    if (key.id == "enter") {
+                        onEnterLongPress?.invoke()
+                    } else if (key.id == "del") {
+                        startDeleteRepeat()
+                    }
+                }
+            }
         }
+        mainHandler.postDelayed(longPressRunnable!!, 400L)
+    }
+
+    private fun cancelLongPressForPointer(pointerId: Int) {
+        if (longPressPointerId == pointerId) {
+            cancelKeyboardLongPress()
+        }
+    }
+
+    private fun updatePressedKeyId() {
+        pressedKeyId = null
+        for (i in 0 until pointerMap.size()) {
+            val ps = pointerMap.valueAt(i)
+            if (ps.pressedKeyId != null) {
+                pressedKeyId = ps.pressedKeyId
+                return
+            }
+        }
+    }
+
+    private fun cancelAllPointers() {
+        for (i in 0 until pointerMap.size()) {
+            pointerMap.valueAt(i).let {
+                it.key = null
+                it.committed = false
+                it.longPressFired = false
+                it.pressedKeyId = null
+            }
+        }
+        pointerMap.clear()
+    }
+
+    private fun cancelKeyboardLongPress() {
+        longPressCheckPending = false
+        longPressRunnable?.let { mainHandler.removeCallbacks(it) }
+        longPressRunnable = null
+        longPressPointerId = -1
     }
 
     private fun startDeleteRepeat() {
@@ -224,14 +343,16 @@ class XiweiKeyboardView @JvmOverloads constructor(
     fun destroy() {
         stopDeleteRepeat()
         cancelKeyboardLongPress()
-        trackedKey = null
+        cancelAllPointers()
         pressedKeyId = null
         longPressedKeyId = null
     }
 
     internal fun simulateLongPress() {
-        val lk = trackedKey ?: return
-        longPressFired = true
+        if (pointerMap.size() == 0) return
+        val ps = pointerMap.valueAt(0)
+        val lk = ps.key ?: return
+        ps.longPressFired = true
         longPressedKeyId = lk.id
         cancelKeyboardLongPress()
         invalidate()

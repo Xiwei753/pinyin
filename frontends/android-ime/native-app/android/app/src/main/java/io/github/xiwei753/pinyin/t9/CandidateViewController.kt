@@ -54,56 +54,35 @@ class CandidateViewController(
     }
 
     fun refreshFromState(state: KeyboardUiState) {
-        if (state.preeditState.visible) {
-            v.pinyinFloatingBar.visibility = View.VISIBLE
-            v.pinyinFloatingText.text = state.preeditState.text
-        } else {
-            v.pinyinFloatingBar.visibility = View.GONE
-        }
+        v.pinyinFloatingBar.visibility = View.GONE
 
         if (state.candidateStripState.isDictionaryPreparing || isDictPreparing) {
-            val text = "词库准备中..."
-            val btn = createTextView(text, CandidateItemType.PREPARING, false, null)
             v.candidateContainer.removeAllViews()
+            val btn = createTextView("词库准备中...", CandidateItemType.PREPARING, false, null)
             v.candidateContainer.addView(btn)
             v.candidateContainer.visibility = View.VISIBLE
             return
         }
 
-        val items = state.candidateStripState.candidates.mapIndexed { index, candidate ->
-            CandidateItem(CandidateItemType.CANDIDATE, candidate.text, payload = index)
+        v.candidateContainer.removeAllViews()
+
+        val hasPreedit = state.preeditState.visible && state.preeditState.text.isNotEmpty()
+        if (hasPreedit) {
+            val preeditChip = createTextView(state.preeditState.text, CandidateItemType.PREPARING, false, null)
+            preeditChip.isClickable = false
+            preeditChip.isFocusable = false
+            v.candidateContainer.addView(preeditChip)
         }
 
-        if (items.isEmpty()) {
-            v.candidateContainer.visibility = View.GONE
+        for ((index, candidate) in state.candidateStripState.candidates.withIndex()) {
+            val chip = createTextView(candidate.text, CandidateItemType.CANDIDATE, false, index)
+            v.candidateContainer.addView(chip)
+        }
+
+        v.candidateContainer.visibility = if (hasPreedit || state.candidateStripState.candidates.isNotEmpty()) {
+            View.VISIBLE
         } else {
-            v.candidateContainer.visibility = View.VISIBLE
-            val childCount = v.candidateContainer.childCount
-
-            for (i in items.indices) {
-                val item = items[i]
-                if (i < childCount) {
-                    val tv = v.candidateContainer.getChildAt(i) as? TextView
-                    if (tv != null) {
-                        tv.text = item.text
-                        tv.setOnClickListener {
-                            val index = item.payload as? Int
-                            if (index != null) {
-                                onInputAction?.invoke(ImeInputAction.CandidateSelected(index))
-                            }
-                        }
-                        tv.visibility = View.VISIBLE
-                    }
-                } else {
-                    val btn = createTextView(item.text, item.type, item.isActive, item.payload)
-                    v.candidateContainer.addView(btn)
-                }
-            }
-
-            for (i in items.size until childCount) {
-                val tv = v.candidateContainer.getChildAt(i)
-                tv.visibility = View.GONE
-            }
+            View.GONE
         }
     }
 
