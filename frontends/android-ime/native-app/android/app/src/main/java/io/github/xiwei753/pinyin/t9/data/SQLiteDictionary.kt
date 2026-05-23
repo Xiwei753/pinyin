@@ -94,7 +94,6 @@ class SQLiteDictionary private constructor(
 
                 val originStr = cursor.getString(originIdx)
 
-                val type = CandidateType.NORMAL
                 val origin = if (forcePrefixOrigin) {
                     CandidateOrigin.PREFIX_COMPLETION
                 } else {
@@ -116,10 +115,69 @@ class SQLiteDictionary private constructor(
         }
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
-            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE pinyin = ? ORDER BY freq DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq, origin FROM entries WHERE pinyin = ? ORDER BY freq DESC LIMIT 100",
             arrayOf(pinyinSequence)
         )
         return cursorToCandidates(cursor)
+    }
+
+    override fun getPinyinExactCandidatesMultiple(pinyinSequences: List<String>): Map<String, List<Candidate>> {
+        val resultMap = mutableMapOf<String, MutableList<Candidate>>()
+        val uniqueSequences = pinyinSequences.distinct()
+        if (uniqueSequences.isEmpty()) return emptyMap()
+
+        if (isFallback) {
+            for (seq in uniqueSequences) {
+                if (seq == "ni hao") resultMap["ni hao"] = getFallbackCandidates().filter { it.text == "你好" }.toMutableList()
+                if (seq == "shu ru fa") resultMap["shu ru fa"] = getFallbackCandidates().filter { it.text == "输入法" }.toMutableList()
+            }
+            return resultMap
+        }
+
+        val db = db ?: return emptyMap()
+
+        // Chunk into 100 items per query to avoid SQLite variable limit
+        val chunks = uniqueSequences.chunked(100)
+
+        for (chunk in chunks) {
+            val placeholders = chunk.joinToString(",") { "?" }
+            val query = "SELECT text, pinyin, code, freq, origin FROM entries WHERE pinyin IN ($placeholders) ORDER BY freq DESC LIMIT ${chunk.size * 50}"
+            val cursor = db.rawQuery(query, chunk.toTypedArray())
+
+            if (cursor.moveToFirst()) {
+                val textIdx = cursor.getColumnIndex("text")
+                val pinyinIdx = cursor.getColumnIndex("pinyin")
+                val codeIdx = cursor.getColumnIndex("code")
+                val freqIdx = cursor.getColumnIndex("freq")
+                val originIdx = cursor.getColumnIndex("origin")
+
+                do {
+                    val text = cursor.getString(textIdx)
+                    val pinyin = cursor.getString(pinyinIdx)
+                    val code = cursor.getString(codeIdx)
+                    val freq = cursor.getInt(freqIdx)
+                    val originStr = cursor.getString(originIdx)
+
+                    val origin = try { CandidateOrigin.valueOf(originStr) } catch (e: Exception) { CandidateOrigin.UNKNOWN }
+
+                    val candidate = Candidate(text, code, freq, CandidateType.NORMAL, "", origin)
+
+                    if (!resultMap.containsKey(pinyin)) {
+                        resultMap[pinyin] = mutableListOf()
+                    }
+                    resultMap[pinyin]!!.add(candidate)
+                } while (cursor.moveToNext())
+            }
+            cursor.close()
+        }
+
+        // Distinct and limit
+        val finalMap = mutableMapOf<String, List<Candidate>>()
+        for ((pinyin, list) in resultMap) {
+            finalMap[pinyin] = list.distinctBy { it.text }.take(100)
+        }
+
+        return finalMap
     }
 
     override fun getPinyinPrefixCandidates(pinyinPrefix: String): List<Candidate> {
@@ -130,13 +188,13 @@ class SQLiteDictionary private constructor(
         }
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
-            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE pinyin LIKE ? ORDER BY freq DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq, origin FROM entries WHERE pinyin LIKE ? ORDER BY freq DESC LIMIT 100",
             arrayOf("$pinyinPrefix %")
         )
         val spaceMatches = cursorToCandidates(cursor, forcePrefixOrigin = true)
 
         val cursor2 = db.rawQuery(
-            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE pinyin = ? ORDER BY freq DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq, origin FROM entries WHERE pinyin = ? ORDER BY freq DESC LIMIT 100",
             arrayOf(pinyinPrefix)
         )
         val exactMatches = cursorToCandidates(cursor2) // keep exact origins
@@ -148,7 +206,7 @@ class SQLiteDictionary private constructor(
         if (isFallback) return emptyList()
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
-            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE pinyin = ? AND syllable_count = 1 ORDER BY freq DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq, origin FROM entries WHERE pinyin = ? AND syllable_count = 1 ORDER BY freq DESC LIMIT 100",
             arrayOf(syllable)
         )
         return cursorToCandidates(cursor)
@@ -166,7 +224,7 @@ class SQLiteDictionary private constructor(
         }
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
-            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE code = ? ORDER BY freq DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq, origin FROM entries WHERE code = ? ORDER BY freq DESC LIMIT 100",
             arrayOf(code)
         )
         return cursorToCandidates(cursor)
@@ -181,7 +239,7 @@ class SQLiteDictionary private constructor(
         }
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
-            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE code LIKE ? ORDER BY freq DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq, origin FROM entries WHERE code LIKE ? ORDER BY freq DESC LIMIT 100",
             arrayOf("$code%")
         )
         return cursorToCandidates(cursor, forcePrefixOrigin = true)

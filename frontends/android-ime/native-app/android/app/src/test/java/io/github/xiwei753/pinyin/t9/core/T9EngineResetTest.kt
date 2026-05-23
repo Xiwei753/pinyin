@@ -7,6 +7,13 @@ import org.junit.Test
 
 class T9EngineResetTest {
     class MockDict : DictionaryProvider {
+    override fun getPinyinExactCandidatesMultiple(pinyinSequences: List<String>): Map<String, List<Candidate>> {
+        val result = mutableMapOf<String, List<Candidate>>()
+        for (seq in pinyinSequences) {
+            result[seq] = list.filter { it.code == seq }
+        }
+        return result
+    }
         private val list = mutableListOf<Candidate>()
 
         fun add(c: Candidate, pinyin: String) {

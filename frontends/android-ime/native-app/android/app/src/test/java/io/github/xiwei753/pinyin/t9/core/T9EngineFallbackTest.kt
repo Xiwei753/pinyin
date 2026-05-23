@@ -7,6 +7,7 @@ import org.junit.Test
 class T9EngineFallbackTest {
 
     class EmptyDict : DictionaryProvider {
+    override fun getPinyinExactCandidatesMultiple(pinyinSequences: List<String>): Map<String, List<Candidate>> = emptyMap()
         override fun getPinyinExactCandidates(pinyinSequence: String): List<Candidate> = emptyList()
         override fun getPinyinPrefixCandidates(pinyinPrefix: String): List<Candidate> = emptyList()
         override fun getSingleSyllableCandidates(syllable: String): List<Candidate> = emptyList()
