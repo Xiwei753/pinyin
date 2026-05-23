@@ -23,16 +23,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
 
-      - name: Fetch rime-ice dictionary
+      - name: Check Dictionary Files
         run: |
-          if [ ! -f "third_party/rime-ice/cn_dicts/base.dict.yaml" ]; then
-            echo "third_party/rime-ice not populated by checkout; shallow cloning public repo..."
-            rm -rf third_party/rime-ice
-            git clone --depth 1 https://github.com/iDvel/rime-ice.git third_party/rime-ice
-          fi
-          echo "Checking required dictionary files..."
           if [ ! -f "third_party/rime-ice/cn_dicts/base.dict.yaml" ]; then
             echo "Error: base.dict.yaml not found"
             exit 1
@@ -41,7 +35,6 @@ jobs:
             echo "Error: 8105.dict.yaml not found"
             exit 1
           fi
-          echo "Both dictionary files present."
 
       - name: Verify T9 Dictionary Asset Script
         run: |
