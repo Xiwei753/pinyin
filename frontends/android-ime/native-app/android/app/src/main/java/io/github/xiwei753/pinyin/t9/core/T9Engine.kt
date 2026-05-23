@@ -4,8 +4,15 @@ import io.github.xiwei753.pinyin.t9.data.DictionaryProvider
 
 class T9Engine(
     private val dictionary: DictionaryProvider,
-    private var userDictionary: io.github.xiwei753.pinyin.t9.data.UserDictionaryProvider? = null
+    private var userDictionary: io.github.xiwei753.pinyin.t9.data.UserDictionaryProvider? = null,
+    private val logger: io.github.xiwei753.pinyin.t9.T9DebugLogger? = null
 ) {
+    var dbQueryCount: Int = 0
+
+    private fun <T> trackQuery(block: () -> T): T {
+        dbQueryCount++
+        return block()
+    }
     var buffer = ""
         private set
 
@@ -98,9 +105,13 @@ class T9Engine(
     private var lastBuffer = ""
     private var lastCandidates = listOf<Candidate>()
     private var lastLimit = -1
+    private var lastDictVersion = -1
 
     private var lastVisibleCandidates = listOf<Candidate>()
     private var lastVisibleLimit = -1
+    private var lastVisibleDictVersion = -1
+    private var lastVisibleLockedSyllables = listOf<String>()
+    private var lastLockedSyllables = listOf<String>()
     private var lastVisibleBuffer = ""
     private var lastInternalCandidates = listOf<Candidate>()
 
@@ -154,10 +165,14 @@ class T9Engine(
     }
 
     fun getVisibleCandidates(limit: Int = 30): List<Candidate> {
+        val currentDictVersion = dictionary.dictionaryVersion
         if (buffer.isEmpty()) return emptyList()
-        if (buffer == lastVisibleBuffer && limit == lastVisibleLimit && lastVisibleCandidates.isNotEmpty()) {
+        if (buffer == lastVisibleBuffer && limit == lastVisibleLimit && currentDictVersion == lastVisibleDictVersion && lockedSyllables == lastVisibleLockedSyllables && lastVisibleCandidates.isNotEmpty()) {
             return lastVisibleCandidates
         }
+        singleSyllableCache.clear()
+        prefixCache.clear()
+        exactCache.clear()
 
         val compositions = getValidCompositions()
         val primaryPinyin: String = compositions.firstOrNull { it.isComplete }?.pinyinString
@@ -199,6 +214,8 @@ class T9Engine(
         lastVisibleCandidates = finalCandidates
         lastVisibleLimit = limit
         lastVisibleBuffer = buffer
+        lastVisibleDictVersion = dictionary.dictionaryVersion
+        lastVisibleLockedSyllables = lockedSyllables.toList()
 
         return finalCandidates
     }
@@ -252,7 +269,7 @@ class T9Engine(
         if (completeComp.pinyinList.size != 2) return emptyList()
         val pinyins = completeComp.pinyinList
 
-        val batchResults = dictionary.getPinyinExactCandidatesMultiple(listOf(pinyins[0], pinyins[1]))
+        val batchResults = trackQuery { dictionary.getPinyinExactCandidatesMultiple(listOf(pinyins[0], pinyins[1])) }
 
         val firstCandidates = (batchResults[pinyins[0]] ?: emptyList())
             .filter { it.origin == CandidateOrigin.EXACT_SINGLE && it.text.length == 1 && it.score >= 50000 }
@@ -278,16 +295,30 @@ class T9Engine(
     }
 
     fun getCandidates(limit: Int = 30): List<Candidate> {
+        val currentDictVersion = dictionary.dictionaryVersion
         if (buffer.isEmpty()) return emptyList()
-        if (buffer != lastBuffer || limit != lastLimit) {
+        if (buffer != lastBuffer || limit != lastLimit || currentDictVersion != lastDictVersion || lockedSyllables != lastLockedSyllables) {
+            singleSyllableCache.clear()
+            prefixCache.clear()
+            exactCache.clear()
             lastCandidates = generateCandidates(buffer, limit)
             lastBuffer = buffer
             lastLimit = limit
+            lastDictVersion = currentDictVersion
+            lastLockedSyllables = lockedSyllables.toList()
         }
         return lastCandidates
     }
 
+    private val singleSyllableCache = mutableMapOf<String, List<Candidate>>()
+    private val prefixCache = mutableMapOf<String, List<Candidate>>()
+    private val exactCache = mutableMapOf<String, List<Candidate>>()
+
     private fun generateCandidates(currentBuffer: String, limit: Int, allowDynamic: Boolean = true): List<Candidate> {
+        val startTime = System.currentTimeMillis()
+        dbQueryCount = 0
+
+
         val compositions = getValidCompositions()
         if (compositions.isEmpty()) {
             return listOf(Candidate(currentBuffer, currentBuffer, -Int.MAX_VALUE, CandidateType.NORMAL, currentBuffer))
@@ -296,7 +327,7 @@ class T9Engine(
         val allCandidates = mutableListOf<Candidate>()
 
         // Take the top 16 compositions to explore multiple plausible paths
-        val topComps = compositions.take(16)
+        val topComps = compositions.take(8)
 
         // Pre-calculate path qualities for exact single syllable paths
         // This ensures the highest frequency candidates heavily influence the path score,
@@ -323,11 +354,11 @@ class T9Engine(
                 continue
             }
 
-            val exactPhrases = if (comp.isComplete) dictionary.getPinyinExactCandidates(comp.pinyinString) else emptyList()
+            val exactPhrases = if (comp.isComplete) exactCache.getOrPut(comp.pinyinString) { trackQuery { dictionary.getPinyinExactCandidates(comp.pinyinString) } } else emptyList()
 
             val candidates = if (comp.pinyinList.size == 1) {
                 val singles = getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit, comp.pinyinString, comp.segmentDigits)
-                val prefixes = dictionary.getPinyinPrefixCandidates(comp.pinyinString)
+                val prefixes = prefixCache.getOrPut(comp.pinyinString) { trackQuery { dictionary.getPinyinPrefixCandidates(comp.pinyinString) } }
                 (exactPhrases.map { Candidate(it.text, it.code, it.score, it.type, comp.pinyinString, CandidateOrigin.EXACT_PHRASE) } + singles + prefixes).distinctBy { it.text }
             } else {
                 val sentence = getSentenceCandidates(comp, limit, comp.pinyinString, allowDynamic)
@@ -403,11 +434,17 @@ class T9Engine(
             if (isC2SpacedDynamic && !isC1SpacedDynamic) return@Comparator -1
 
             c2.score.compareTo(c1.score)
-        }).take(limit)
+        }).take(limit).also {
+            val elapsed = System.currentTimeMillis() - startTime
+            val preeditCount = topComps.size
+            logger?.log("T9Engine", "generateCandidates: buffer=${currentBuffer.length} preedit=$preeditCount queries=$dbQueryCount time=${elapsed}ms")
+        }
     }
 
     private fun getSingleSyllableCandidates(pinyin: String, isComplete: Boolean, limit: Int, sourcePinyin: String, segmentDigits: List<String>): List<Candidate> {
-        val candidates = dictionary.getSingleSyllableCandidates(pinyin)
+        val candidates = singleSyllableCache.getOrPut(pinyin) {
+            trackQuery { dictionary.getSingleSyllableCandidates(pinyin) }
+        }
 
         val typedCodeLength = if (segmentDigits.isNotEmpty()) segmentDigits[0].length else T9CodeMapper.toCode(pinyin).length
         val codeLen = T9CodeMapper.toCode(pinyin).length
@@ -445,10 +482,22 @@ class T9Engine(
                 allPartStrs.add(partStr)
             }
         }
-        val batchResults = dictionary.getPinyinExactCandidatesMultiple(allPartStrs.toList())
+        val batchResults = trackQuery { dictionary.getPinyinExactCandidatesMultiple(allPartStrs.toList()) }
 
         for (i in 1..pinyins.size) {
             val currentCandidates = mutableListOf<Candidate>()
+
+            // Check for exact phrase short-circuit
+            val isPrefix = (i == pinyins.size)
+            if (isPrefix) {
+                val fullPinyin = pinyins.joinToString(" ")
+                val exactPhrases = batchResults[fullPinyin] ?: emptyList()
+                val topExactPhrases = exactPhrases.filter { it.origin == CandidateOrigin.EXACT_PHRASE && it.text.length >= 2 && !it.text.matches(Regex("^[a-zA-Z\\s]+$")) }
+                if (topExactPhrases.isNotEmpty() && topExactPhrases.size >= limit) {
+                    dp[i] = topExactPhrases.map { Candidate(it.text, it.code, it.score + 50000, CandidateType.NORMAL, sourcePinyin, it.origin) }.toMutableList()
+                    break
+                }
+            }
 
             for (j in 0 until i) {
                 if (dp[j] == null || dp[j]!!.isEmpty()) continue
@@ -550,7 +599,7 @@ class T9Engine(
                         }
                     }
                     .sortedByDescending { it.score }
-                    .take(limit)
+                    .take(if (i == pinyins.size) limit else 10)
                     .toMutableList()
             } else {
                 dp[i] = mutableListOf()

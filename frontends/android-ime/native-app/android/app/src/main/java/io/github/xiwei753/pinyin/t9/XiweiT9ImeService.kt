@@ -90,7 +90,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             when (state) {
                 is DictionaryState.Ready -> {
                     if (this::handler.isInitialized) {
-                        val engine = T9Engine(state.dictionary, userDictionary)
+                        val engine = T9Engine(state.dictionary, userDictionary, debugLogger)
                         handler.attachEngine(engine)
                         if (this::keyboardViews.isInitialized) refreshUi()
                     }
@@ -100,7 +100,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                         Thread {
                             val dict = DictionaryManager.getProviderBlocking(this)
                             Handler(Looper.getMainLooper()).post {
-                                val engine = T9Engine(dict, userDictionary)
+                                val engine = T9Engine(dict, userDictionary, debugLogger)
                                 handler.attachEngine(engine)
                                 if (this::keyboardViews.isInitialized) refreshUi()
                             }
@@ -126,7 +126,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             DictionaryManager.prepareAsync(this)
             val readyDict = DictionaryManager.getReadyProviderOrNull()
             if (readyDict != null) {
-                handler.attachEngine(T9Engine(readyDict, userDictionary))
+                handler.attachEngine(T9Engine(readyDict, userDictionary, debugLogger))
             }
         }
     }

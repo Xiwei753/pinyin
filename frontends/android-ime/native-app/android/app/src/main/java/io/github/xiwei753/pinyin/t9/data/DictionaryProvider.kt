@@ -3,6 +3,9 @@ package io.github.xiwei753.pinyin.t9.data
 import io.github.xiwei753.pinyin.t9.core.Candidate
 
 interface DictionaryProvider {
+    val dictionaryVersion: Int
+        get() = 0
+
     fun getPinyinExactCandidates(pinyinSequence: String): List<Candidate>
     fun getPinyinExactCandidatesMultiple(pinyinSequences: List<String>): Map<String, List<Candidate>>
     fun getPinyinPrefixCandidates(pinyinPrefix: String): List<Candidate>
