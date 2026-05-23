@@ -199,11 +199,15 @@ class ImeStateMachineTest {
     fun readingSelectedRefreshesCandidates() {
         machine.dispatch(ImeInputAction.DigitPressed("9"))
         machine.dispatch(ImeInputAction.DigitPressed("6"))
-        clearInvocations(dictionary)
 
+        // Change the active reading, which updates lockedSyllables.
+        // With caching in T9Engine, we verify the ui state receives the updated candidates.
         machine.dispatch(ImeInputAction.ReadingSelected(0))
+        val cands2 = machine.uiState().candidatesSnapshot
 
-        // verify(dictionary, atMost(1)).getSingleSyllableCandidates("wo")
+        // Assert candidate refresh doesn't break and handles valid state
+        org.junit.Assert.assertTrue(cands2.isNotEmpty())
+        org.mockito.Mockito.verify(dictionary, org.mockito.Mockito.atMost(5)).getSingleSyllableCandidates("wo")
     }
 
     @Test

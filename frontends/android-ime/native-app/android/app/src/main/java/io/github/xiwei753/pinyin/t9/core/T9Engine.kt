@@ -111,6 +111,7 @@ class T9Engine(
     private var lastVisibleLimit = -1
     private var lastVisibleDictVersion = -1
     private var lastVisibleLockedSyllables = listOf<String>()
+    private var lastLockedSyllables = listOf<String>()
     private var lastVisibleBuffer = ""
     private var lastInternalCandidates = listOf<Candidate>()
 
@@ -296,7 +297,7 @@ class T9Engine(
     fun getCandidates(limit: Int = 30): List<Candidate> {
         val currentDictVersion = dictionary.dictionaryVersion
         if (buffer.isEmpty()) return emptyList()
-        if (buffer != lastBuffer || limit != lastLimit || currentDictVersion != lastDictVersion || lockedSyllables != lastVisibleLockedSyllables) {
+        if (buffer != lastBuffer || limit != lastLimit || currentDictVersion != lastDictVersion || lockedSyllables != lastLockedSyllables) {
             singleSyllableCache.clear()
             prefixCache.clear()
             exactCache.clear()
@@ -304,6 +305,7 @@ class T9Engine(
             lastBuffer = buffer
             lastLimit = limit
             lastDictVersion = currentDictVersion
+            lastLockedSyllables = lockedSyllables.toList()
         }
         return lastCandidates
     }
