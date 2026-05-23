@@ -82,26 +82,26 @@ class SQLiteDictionary private constructor(
             val textIdx = cursor.getColumnIndex("text")
             val pinyinIdx = cursor.getColumnIndex("pinyin")
             val codeIdx = cursor.getColumnIndex("code")
-            val scoreIdx = cursor.getColumnIndex("score")
-            val typeIdx = cursor.getColumnIndex("type")
+            val freqIdx = cursor.getColumnIndex("freq")
+
             val originIdx = cursor.getColumnIndex("origin")
 
             do {
                 val text = cursor.getString(textIdx)
                 val pinyin = cursor.getString(pinyinIdx)
                 val code = cursor.getString(codeIdx)
-                val score = cursor.getInt(scoreIdx)
-                val typeStr = cursor.getString(typeIdx)
+                val freq = cursor.getInt(freqIdx)
+
                 val originStr = cursor.getString(originIdx)
 
-                val type = try { CandidateType.valueOf(typeStr) } catch (e: Exception) { CandidateType.NORMAL }
+                val type = CandidateType.NORMAL
                 val origin = if (forcePrefixOrigin) {
                     CandidateOrigin.PREFIX_COMPLETION
                 } else {
                     try { CandidateOrigin.valueOf(originStr) } catch (e: Exception) { CandidateOrigin.UNKNOWN }
                 }
 
-                candidates.add(Candidate(text, code, score, type, "", origin))
+                candidates.add(Candidate(text, code, freq, CandidateType.NORMAL, "", origin))
             } while (cursor.moveToNext())
         }
         cursor.close()
@@ -116,7 +116,7 @@ class SQLiteDictionary private constructor(
         }
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
-            "SELECT text, pinyin, code, score, type, origin FROM entries WHERE pinyin = ? ORDER BY score DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE pinyin = ? ORDER BY freq DESC LIMIT 100",
             arrayOf(pinyinSequence)
         )
         return cursorToCandidates(cursor)
@@ -130,13 +130,13 @@ class SQLiteDictionary private constructor(
         }
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
-            "SELECT text, pinyin, code, score, type, origin FROM entries WHERE pinyin LIKE ? ORDER BY score DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE pinyin LIKE ? ORDER BY freq DESC LIMIT 100",
             arrayOf("$pinyinPrefix %")
         )
         val spaceMatches = cursorToCandidates(cursor, forcePrefixOrigin = true)
 
         val cursor2 = db.rawQuery(
-            "SELECT text, pinyin, code, score, type, origin FROM entries WHERE pinyin = ? ORDER BY score DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE pinyin = ? ORDER BY freq DESC LIMIT 100",
             arrayOf(pinyinPrefix)
         )
         val exactMatches = cursorToCandidates(cursor2) // keep exact origins
@@ -148,7 +148,7 @@ class SQLiteDictionary private constructor(
         if (isFallback) return emptyList()
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
-            "SELECT text, pinyin, code, score, type, origin FROM entries WHERE syllable = ? ORDER BY score DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE pinyin = ? AND syllable_count = 1 ORDER BY freq DESC LIMIT 100",
             arrayOf(syllable)
         )
         return cursorToCandidates(cursor)
@@ -166,7 +166,7 @@ class SQLiteDictionary private constructor(
         }
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
-            "SELECT text, pinyin, code, score, type, origin FROM entries WHERE code = ? ORDER BY score DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE code = ? ORDER BY freq DESC LIMIT 100",
             arrayOf(code)
         )
         return cursorToCandidates(cursor)
@@ -181,7 +181,7 @@ class SQLiteDictionary private constructor(
         }
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
-            "SELECT text, pinyin, code, score, type, origin FROM entries WHERE code LIKE ? ORDER BY score DESC LIMIT 100",
+            "SELECT text, pinyin, code, freq,  origin FROM entries WHERE code LIKE ? ORDER BY freq DESC LIMIT 100",
             arrayOf("$code%")
         )
         return cursorToCandidates(cursor, forcePrefixOrigin = true)

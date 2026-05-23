@@ -209,3 +209,8 @@
 - `288249464` -> preedit `bu tai xing`，第一候选必须是“不太行”。
 - `288249464` 不应该出现“不太新股”“不太英语”。
 - `546842692674264` -> preedit `jin tian wan shang`，候选包含“今天晚上”。
+
+### 阶段 5：大词库系统 V1 (已完成)
+- 基于 rime-ice 引入 50 万级别高质量常用词汇。
+- 修改了 SQLite schema，引入 `freq`, `syllable_count`, `origin` 等结构化字段。
+- T9Engine 已经完成重构，实现了对 `EXACT_PHRASE` 的最高优先级展示。

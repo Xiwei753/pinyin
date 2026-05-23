@@ -65,6 +65,20 @@ class T9EngineGoldenRealDictTest {
         assertFalse("不应出现错误长词候选: $visibleTexts", visibleTexts.contains("不太英语"))
     }
 
+
+    @Test
+    fun newGoldenPhraseCasesUseRealDictionary() {
+        assertCase("94664", "zhong", setOf("中"))
+        assertCase("94664486", "zhong guo", setOf("中国"))
+        assertCase("96636", "wo men", setOf("我们"))
+        assertCase("6433", "ni de", setOf("你的"))
+        assertCase("64426", "ni hao", setOf("你好"))
+        assertCase("526", "kan", setOf("看"))
+        assertCase("5468426", "jin tian", setOf("今天"))
+        assertCase("934743663", "wei shen me", setOf("为什么"))
+        assertCase("7436474", "sheng ri", setOf("生气", "生日"))
+        assertCase("746458264", "qing kuang", setOf("情况"))
+    }
     @Test
     fun separatorCaseUsesRealDictionary() {
         assertCase("28182419464", "bu tai xing", setOf("不太行"))

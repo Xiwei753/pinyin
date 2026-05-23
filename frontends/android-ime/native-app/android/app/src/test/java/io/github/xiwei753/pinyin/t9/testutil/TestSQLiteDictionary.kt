@@ -28,8 +28,8 @@ class TestSQLiteDictionary(dbPath: String) : DictionaryProvider {
             val text = rs.getString("text")
             val pinyin = rs.getString("pinyin")
             val code = rs.getString("code")
-            val score = rs.getInt("score")
-            val typeStr = rs.getString("type")
+            val score = rs.getInt("freq")
+            val typeStr = "NORMAL"
             val originStr = rs.getString("origin")
 
             val type = try { CandidateType.valueOf(typeStr) } catch (e: Exception) { CandidateType.NORMAL }
@@ -46,7 +46,7 @@ class TestSQLiteDictionary(dbPath: String) : DictionaryProvider {
 
     override fun getPinyinExactCandidates(pinyinSequence: String): List<Candidate> {
         val conn = connection ?: return emptyList()
-        val stmt = conn.prepareStatement("SELECT text, pinyin, code, score, type, origin FROM entries WHERE pinyin = ? ORDER BY score DESC LIMIT 100")
+        val stmt = conn.prepareStatement("SELECT text, pinyin, code, freq, origin FROM entries WHERE pinyin = ? ORDER BY freq DESC LIMIT 100")
         stmt.setString(1, pinyinSequence)
         val rs = stmt.executeQuery()
         val res = resultSetToCandidates(rs)
@@ -57,14 +57,14 @@ class TestSQLiteDictionary(dbPath: String) : DictionaryProvider {
 
     override fun getPinyinPrefixCandidates(pinyinPrefix: String): List<Candidate> {
         val conn = connection ?: return emptyList()
-        val stmt = conn.prepareStatement("SELECT text, pinyin, code, score, type, origin FROM entries WHERE pinyin LIKE ? ORDER BY score DESC LIMIT 100")
+        val stmt = conn.prepareStatement("SELECT text, pinyin, code, freq, origin FROM entries WHERE pinyin LIKE ? ORDER BY freq DESC LIMIT 100")
         stmt.setString(1, "$pinyinPrefix %")
         val rs = stmt.executeQuery()
         val spaceMatches = resultSetToCandidates(rs, forcePrefixOrigin = true)
         rs.close()
         stmt.close()
 
-        val stmt2 = conn.prepareStatement("SELECT text, pinyin, code, score, type, origin FROM entries WHERE pinyin = ? ORDER BY score DESC LIMIT 100")
+        val stmt2 = conn.prepareStatement("SELECT text, pinyin, code, freq, origin FROM entries WHERE pinyin = ? ORDER BY freq DESC LIMIT 100")
         stmt2.setString(1, pinyinPrefix)
         val rs2 = stmt2.executeQuery()
         val exactMatches = resultSetToCandidates(rs2)
@@ -76,7 +76,7 @@ class TestSQLiteDictionary(dbPath: String) : DictionaryProvider {
 
     override fun getSingleSyllableCandidates(syllable: String): List<Candidate> {
         val conn = connection ?: return emptyList()
-        val stmt = conn.prepareStatement("SELECT text, pinyin, code, score, type, origin FROM entries WHERE syllable = ? ORDER BY score DESC LIMIT 100")
+        val stmt = conn.prepareStatement("SELECT text, pinyin, code, freq, origin FROM entries WHERE pinyin = ? AND syllable_count = 1 ORDER BY freq DESC LIMIT 100")
         stmt.setString(1, syllable)
         val rs = stmt.executeQuery()
         val res = resultSetToCandidates(rs)
@@ -91,7 +91,7 @@ class TestSQLiteDictionary(dbPath: String) : DictionaryProvider {
 
     override fun getExactCandidates(code: String): List<Candidate> {
         val conn = connection ?: return emptyList()
-        val stmt = conn.prepareStatement("SELECT text, pinyin, code, score, type, origin FROM entries WHERE code = ? ORDER BY score DESC LIMIT 100")
+        val stmt = conn.prepareStatement("SELECT text, pinyin, code, freq, origin FROM entries WHERE code = ? ORDER BY freq DESC LIMIT 100")
         stmt.setString(1, code)
         val rs = stmt.executeQuery()
         val res = resultSetToCandidates(rs)
@@ -102,7 +102,7 @@ class TestSQLiteDictionary(dbPath: String) : DictionaryProvider {
 
     override fun getPrefixCandidates(code: String): List<Candidate> {
         val conn = connection ?: return emptyList()
-        val stmt = conn.prepareStatement("SELECT text, pinyin, code, score, type, origin FROM entries WHERE code LIKE ? ORDER BY score DESC LIMIT 100")
+        val stmt = conn.prepareStatement("SELECT text, pinyin, code, freq, origin FROM entries WHERE code LIKE ? ORDER BY freq DESC LIMIT 100")
         stmt.setString(1, "$code%")
         val rs = stmt.executeQuery()
         val res = resultSetToCandidates(rs, forcePrefixOrigin = true)
