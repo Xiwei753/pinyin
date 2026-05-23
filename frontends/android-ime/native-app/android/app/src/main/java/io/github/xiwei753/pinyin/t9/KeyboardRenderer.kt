@@ -133,6 +133,9 @@ class KeyboardRenderer {
         }
         val subColor = palette.subColor
 
+        canvas.save()
+        canvas.clipRect(rect)
+
         when (key.role) {
             KeyboardKeyRole.NORMAL -> {
                 if (key.subLabel != null) {
@@ -175,7 +178,19 @@ class KeyboardRenderer {
             }
             KeyboardKeyRole.RAIL_READING -> {
                 textPaint.color = textColor
-                textPaint.textSize = minOf(rect.height() * palette.layoutTokens.railTextSize, rect.width() * 0.65f)
+
+                // Need to scale text dynamically to fit inside rect width with padding
+                var ts = minOf(rect.height() * palette.layoutTokens.railTextSize, rect.width() * 0.65f)
+                textPaint.textSize = ts
+                val padding = rect.width() * 0.1f // 10% padding
+                val maxTextWidth = rect.width() - padding
+
+                // Shrink text size until it fits the width or reaches a minimum
+                while (textPaint.measureText(key.label) > maxTextWidth && ts > 10f) {
+                    ts -= 1f
+                    textPaint.textSize = ts
+                }
+
                 val centerX = rect.centerX().toFloat()
                 val textY = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
                 canvas.drawText(key.label, centerX, textY, textPaint)
@@ -203,6 +218,8 @@ class KeyboardRenderer {
             }
             KeyboardKeyRole.PLACEHOLDER -> {}
         }
+
+        canvas.restore()
     }
 
     fun hitTest(keys: List<KeyboardKey>, leftRailKeys: List<KeyboardKey>, bottomLeftKey: KeyboardKey?, x: Float, y: Float, leftRailScrollY: Int): KeyboardKey? {
