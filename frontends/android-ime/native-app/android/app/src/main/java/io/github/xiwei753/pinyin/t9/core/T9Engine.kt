@@ -251,10 +251,13 @@ class T9Engine(
         val completeComp = compositions.firstOrNull { it.isComplete } ?: return emptyList()
         if (completeComp.pinyinList.size != 2) return emptyList()
         val pinyins = completeComp.pinyinList
-        val firstCandidates = dictionary.getPinyinExactCandidates(pinyins[0])
+
+        val batchResults = dictionary.getPinyinExactCandidatesMultiple(listOf(pinyins[0], pinyins[1]))
+
+        val firstCandidates = (batchResults[pinyins[0]] ?: emptyList())
             .filter { it.origin == CandidateOrigin.EXACT_SINGLE && it.text.length == 1 && it.score >= 50000 }
             .take(3)
-        val secondCandidates = dictionary.getPinyinExactCandidates(pinyins[1])
+        val secondCandidates = (batchResults[pinyins[1]] ?: emptyList())
             .filter { it.origin == CandidateOrigin.EXACT_SINGLE && it.text.length == 1 && it.score >= 50000 }
             .take(3)
         val results = mutableListOf<Candidate>()
@@ -370,7 +373,6 @@ class T9Engine(
         lastInternalCandidates = sortedAll.take(10)
 
         val distinctSorted = sortedAll
-            .take(limit - 1)
             .toMutableList()
 
         // Always ensure the bare numeric fallback is at the very end
@@ -380,10 +382,28 @@ class T9Engine(
         return distinctSorted.sortedWith(Comparator { c1, c2 ->
             if (c1.text == currentBuffer) return@Comparator 1
             if (c2.text == currentBuffer) return@Comparator -1
+
+            // EXACT_PHRASE always beats everything else
             if (c1.origin == CandidateOrigin.EXACT_PHRASE && c2.origin != CandidateOrigin.EXACT_PHRASE) return@Comparator -1
             if (c2.origin == CandidateOrigin.EXACT_PHRASE && c1.origin != CandidateOrigin.EXACT_PHRASE) return@Comparator 1
+
+            // EXACT_SINGLE and SAFE_DYNAMIC_COMPOSITION beat DYNAMIC_COMPOSITION
+            val isC1Safe = c1.origin == CandidateOrigin.EXACT_SINGLE || c1.origin == CandidateOrigin.SAFE_DYNAMIC_COMPOSITION
+            val isC2Safe = c2.origin == CandidateOrigin.EXACT_SINGLE || c2.origin == CandidateOrigin.SAFE_DYNAMIC_COMPOSITION
+            val isC1Dynamic = c1.origin == CandidateOrigin.DYNAMIC_COMPOSITION
+            val isC2Dynamic = c2.origin == CandidateOrigin.DYNAMIC_COMPOSITION
+
+            if (isC1Safe && isC2Dynamic) return@Comparator -1
+            if (isC2Safe && isC1Dynamic) return@Comparator 1
+
+            // Spaced dynamic composition shouldn't beat anything that isn't a fallback
+            val isC1SpacedDynamic = c1.origin == CandidateOrigin.DYNAMIC_COMPOSITION && c1.text.contains(" ")
+            val isC2SpacedDynamic = c2.origin == CandidateOrigin.DYNAMIC_COMPOSITION && c2.text.contains(" ")
+            if (isC1SpacedDynamic && !isC2SpacedDynamic) return@Comparator 1
+            if (isC2SpacedDynamic && !isC1SpacedDynamic) return@Comparator -1
+
             c2.score.compareTo(c1.score)
-        })
+        }).take(limit)
     }
 
     private fun getSingleSyllableCandidates(pinyin: String, isComplete: Boolean, limit: Int, sourcePinyin: String, segmentDigits: List<String>): List<Candidate> {
@@ -417,6 +437,16 @@ class T9Engine(
         val dp = Array<MutableList<Candidate>?>(pinyins.size + 1) { null }
         dp[0] = mutableListOf(Candidate("", "", 0))
 
+        // Pre-fetch all needed exact candidates
+        val allPartStrs = mutableSetOf<String>()
+        for (i in 1..pinyins.size) {
+            for (j in 0 until i) {
+                val partStr = pinyins.subList(j, i).joinToString(" ")
+                allPartStrs.add(partStr)
+            }
+        }
+        val batchResults = dictionary.getPinyinExactCandidatesMultiple(allPartStrs.toList())
+
         for (i in 1..pinyins.size) {
             val currentCandidates = mutableListOf<Candidate>()
 
@@ -427,7 +457,7 @@ class T9Engine(
                 val partStr = partPinyins.joinToString(" ")
                 val isPrefix = (i == pinyins.size)
 
-                val partCandidates = dictionary.getPinyinExactCandidates(partStr)
+                val partCandidates = batchResults[partStr] ?: emptyList()
 
                 val partCodeLength = if (comp.segmentDigits.isNotEmpty()) {
                     comp.segmentDigits.subList(j, i).sumOf { it.length }
@@ -473,10 +503,35 @@ class T9Engine(
 
                         if (comp.rawDigits.length <= 4 && prevCandidate.text.isNotEmpty()) {
                             // Heavily penalize multiple word combinations for short inputs
+                            baseScore -= 1000000
+                        }
+
+                        if (comp.rawDigits.length <= 9 && prevCandidate.text.isNotEmpty() && partCandidate.origin == CandidateOrigin.PREFIX_COMPLETION && partCandidate.text.length >= 2) {
+                            // Penalize long prefix concatenations on short-ish inputs (like bu tai xinggu)
+                            baseScore -= 1000000
+                        }
+
+                        if (comp.rawDigits.length <= 9 && isDynamic && partCandidate.origin == CandidateOrigin.PREFIX_COMPLETION) {
                             baseScore -= 500000
                         }
 
+                        if (comp.rawDigits.length <= 4 && isDynamic) {
+                            baseScore -= 500000
+                        }
 
+                        if (isDynamic) {
+                            // general dynamic penalty to let exact phrases win
+                            baseScore -= 50000
+                        }
+
+                        // Overpower any dynamic combination if space count is high on short input
+                        if (comp.rawDigits.length <= 9 && newSpaceCount > 0) {
+                            baseScore -= 2000000
+                        }
+
+                        if (comp.rawDigits.length <= 9 && isDynamic && newText.contains(" ") && partCandidate.text.length == 1) {
+                            baseScore -= 2000000
+                        }
 
                         val origin = if (isDynamic) CandidateOrigin.DYNAMIC_COMPOSITION else partCandidate.origin
 
