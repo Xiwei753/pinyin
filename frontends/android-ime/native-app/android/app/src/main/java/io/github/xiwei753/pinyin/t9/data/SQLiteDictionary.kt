@@ -15,7 +15,12 @@ class SQLiteDictionary private constructor(
     private var db: SQLiteDatabase?,
     val isFallback: Boolean,
     val loadedWordCount: Int
+
 ) : DictionaryProvider {
+
+    override val dictionaryVersion: Int
+        get() = loadedWordCount
+
 
     companion object {
         private const val DB_NAME = "t9_dict.db"

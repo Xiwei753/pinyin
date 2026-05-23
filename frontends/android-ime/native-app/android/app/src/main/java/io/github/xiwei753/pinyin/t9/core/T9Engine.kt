@@ -1,12 +1,11 @@
 package io.github.xiwei753.pinyin.t9.core
 
 import io.github.xiwei753.pinyin.t9.data.DictionaryProvider
-import io.github.xiwei753.pinyin.t9.data.SQLiteDictionary
-import android.util.Log
 
 class T9Engine(
     private val dictionary: DictionaryProvider,
-    private var userDictionary: io.github.xiwei753.pinyin.t9.data.UserDictionaryProvider? = null
+    private var userDictionary: io.github.xiwei753.pinyin.t9.data.UserDictionaryProvider? = null,
+    private val logger: io.github.xiwei753.pinyin.t9.T9DebugLogger? = null
 ) {
     var dbQueryCount: Int = 0
 
@@ -165,7 +164,7 @@ class T9Engine(
     }
 
     fun getVisibleCandidates(limit: Int = 30): List<Candidate> {
-        val currentDictVersion = (dictionary as? SQLiteDictionary)?.loadedWordCount ?: 0
+        val currentDictVersion = dictionary.dictionaryVersion
         if (buffer.isEmpty()) return emptyList()
         if (buffer == lastVisibleBuffer && limit == lastVisibleLimit && currentDictVersion == lastVisibleDictVersion && lockedSyllables == lastVisibleLockedSyllables && lastVisibleCandidates.isNotEmpty()) {
             return lastVisibleCandidates
@@ -214,7 +213,7 @@ class T9Engine(
         lastVisibleCandidates = finalCandidates
         lastVisibleLimit = limit
         lastVisibleBuffer = buffer
-        lastVisibleDictVersion = (dictionary as? SQLiteDictionary)?.loadedWordCount ?: 0
+        lastVisibleDictVersion = dictionary.dictionaryVersion
         lastVisibleLockedSyllables = lockedSyllables.toList()
 
         return finalCandidates
@@ -295,7 +294,7 @@ class T9Engine(
     }
 
     fun getCandidates(limit: Int = 30): List<Candidate> {
-        val currentDictVersion = (dictionary as? SQLiteDictionary)?.loadedWordCount ?: 0
+        val currentDictVersion = dictionary.dictionaryVersion
         if (buffer.isEmpty()) return emptyList()
         if (buffer != lastBuffer || limit != lastLimit || currentDictVersion != lastDictVersion || lockedSyllables != lastVisibleLockedSyllables) {
             singleSyllableCache.clear()
@@ -436,7 +435,7 @@ class T9Engine(
         }).take(limit).also {
             val elapsed = System.currentTimeMillis() - startTime
             val preeditCount = topComps.size
-            Log.d("T9Engine", "generateCandidates: buffer=${currentBuffer.length} preedit=$preeditCount queries=$dbQueryCount time=${elapsed}ms")
+            logger?.log("T9Engine", "generateCandidates: buffer=${currentBuffer.length} preedit=$preeditCount queries=$dbQueryCount time=${elapsed}ms")
         }
     }
 
