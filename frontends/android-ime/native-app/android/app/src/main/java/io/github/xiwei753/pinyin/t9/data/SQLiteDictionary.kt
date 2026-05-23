@@ -122,6 +122,56 @@ class SQLiteDictionary private constructor(
         return cursorToCandidates(cursor)
     }
 
+    override fun getPinyinExactCandidatesMultiple(pinyinSequences: List<String>): Map<String, List<Candidate>> {
+        if (pinyinSequences.isEmpty()) return emptyMap()
+        if (isFallback) {
+            return super.getPinyinExactCandidatesMultiple(pinyinSequences)
+        }
+        val db = db ?: return emptyMap()
+
+        val placeholders = pinyinSequences.joinToString(",") { "?" }
+        val cursor = db.rawQuery(
+            "SELECT text, pinyin, code, score, type, origin FROM entries WHERE pinyin IN ($placeholders) ORDER BY score DESC",
+            pinyinSequences.toTypedArray()
+        )
+
+        val results = mutableMapOf<String, MutableList<Candidate>>()
+        pinyinSequences.forEach { results[it] = mutableListOf() }
+
+        if (cursor.moveToFirst()) {
+            val textIdx = cursor.getColumnIndex("text")
+            val pinyinIdx = cursor.getColumnIndex("pinyin")
+            val codeIdx = cursor.getColumnIndex("code")
+            val scoreIdx = cursor.getColumnIndex("score")
+            val typeIdx = cursor.getColumnIndex("type")
+            val originIdx = cursor.getColumnIndex("origin")
+
+            do {
+                val pinyin = cursor.getString(pinyinIdx)
+                val text = cursor.getString(textIdx)
+                val code = cursor.getString(codeIdx)
+                val score = cursor.getInt(scoreIdx)
+                val type = try { io.github.xiwei753.pinyin.t9.core.CandidateType.values()[cursor.getInt(typeIdx)] } catch (e: Exception) { io.github.xiwei753.pinyin.t9.core.CandidateType.NORMAL }
+                val originStr = cursor.getString(originIdx)
+                val origin = if (originStr == null) {
+                    io.github.xiwei753.pinyin.t9.core.CandidateOrigin.UNKNOWN
+                } else {
+                    try { io.github.xiwei753.pinyin.t9.core.CandidateOrigin.valueOf(originStr) } catch (e: Exception) { io.github.xiwei753.pinyin.t9.core.CandidateOrigin.UNKNOWN }
+                }
+
+                val list = results[pinyin]
+                if (list != null && list.size < 100) {
+                    list.add(Candidate(text, code, score, type, "", origin))
+                }
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+
+        return results.mapValues { (_, list) ->
+            list.sortedByDescending { it.score }.distinctBy { it.text }
+        }
+    }
+
     override fun getPinyinPrefixCandidates(pinyinPrefix: String): List<Candidate> {
         if (isFallback) {
             if ("ni hao".startsWith(pinyinPrefix)) return getFallbackCandidates().filter { it.text == "你好" }.map { it.copy(origin = CandidateOrigin.PREFIX_COMPLETION) }

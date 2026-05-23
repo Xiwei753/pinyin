@@ -44,6 +44,10 @@ class TestSQLiteDictionary(dbPath: String) : DictionaryProvider {
         return candidates.distinctBy { it.text }
     }
 
+    override fun getPinyinExactCandidatesMultiple(pinyinSequences: List<String>): Map<String, List<Candidate>> {
+        return pinyinSequences.associateWith { getPinyinExactCandidates(it) }
+    }
+
     override fun getPinyinExactCandidates(pinyinSequence: String): List<Candidate> {
         val conn = connection ?: return emptyList()
         val stmt = conn.prepareStatement("SELECT text, pinyin, code, score, type, origin FROM entries WHERE pinyin = ? ORDER BY score DESC LIMIT 100")

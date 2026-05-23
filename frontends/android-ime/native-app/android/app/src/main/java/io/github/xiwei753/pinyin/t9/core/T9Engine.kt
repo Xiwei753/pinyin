@@ -251,10 +251,11 @@ class T9Engine(
         val completeComp = compositions.firstOrNull { it.isComplete } ?: return emptyList()
         if (completeComp.pinyinList.size != 2) return emptyList()
         val pinyins = completeComp.pinyinList
-        val firstCandidates = dictionary.getPinyinExactCandidates(pinyins[0])
+        val multiResults = dictionary.getPinyinExactCandidatesMultiple(pinyins)
+        val firstCandidates = (multiResults[pinyins[0]] ?: emptyList())
             .filter { it.origin == CandidateOrigin.EXACT_SINGLE && it.text.length == 1 && it.score >= 50000 }
             .take(3)
-        val secondCandidates = dictionary.getPinyinExactCandidates(pinyins[1])
+        val secondCandidates = (multiResults[pinyins[1]] ?: emptyList())
             .filter { it.origin == CandidateOrigin.EXACT_SINGLE && it.text.length == 1 && it.score >= 50000 }
             .take(3)
         val results = mutableListOf<Candidate>()
