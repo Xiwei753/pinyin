@@ -56,4 +56,32 @@ class T9EngineBatchQueryCountTest {
 
         assertTrue("Should have used batch query for sentence candidates", mockDict.multipleCallCount > 0)
     }
+
+    @Test
+    fun getPreeditHintDoesNotQueryDictionary() {
+        val mockDict = MockDictionaryProvider()
+        val engine = T9Engine(mockDict)
+
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+        engine.inputDigit("9")
+        engine.inputDigit("4")
+        engine.inputDigit("6")
+        engine.inputDigit("4")
+
+        val hint = engine.getPreeditHint()
+
+        org.junit.Assert.assertTrue("preedit hint should be non-empty", hint.isNotEmpty())
+        org.junit.Assert.assertEquals(
+            "getPreeditHint must not call getPinyinExactCandidates", 0, mockDict.exactCallCount)
+        org.junit.Assert.assertEquals(
+            "getPreeditHint must not call getPinyinExactCandidatesMultiple", 0, mockDict.multipleCallCount)
+        org.junit.Assert.assertEquals(
+            "getPreeditHint must not call getPinyinPrefixCandidates", 0, mockDict.prefixCallCount)
+        org.junit.Assert.assertEquals(
+            "getPreeditHint must not call getSingleSyllableCandidates", 0, mockDict.singleCallCount)
+    }
 }

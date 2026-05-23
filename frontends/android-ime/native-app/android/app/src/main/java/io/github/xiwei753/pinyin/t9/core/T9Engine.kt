@@ -188,19 +188,7 @@ class T9Engine(
         if (buffer.isEmpty()) return ""
         val compositions = getValidCompositions()
         if (compositions.isEmpty()) return ""
-
-        val exactPhrase = generateExactPhraseCandidates(compositions.take(6), 1).firstOrNull()
-        if (exactPhrase != null && exactPhrase.sourcePinyin.isNotEmpty()) {
-            return exactPhrase.sourcePinyin
-        }
-
-        val exactSingles = generateExactSingleCandidates(compositions.take(6), 1).firstOrNull()
-        if (exactSingles != null && exactSingles.sourcePinyin.isNotEmpty()) {
-            return exactSingles.sourcePinyin
-        }
-
-        val first = compositions.firstOrNull() ?: return ""
-        return first.pinyinString
+        return compositions.first().pinyinString
     }
 
     fun createDetachedCandidateEngine(bufferSnapshot: String = buffer, lockedSyllablesSnapshot: List<String> = lockedSyllables.toList()): T9Engine? {

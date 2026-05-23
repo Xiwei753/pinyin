@@ -11,6 +11,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.ArgumentMatchers.anyList
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.clearInvocations
 import org.mockito.Mockito.mock
@@ -193,6 +194,25 @@ class ImeStateMachineTest {
         assertEquals(before, state2.candidatesSnapshot)
         verify(dictionary, never()).getSingleSyllableCandidates(anyString())
         verify(dictionary, never()).getPinyinExactCandidates(anyString())
+    }
+
+    @Test
+    fun deferredPreeditDoesNotQueryCandidates() {
+        val localMachine = ImeStateMachine({ 30 }, deferCandidateComputation = true)
+        val engine = T9Engine(dictionary)
+        localMachine.attachEngine(T9EngineAdapter(engine))
+
+        for (ch in "288249464") {
+            localMachine.dispatch(ImeInputAction.DigitPressed(ch.toString()))
+        }
+
+        val state = localMachine.uiState()
+        assertTrue("preedit should be non-empty", state.preedit.isNotEmpty())
+
+        verify(dictionary, never()).getSingleSyllableCandidates(anyString())
+        verify(dictionary, never()).getPinyinExactCandidates(anyString())
+        verify(dictionary, never()).getPinyinPrefixCandidates(anyString())
+        verify(dictionary, never()).getPinyinExactCandidatesMultiple(anyList())
     }
 
     @Test
