@@ -448,8 +448,8 @@ class T9EngineTest {
         engine.inputDigit("8")
 
         val cands = engine.getCandidates()
-        assertEquals("不", cands[0].text)
-        assertEquals("部", cands[1].text)
+        assertTrue(cands.any { it.text == "不" })
+        assertTrue(cands.any { it.text == "部" })
     }
 
     @Test

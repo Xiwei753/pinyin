@@ -3,13 +3,14 @@ import os
 import re
 import sys
 import sqlite3
+import string
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Tuple
 
 from convert_rime_dict import apply_pinyin_correction, load_pinyin_corrections, normalize_pinyin
 
-MAX_OUTPUT_ENTRIES = 90000
-BASE_MULTI_QUOTA = 62000
+MAX_OUTPUT_ENTRIES = 500000
+BASE_MULTI_QUOTA = 300000
 BASE_SINGLE_QUOTA = 12000
 MIN_OUTPUT_ENTRIES = 30000
 PINYIN_RE = re.compile(r"^[a-züv: ]+$")
@@ -23,6 +24,39 @@ class Entry:
 
 def repo_root() -> str:
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+def contains_illegal_chars(text: str) -> bool:
+    # Pure english, emoji, pure punctuation
+    if not text:
+        return True
+
+    # Check if all chars are in ascii (pure english/punctuation)
+    if all(ord(c) < 128 for c in text):
+        return True
+
+    # Simple emoji check (outside typical CJK range, though not perfect)
+    for c in text:
+        if '\U00010000' <= c <= '\U0010ffff':
+            return True
+
+    return False
+
+def is_valid_entry(text: str, pinyin: str) -> bool:
+    if not text or not pinyin:
+        return False
+    if len(text) > 8:
+        return False
+    if not PINYIN_RE.match(pinyin):
+        return False
+
+    syl_count = len(pinyin.split())
+    if len(text) != syl_count:
+        return False
+
+    if contains_illegal_chars(text):
+        return False
+
+    return True
 
 def parse_rime_dict(path: str, source: str) -> Iterable[Entry]:
     header_ended = False
@@ -42,7 +76,8 @@ def parse_rime_dict(path: str, source: str) -> Iterable[Entry]:
 
             text = parts[0].strip()
             pinyin = normalize_pinyin(parts[1].strip())
-            if not text or not pinyin or len(text) > 20 or not PINYIN_RE.match(pinyin):
+
+            if not is_valid_entry(text, pinyin):
                 continue
 
             weight = 0
@@ -67,7 +102,8 @@ def parse_tsv_phrases(path: str, source: str) -> Iterable[Entry]:
 
             text = parts[0].strip()
             pinyin = normalize_pinyin(parts[1].strip())
-            if not text or not pinyin or len(text) > 20 or not PINYIN_RE.match(pinyin):
+
+            if not is_valid_entry(text, pinyin):
                 continue
 
             weight = 0
@@ -94,12 +130,13 @@ def selection_score(entry: Entry) -> Tuple[int, int, int, str, str]:
     score = entry.weight + source_bonus + phrase_bonus
     return (score, entry.weight, text_len, entry.pinyin, entry.text)
 
-
 def merge_entries(entries: Iterable[Entry], corrections: Dict[Tuple[str, str], str]) -> Dict[Tuple[str, str], Entry]:
     merged: Dict[Tuple[str, str], Entry] = {}
     for entry in entries:
         corrected_pinyin = apply_pinyin_correction(entry.text, entry.pinyin, corrections)
         if corrected_pinyin != entry.pinyin:
+            if not is_valid_entry(entry.text, corrected_pinyin):
+                continue
             entry = Entry(text=entry.text, pinyin=corrected_pinyin, weight=entry.weight, source=entry.source)
 
         key = (entry.text, entry.pinyin)
@@ -234,15 +271,27 @@ def main() -> int:
     corrections = load_pinyin_corrections()
 
     entries: List[Entry] = []
+
+    print("Parsing base...")
     entries.extend(parse_rime_dict(input_file_base, "base"))
+    print("Parsing 8105...")
     entries.extend(e for e in parse_rime_dict(input_file_8105, "8105") if len(e.text) == 1)
+
     if os.path.exists(input_file_ext):
+        print("Parsing ext...")
         entries.extend(parse_rime_dict(input_file_ext, "ext"))
+
     if os.path.exists(input_file_common):
+        print("Parsing common...")
         entries.extend(parse_tsv_phrases(input_file_common, "common"))
 
+    print(f"Total raw entries before merge: {len(entries)}")
+
     merged = merge_entries(entries, corrections)
+    print(f"Total entries after merge: {len(merged)}")
+
     final_entries = pick_entries(merged)
+    print(f"Final entries picked: {len(final_entries)}")
 
     with open(output_file, "w", encoding="utf-8", newline="\n") as f:
         for entry in final_entries:
@@ -259,47 +308,66 @@ def main() -> int:
             id INTEGER PRIMARY KEY,
             text TEXT NOT NULL,
             pinyin TEXT NOT NULL,
-            syllable TEXT,
             code TEXT NOT NULL,
-            score INTEGER NOT NULL,
-            type TEXT NOT NULL,
+            syllable_count INTEGER NOT NULL,
+            freq INTEGER NOT NULL,
+            source TEXT NOT NULL,
             origin TEXT NOT NULL,
-            source TEXT
+            is_single INTEGER NOT NULL,
+            is_phrase INTEGER NOT NULL
         )
     """)
 
     db_entries = []
+
+    single_count = 0
+    phrase_count = 0
+
     for entry in final_entries:
         code = get_t9_code(entry.pinyin)
-        c_type = get_candidate_type(entry.text, entry.weight)
         c_origin = get_candidate_origin(entry.text)
-        syllables = entry.pinyin.split()
-        single_syllable = syllables[0] if len(syllables) == 1 else None
+        syllable_count = len(entry.pinyin.split())
+        is_single = 1 if len(entry.text) == 1 else 0
+        is_phrase = 1 if len(entry.text) > 1 else 0
+
+        if is_single:
+            single_count += 1
+        else:
+            phrase_count += 1
 
         db_entries.append((
             entry.text,
             entry.pinyin,
-            single_syllable,
             code,
+            syllable_count,
             entry.weight,
-            c_type,
+            entry.source,
             c_origin,
-            entry.source
+            is_single,
+            is_phrase
         ))
 
     cursor.executemany("""
-        INSERT INTO entries (text, pinyin, syllable, code, score, type, origin, source)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO entries (text, pinyin, code, syllable_count, freq, source, origin, is_single, is_phrase)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, db_entries)
 
     cursor.execute("CREATE INDEX idx_pinyin ON entries (pinyin)")
-    cursor.execute("CREATE INDEX idx_syllable ON entries (syllable)")
     cursor.execute("CREATE INDEX idx_code ON entries (code)")
     cursor.execute("CREATE INDEX idx_text ON entries (text)")
-    cursor.execute("CREATE INDEX idx_code_score ON entries (code, score)")
+    cursor.execute("CREATE INDEX idx_code_syllable ON entries (code, syllable_count)")
+    cursor.execute("CREATE INDEX idx_pinyin_syllable ON entries (pinyin, syllable_count)")
 
     conn.commit()
     conn.close()
+
+    db_size = os.path.getsize(output_db_file)
+
+    print("\n--- Build Stats ---")
+    print(f"Total valid entries: {len(final_entries)}")
+    print(f"Phrase entries: {phrase_count}")
+    print(f"Single char entries: {single_count}")
+    print(f"SQLite DB size: {db_size / (1024 * 1024):.2f} MB")
 
     if len(final_entries) < MIN_OUTPUT_ENTRIES:
         print(

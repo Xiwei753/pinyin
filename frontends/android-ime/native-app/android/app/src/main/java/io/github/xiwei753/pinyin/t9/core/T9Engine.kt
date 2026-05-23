@@ -320,10 +320,15 @@ class T9Engine(
                 continue
             }
 
+            val exactPhrases = if (comp.isComplete) dictionary.getPinyinExactCandidates(comp.pinyinString) else emptyList()
+
             val candidates = if (comp.pinyinList.size == 1) {
-                getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit, comp.pinyinString, comp.segmentDigits)
+                val singles = getSingleSyllableCandidates(comp.pinyinList[0], comp.isComplete, limit, comp.pinyinString, comp.segmentDigits)
+                val prefixes = dictionary.getPinyinPrefixCandidates(comp.pinyinString)
+                (exactPhrases.map { Candidate(it.text, it.code, it.score, it.type, comp.pinyinString, CandidateOrigin.EXACT_PHRASE) } + singles + prefixes).distinctBy { it.text }
             } else {
-                getSentenceCandidates(comp, limit, comp.pinyinString, allowDynamic)
+                val sentence = getSentenceCandidates(comp, limit, comp.pinyinString, allowDynamic)
+                (exactPhrases.map { Candidate(it.text, it.code, it.score, it.type, comp.pinyinString, CandidateOrigin.EXACT_PHRASE) } + sentence).distinctBy { it.text }
             }
 
             val adjustedCandidates = candidates.map { c ->
@@ -375,6 +380,8 @@ class T9Engine(
         return distinctSorted.sortedWith(Comparator { c1, c2 ->
             if (c1.text == currentBuffer) return@Comparator 1
             if (c2.text == currentBuffer) return@Comparator -1
+            if (c1.origin == CandidateOrigin.EXACT_PHRASE && c2.origin != CandidateOrigin.EXACT_PHRASE) return@Comparator -1
+            if (c2.origin == CandidateOrigin.EXACT_PHRASE && c1.origin != CandidateOrigin.EXACT_PHRASE) return@Comparator 1
             c2.score.compareTo(c1.score)
         })
     }
@@ -388,13 +395,9 @@ class T9Engine(
         return candidates
             .filter { candidate ->
                 if (codeLen == 1) {
-                    candidate.type == CandidateType.SINGLE_CHAR || (candidate.type == CandidateType.COMMON_SHORT && candidate.text.length == 1)
-                } else if (codeLen == 2) {
-                    candidate.text.length <= 2
-                } else if (codeLen == 3) {
-                    candidate.text.length <= 3 && candidate.type != CandidateType.LONG_OR_LOW_FREQ
+                    candidate.text.length == 1
                 } else {
-                    candidate.text.length <= codeLen
+                    true
                 }
             }
             .map { candidate ->
@@ -473,10 +476,7 @@ class T9Engine(
                             baseScore -= 500000
                         }
 
-                        // For short inputs, heavily penalize or exclude LONG_OR_LOW_FREQ candidates that are part of dynamic combinations
-                        if (comp.rawDigits.length <= 4 && partCandidate.type == CandidateType.LONG_OR_LOW_FREQ) {
-                            baseScore -= 500000
-                        }
+
 
                         val origin = if (isDynamic) CandidateOrigin.DYNAMIC_COMPOSITION else partCandidate.origin
 

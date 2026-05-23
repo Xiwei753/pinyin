@@ -85,3 +85,8 @@ A future Linux frontend should send the same `ImeInputAction` values to the Kotl
 ## Future Rust Boundary
 
 If Rust is introduced later, it should replace the platform-independent core boundary: reducer/state machine, composition state, and possibly the T9 engine/dictionary lookup. Android and Linux should keep the same action/state/effect contract so UI and platform adapters are not thrown away.
+
+## 词库层 (Dictionary)
+词库层由预构建的 SQLite 数据库 (`t9_dict.db`) 支撑，详见 [DICTIONARY_PIPELINE.md](DICTIONARY_PIPELINE.md)。
+- **查询策略**: `T9Engine` 在查询时，优先精确匹配完整拼音路径对应的 `EXACT_PHRASE`，然后补清单字候选。
+- **避免降级**: 绝对不允许回退到通过纯数字序列（如 `LIKE '28%'`）直接查询中文字词，保证拼音预编辑 (preedit) 的显示与候选项绝对一致。
