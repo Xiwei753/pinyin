@@ -12,6 +12,7 @@ enum class KeyboardKeyRole {
     RAIL_NUMBER_AUX,
     SYMBOL_KEY,
     PLACEHOLDER,
+    CLIPBOARD_ITEM,
 }
 
 data class KeyboardKey(

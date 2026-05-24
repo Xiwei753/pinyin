@@ -25,6 +25,8 @@ class KeyboardLayoutBuilder {
         registry: SymbolKeyRegistry,
         density: Float,
         symbolEntries: List<Pair<Int, String>> = emptyList(),
+        clipboardHistory: List<String> = emptyList(),
+        clipboardPage: Int = 0,
     ): KeyboardLayoutModel {
         return when (state.keyboardMode) {
             KeyboardMode.ChineseT9, KeyboardMode.EnglishT9 -> buildT9(
@@ -66,16 +68,23 @@ class KeyboardLayoutBuilder {
                 registry = registry,
                 density = density,
             )
-            KeyboardMode.ClipboardPanel, KeyboardMode.SelectionPanel -> buildT9(
+            KeyboardMode.ClipboardPanel -> buildClipboard(
                 panelWidth = panelWidth,
                 panelHeight = panelHeight,
                 rowHeight = rowHeight,
                 bottomRowHeight = bottomRowHeight,
                 horizontalGap = horizontalGap,
                 verticalGap = verticalGap,
-                readings = emptyList(),
-                isComposing = false,
-                keyboardMode = state.keyboardMode,
+                history = clipboardHistory,
+                currentPage = clipboardPage,
+            )
+            KeyboardMode.SelectionPanel -> buildSelection(
+                panelWidth = panelWidth,
+                panelHeight = panelHeight,
+                rowHeight = rowHeight,
+                bottomRowHeight = bottomRowHeight,
+                horizontalGap = horizontalGap,
+                verticalGap = verticalGap,
             )
         }
     }
@@ -612,5 +621,159 @@ class KeyboardLayoutBuilder {
             }
         }
         return results
+    }
+
+    fun buildClipboard(
+        panelWidth: Int,
+        panelHeight: Int,
+        rowHeight: Int,
+        bottomRowHeight: Int,
+        horizontalGap: Int,
+        verticalGap: Int,
+        history: List<String>,
+        currentPage: Int,
+    ): KeyboardLayoutModel {
+        val keys = mutableListOf<KeyboardKey>()
+        val geo = T9KeyboardGeometry.calculate(panelWidth, panelHeight, rowHeight, bottomRowHeight, horizontalGap, verticalGap)
+        val rowHeights = listOf(geo.key1Rect.height(), geo.key4Rect.height(), geo.key7Rect.height())
+        val rowTops = listOf(geo.key1Rect.top, geo.key4Rect.top, geo.key7Rect.top)
+        
+        if (history.isEmpty()) {
+            val firstRowRect = Rect(horizontalGap, rowTops[0], panelWidth - horizontalGap, rowTops[0] + rowHeights[0])
+            keys.add(
+                KeyboardKey(
+                    id = "clip_empty",
+                    role = KeyboardKeyRole.NORMAL,
+                    rect = firstRowRect,
+                    label = "剪贴板为空",
+                    action = "none",
+                )
+            )
+        } else {
+            val startIndex = currentPage * 3
+            val pageItems = history.drop(startIndex).take(3)
+            for (i in pageItems.indices) {
+                val text = pageItems[i]
+                val rowRect = Rect(horizontalGap, rowTops[i], panelWidth - horizontalGap, rowTops[i] + rowHeights[i])
+                keys.add(
+                    KeyboardKey(
+                        id = "clip_item_${startIndex + i}",
+                        role = KeyboardKeyRole.CLIPBOARD_ITEM,
+                        rect = rowRect,
+                        label = text,
+                        action = "clip:commit",
+                        actionPayload = text,
+                    )
+                )
+            }
+        }
+        
+        val bottomRowTop = geo.keyNumberToggleRect.top
+        val bottomRowHeightVal = geo.keyNumberToggleRect.height()
+        val bottomY = bottomRowTop + bottomRowHeightVal
+        
+        val buttonWidth = (panelWidth - 4 * horizontalGap) / 3
+        val x0 = horizontalGap
+        val x1 = x0 + buttonWidth + horizontalGap
+        val x2 = x1 + buttonWidth + horizontalGap
+        
+        keys.add(
+            KeyboardKey(
+                id = "clip_prev",
+                role = KeyboardKeyRole.SPECIAL,
+                rect = Rect(x0, bottomRowTop, x0 + buttonWidth, bottomY),
+                label = "上一页",
+                action = "clip:prev",
+                isSelected = false,
+                isBottomRow = true,
+            )
+        )
+        keys.add(
+            KeyboardKey(
+                id = "clip_back",
+                role = KeyboardKeyRole.SPECIAL,
+                rect = Rect(x1, bottomRowTop, x1 + buttonWidth, bottomY),
+                label = "返回",
+                action = "clip:back",
+                isSelected = false,
+                isBottomRow = true,
+            )
+        )
+        keys.add(
+            KeyboardKey(
+                id = "clip_next",
+                role = KeyboardKeyRole.SPECIAL,
+                rect = Rect(x2, bottomRowTop, x2 + buttonWidth, bottomY),
+                label = "下一页",
+                action = "clip:next",
+                isSelected = false,
+                isBottomRow = true,
+            )
+        )
+        
+        return KeyboardLayoutModel(
+            keys = keys,
+            leftRailKeys = emptyList(),
+            bottomLeftKey = null,
+            panelWidth = panelWidth,
+            panelHeight = panelHeight,
+        )
+    }
+
+    fun buildSelection(
+        panelWidth: Int,
+        panelHeight: Int,
+        rowHeight: Int,
+        bottomRowHeight: Int,
+        horizontalGap: Int,
+        verticalGap: Int,
+    ): KeyboardLayoutModel {
+        val keys = mutableListOf<KeyboardKey>()
+        val geo = T9KeyboardGeometry.calculate(panelWidth, panelHeight, rowHeight, bottomRowHeight, horizontalGap, verticalGap)
+        val rowHeights = listOf(geo.key1Rect.height(), geo.key4Rect.height(), geo.key7Rect.height())
+        val rowTops = listOf(geo.key1Rect.top, geo.key4Rect.top, geo.key7Rect.top)
+        
+        val buttonWidth = (panelWidth - 4 * horizontalGap) / 3
+        val x0 = horizontalGap
+        val x1 = x0 + buttonWidth + horizontalGap
+        val x2 = x1 + buttonWidth + horizontalGap
+        
+        // Row 1: [全选] [↑] [复制]
+        keys.add(KeyboardKey("select_all", KeyboardKeyRole.NORMAL, Rect(x0, rowTops[0], x0 + buttonWidth, rowTops[0] + rowHeights[0]), "全选", null, "select:selectAll"))
+        keys.add(KeyboardKey("select_up", KeyboardKeyRole.NORMAL, Rect(x1, rowTops[0], x1 + buttonWidth, rowTops[0] + rowHeights[0]), "↑", null, "select:up"))
+        keys.add(KeyboardKey("select_copy", KeyboardKeyRole.NORMAL, Rect(x2, rowTops[0], x2 + buttonWidth, rowTops[0] + rowHeights[0]), "复制", null, "select:copy"))
+        
+        // Row 2: [←] [粘贴] [→]
+        keys.add(KeyboardKey("select_left", KeyboardKeyRole.NORMAL, Rect(x0, rowTops[1], x0 + buttonWidth, rowTops[1] + rowHeights[1]), "←", null, "select:left"))
+        keys.add(KeyboardKey("select_paste", KeyboardKeyRole.NORMAL, Rect(x1, rowTops[1], x1 + buttonWidth, rowTops[1] + rowHeights[1]), "粘贴", null, "select:paste"))
+        keys.add(KeyboardKey("select_right", KeyboardKeyRole.NORMAL, Rect(x2, rowTops[1], x2 + buttonWidth, rowTops[1] + rowHeights[1]), "→", null, "select:right"))
+        
+        // Row 3: [剪切] [↓] [撤销]
+        keys.add(KeyboardKey("select_cut", KeyboardKeyRole.NORMAL, Rect(x0, rowTops[2], x0 + buttonWidth, rowTops[2] + rowHeights[2]), "剪切", null, "select:cut"))
+        keys.add(KeyboardKey("select_down", KeyboardKeyRole.NORMAL, Rect(x1, rowTops[2], x1 + buttonWidth, rowTops[2] + rowHeights[2]), "↓", null, "select:down"))
+        keys.add(KeyboardKey("select_undo", KeyboardKeyRole.NORMAL, Rect(x2, rowTops[2], x2 + buttonWidth, rowTops[2] + rowHeights[2]), "撤销", null, "select:undo"))
+        
+        // Row 4: [返回] (spans full width)
+        val bottomRowTop = geo.keyNumberToggleRect.top
+        val bottomRowHeightVal = geo.keyNumberToggleRect.height()
+        val bottomY = bottomRowTop + bottomRowHeightVal
+        keys.add(
+            KeyboardKey(
+                id = "select_back",
+                role = KeyboardKeyRole.SPECIAL,
+                rect = Rect(horizontalGap, bottomRowTop, panelWidth - horizontalGap, bottomY),
+                label = "返回",
+                action = "select:back",
+                isBottomRow = true,
+            )
+        )
+        
+        return KeyboardLayoutModel(
+            keys = keys,
+            leftRailKeys = emptyList(),
+            bottomLeftKey = null,
+            panelWidth = panelWidth,
+            panelHeight = panelHeight,
+        )
     }
 }

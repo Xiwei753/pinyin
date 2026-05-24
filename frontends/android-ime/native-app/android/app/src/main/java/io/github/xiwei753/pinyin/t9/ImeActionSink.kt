@@ -15,4 +15,9 @@ interface ImeActionSink {
     fun cancelEnglishTimeout()
     fun getCurrentEditorInfo(): EditorInfo?
     fun performEditorAction(action: Int): Boolean
+    
+    fun performContextMenuAction(actionId: Int)
+    fun sendKeyEvent(keyCode: Int)
+    fun clipboardPageUp()
+    fun clipboardPageDown()
 }
