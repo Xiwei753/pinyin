@@ -167,6 +167,19 @@ class KeyboardActionHandler(
                 ImeSideEffect.RefreshUi -> actionSink.refreshUi()
                 ImeSideEffect.CancelEnglishTimeout -> actionSink.cancelEnglishTimeout()
                 is ImeSideEffect.ScheduleEnglishTimeout -> actionSink.scheduleEnglishTimeout(englishTimeoutRunnable, effect.delayMs)
+                
+                // New side effects
+                ImeSideEffect.ClipboardPageUp -> actionSink.clipboardPageUp()
+                ImeSideEffect.ClipboardPageDown -> actionSink.clipboardPageDown()
+                ImeSideEffect.SelectionMoveLeft -> actionSink.sendKeyEvent(android.view.KeyEvent.KEYCODE_DPAD_LEFT)
+                ImeSideEffect.SelectionMoveRight -> actionSink.sendKeyEvent(android.view.KeyEvent.KEYCODE_DPAD_RIGHT)
+                ImeSideEffect.SelectionMoveUp -> actionSink.sendKeyEvent(android.view.KeyEvent.KEYCODE_DPAD_UP)
+                ImeSideEffect.SelectionMoveDown -> actionSink.sendKeyEvent(android.view.KeyEvent.KEYCODE_DPAD_DOWN)
+                ImeSideEffect.SelectionSelectAll -> actionSink.performContextMenuAction(android.R.id.selectAll)
+                ImeSideEffect.SelectionCopy -> actionSink.performContextMenuAction(android.R.id.copy)
+                ImeSideEffect.SelectionCut -> actionSink.performContextMenuAction(android.R.id.cut)
+                ImeSideEffect.SelectionPaste -> actionSink.performContextMenuAction(android.R.id.paste)
+                ImeSideEffect.SelectionUndo -> actionSink.performContextMenuAction(android.R.id.undo)
             }
         }
     }
@@ -203,7 +216,8 @@ fun KeyboardMode.toInputMode(): InputMode = when (this) {
     KeyboardMode.EnglishT9 -> InputMode.EnglishT9
     KeyboardMode.Number -> InputMode.Number
     KeyboardMode.Symbol -> InputMode.Symbol
-    KeyboardMode.ClipboardPanel, KeyboardMode.SelectionPanel -> InputMode.Symbol
+    KeyboardMode.ClipboardPanel -> InputMode.ClipboardPanel
+    KeyboardMode.SelectionPanel -> InputMode.SelectionPanel
 }
 
 fun InputMode.toKeyboardMode(): KeyboardMode = when (this) {
@@ -211,4 +225,6 @@ fun InputMode.toKeyboardMode(): KeyboardMode = when (this) {
     InputMode.EnglishT9 -> KeyboardMode.EnglishT9
     InputMode.Number -> KeyboardMode.Number
     InputMode.Symbol -> KeyboardMode.Symbol
+    InputMode.ClipboardPanel -> KeyboardMode.ClipboardPanel
+    InputMode.SelectionPanel -> KeyboardMode.SelectionPanel
 }

@@ -10,4 +10,18 @@ sealed interface ImeSideEffect {
     data object RefreshUi : ImeSideEffect
     data object CancelEnglishTimeout : ImeSideEffect
     data class ScheduleEnglishTimeout(val delayMs: Long) : ImeSideEffect
+    
+    // Independent Panel Side Effects
+    data object ClipboardPageUp : ImeSideEffect
+    data object ClipboardPageDown : ImeSideEffect
+    data object SelectionMoveLeft : ImeSideEffect
+    data object SelectionMoveRight : ImeSideEffect
+    data object SelectionMoveUp : ImeSideEffect
+    data object SelectionMoveDown : ImeSideEffect
+    data object SelectionSelectAll : ImeSideEffect
+    data object SelectionCopy : ImeSideEffect
+    data object SelectionCut : ImeSideEffect
+    data object SelectionPaste : ImeSideEffect
+    data object SelectionUndo : ImeSideEffect
+
 }

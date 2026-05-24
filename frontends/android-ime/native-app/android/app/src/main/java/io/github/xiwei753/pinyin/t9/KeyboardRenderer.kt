@@ -221,6 +221,44 @@ class KeyboardRenderer {
                 val textY = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
                 canvas.drawText(key.label, centerX, textY, textPaint)
             }
+            KeyboardKeyRole.CLIPBOARD_ITEM -> {
+                textPaint.color = textColor
+                val originalAlign = textPaint.textAlign
+                textPaint.textAlign = Paint.Align.LEFT
+                
+                val padding = (12 * density).toInt()
+                val availableWidth = rect.width() - padding * 2
+                val text = key.label
+                val ts = rect.height() * 0.25f
+                textPaint.textSize = ts
+                
+                val measuredWidth = textPaint.measureText(text)
+                if (measuredWidth <= availableWidth) {
+                    val x = rect.left.toFloat() + padding
+                    val y = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
+                    canvas.drawText(text, x, y, textPaint)
+                } else {
+                    var count = textPaint.breakText(text, true, availableWidth.toFloat(), null)
+                    var line1 = text.substring(0, count)
+                    var remaining = text.substring(count)
+                    
+                    val measuredWidth2 = textPaint.measureText(remaining)
+                    if (measuredWidth2 > availableWidth) {
+                        val count2 = textPaint.breakText(remaining, true, (availableWidth - textPaint.measureText("...")).toFloat(), null)
+                        remaining = remaining.substring(0, count2) + "..."
+                    }
+                    
+                    val x = rect.left.toFloat() + padding
+                    val lineHeight = textPaint.descent() - textPaint.ascent()
+                    val y1 = rect.centerY().toFloat() - lineHeight * 0.4f
+                    val y2 = rect.centerY().toFloat() + lineHeight * 0.7f
+                    
+                    canvas.drawText(line1, x, y1, textPaint)
+                    canvas.drawText(remaining, x, y2, textPaint)
+                }
+                
+                textPaint.textAlign = originalAlign
+            }
             KeyboardKeyRole.PLACEHOLDER -> {}
         }
 

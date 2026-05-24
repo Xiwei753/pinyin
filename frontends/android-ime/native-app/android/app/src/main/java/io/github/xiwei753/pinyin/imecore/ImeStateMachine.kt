@@ -108,6 +108,35 @@ class ImeStateMachine(
                 currentSymbolCategory = "punct"
                 effects.add(ImeSideEffect.RefreshUi)
             }
+            
+            // Clipboard actions
+            is ImeInputAction.ClipboardItemClicked -> {
+                effects.add(ImeSideEffect.CommitText(action.text))
+                val targetMode = if (lastTextMode == InputMode.ChineseT9 || lastTextMode == InputMode.EnglishT9) lastTextMode else InputMode.ChineseT9
+                switchMode(targetMode, effects)
+            }
+            ImeInputAction.ClipboardPageUp -> {
+                effects.add(ImeSideEffect.ClipboardPageUp)
+            }
+            ImeInputAction.ClipboardPageDown -> {
+                effects.add(ImeSideEffect.ClipboardPageDown)
+            }
+            ImeInputAction.ClosePanel -> {
+                val targetMode = if (lastTextMode == InputMode.ChineseT9 || lastTextMode == InputMode.EnglishT9) lastTextMode else InputMode.ChineseT9
+                switchMode(targetMode, effects)
+            }
+            
+            // Selection actions
+            ImeInputAction.SelectionMoveLeft -> effects.add(ImeSideEffect.SelectionMoveLeft)
+            ImeInputAction.SelectionMoveRight -> effects.add(ImeSideEffect.SelectionMoveRight)
+            ImeInputAction.SelectionMoveUp -> effects.add(ImeSideEffect.SelectionMoveUp)
+            ImeInputAction.SelectionMoveDown -> effects.add(ImeSideEffect.SelectionMoveDown)
+            ImeInputAction.SelectionSelectAll -> effects.add(ImeSideEffect.SelectionSelectAll)
+            ImeInputAction.SelectionCopy -> effects.add(ImeSideEffect.SelectionCopy)
+            ImeInputAction.SelectionCut -> effects.add(ImeSideEffect.SelectionCut)
+            ImeInputAction.SelectionPaste -> effects.add(ImeSideEffect.SelectionPaste)
+            ImeInputAction.SelectionUndo -> effects.add(ImeSideEffect.SelectionUndo)
+
         }
         return effects
     }
@@ -201,6 +230,7 @@ class ImeStateMachine(
                 effects.add(ImeSideEffect.CommitText(digit))
                 effects.add(ImeSideEffect.RefreshUi)
             }
+            InputMode.ClipboardPanel, InputMode.SelectionPanel -> {}
         }
     }
 
@@ -258,6 +288,7 @@ class ImeStateMachine(
             }
             InputMode.Number -> effects.add(ImeSideEffect.CommitText("0"))
             InputMode.Symbol -> effects.add(ImeSideEffect.CommitText("0"))
+            InputMode.ClipboardPanel, InputMode.SelectionPanel -> {}
         }
     }
 
@@ -295,6 +326,7 @@ class ImeStateMachine(
                 effects.add(ImeSideEffect.CommitText(" "))
             }
             InputMode.Symbol, InputMode.Number -> effects.add(ImeSideEffect.CommitText(" "))
+            InputMode.ClipboardPanel, InputMode.SelectionPanel -> {}
         }
     }
 
@@ -336,7 +368,8 @@ class ImeStateMachine(
         val oldMode = mode
         leavingCurrentMode(effects)
         if ((oldMode == InputMode.ChineseT9 || oldMode == InputMode.EnglishT9) &&
-            (targetMode == InputMode.Symbol || targetMode == InputMode.Number)) {
+            (targetMode == InputMode.Symbol || targetMode == InputMode.Number ||
+             targetMode == InputMode.ClipboardPanel || targetMode == InputMode.SelectionPanel)) {
             lastTextMode = oldMode
         }
         mode = targetMode

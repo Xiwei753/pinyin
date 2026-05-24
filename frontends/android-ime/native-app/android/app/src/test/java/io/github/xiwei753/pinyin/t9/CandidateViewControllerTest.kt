@@ -7,6 +7,7 @@ import android.widget.TextView
 import io.github.xiwei753.pinyin.imecore.CandidateStripState
 import io.github.xiwei753.pinyin.imecore.CandidateSnapshotItem
 import io.github.xiwei753.pinyin.imecore.ImeInputAction
+import io.github.xiwei753.pinyin.imecore.InputMode
 import io.github.xiwei753.pinyin.imecore.PreeditState
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -225,7 +226,6 @@ class CandidateViewControllerTest {
     @Test
     fun testCandidateBarHeightStableWithAndWithoutPreedit() {
         controller.refreshFromState(state(preeditVisible = true, preedit = "wo"))
-        val heightWithPreedit = candidateContainer.height
         candidateContainer.measure(
             android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.AT_MOST),
             android.view.View.MeasureSpec.makeMeasureSpec(48, android.view.View.MeasureSpec.AT_MOST),
@@ -262,138 +262,35 @@ class CandidateViewControllerTest {
         var clickedAction: ImeInputAction? = null
         controller.onInputAction = { clickedAction = it }
 
-        // Click "📋" (index 0)
         val clipChip = candidateContainer.getChildAt(0) as TextView
         clipChip.performClick()
         assert(clickedAction !is ImeInputAction.CandidateSelected)
     }
 
     @Test
-    fun testClipboardHistoryDeduplicationAndSaving() {
-        // Clear history first
-        val sharedPrefs = context.getSharedPreferences("xiwei_clipboard_history", Context.MODE_PRIVATE)
-        sharedPrefs.edit().clear().commit()
-
-        // Mock system clipboard manager to have new text
-        val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-        val clip = android.content.ClipData.newPlainText("text", "hello world")
-        clipboardManager.setPrimaryClip(clip)
-
-        // Trigger refresh which updates history
+    fun testClickClipboardChipEmitsOpenClipboardPanel() {
         controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
 
-        // Click clipboard button to view history
-        val clipChip = candidateContainer.getChildAt(0) as TextView
-        clipChip.performClick()
-
-        // Candidate bar should now show close and the list of history
-        assertEquals(2, candidateContainer.childCount)
-        assertEquals("关闭", (candidateContainer.getChildAt(0) as TextView).text.toString())
-        assertEquals("hello world", (candidateContainer.getChildAt(1) as TextView).text.toString())
-
-        // Test deduplication and 20 limit
-        for (i in 1..25) {
-            val c = android.content.ClipData.newPlainText("text", "text_$i")
-            clipboardManager.setPrimaryClip(c)
-            controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
-        }
-
-        // Open clipboard again
-        clipChip.performClick()
-        // Child count should be 1 (close button) + 20 (history limit) = 21
-        assertEquals(21, candidateContainer.childCount)
-        assertEquals("text_25", (candidateContainer.getChildAt(1) as TextView).text.toString())
-
-        // Click a history item, it should commit full text and close
         var clickedAction: ImeInputAction? = null
         controller.onInputAction = { clickedAction = it }
-        val itemChip = candidateContainer.getChildAt(1) as TextView
-        itemChip.performClick()
 
-        assertEquals(ImeInputAction.SymbolCommitted("text_25"), clickedAction)
-        
-        // It should return to empty state
-        assertEquals(3, candidateContainer.childCount)
-        assertEquals("📋", (candidateContainer.getChildAt(0) as TextView).text.toString())
-    }
-
-    @Test
-    fun testClipboardEmptyState() {
-        val sharedPrefs = context.getSharedPreferences("xiwei_clipboard_history", Context.MODE_PRIVATE)
-        sharedPrefs.edit().clear().commit()
-
-        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
-
-        // Click clipboard
         val clipChip = candidateContainer.getChildAt(0) as TextView
         clipChip.performClick()
 
-        assertEquals(2, candidateContainer.childCount)
-        assertEquals("关闭", (candidateContainer.getChildAt(0) as TextView).text.toString())
-        assertEquals("剪贴板为空", (candidateContainer.getChildAt(1) as TextView).text.toString())
+        assertEquals(ImeInputAction.KeyboardModeSelected(InputMode.ClipboardPanel), clickedAction)
     }
 
     @Test
-    fun testSelectionPanelOperations() {
+    fun testClickSelectionChipEmitsOpenSelectionPanel() {
         controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
 
-        // Click "↔" (index 2)
+        var clickedAction: ImeInputAction? = null
+        controller.onInputAction = { clickedAction = it }
+
         val selectChip = candidateContainer.getChildAt(2) as TextView
         selectChip.performClick()
 
-        // Checks child count: ←, →, 全选, 复制, 剪切, 粘贴, 关闭 (total 7)
-        assertEquals(7, candidateContainer.childCount)
-        val chips = (0 until 7).map { (candidateContainer.getChildAt(it) as TextView).text.toString() }
-        assertEquals(listOf("←", "→", "全选", "复制", "剪切", "粘贴", "关闭"), chips)
-
-        var moveLeft: Boolean? = null
-        controller.onMoveCursor = { moveLeft = it }
-        candidateContainer.getChildAt(0).performClick()
-        assertEquals(false, moveLeft) // Moves left
-
-        var moveRight: Boolean? = null
-        controller.onMoveCursor = { moveRight = it }
-        candidateContainer.getChildAt(1).performClick()
-        assertEquals(true, moveRight) // Moves right
-
-        var editAction: Int? = null
-        controller.onEditorAction = { editAction = it }
-        candidateContainer.getChildAt(2).performClick() // 全选
-        assertEquals(android.R.id.selectAll, editAction)
-
-        // Close should return to empty state
-        candidateContainer.getChildAt(6).performClick()
-        assertEquals(3, candidateContainer.childCount)
-    }
-
-    @Test
-    fun testRegressionNormalTypingOverridesEmptyState() {
-        // First switch to Selection panel
-        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
-        candidateContainer.getChildAt(2).performClick() // Open selection
-        assertEquals(7, candidateContainer.childCount)
-
-        // Now type a digit (non-empty rawBuffer and candidates)
-        controller.refreshFromState(
-            state(
-                preeditVisible = true,
-                preedit = "a",
-                candidates = listOf(candidate("啊", "2", 900)),
-                rawBuffer = "2"
-            )
-        )
-
-        // Should render candidates, not selection panel!
-        assertEquals(2, candidateContainer.childCount)
-        assertEquals("a", (candidateContainer.getChildAt(0) as TextView).text.toString())
-        assertEquals("啊", (candidateContainer.getChildAt(1) as TextView).text.toString())
-    }
-
-    @Test
-    fun testKeyboardModeClipboardAndSelectionPanelPlaceholder() {
-        val modes = KeyboardMode.values()
-        assert(modes.contains(KeyboardMode.ClipboardPanel))
-        assert(modes.contains(KeyboardMode.SelectionPanel))
+        assertEquals(ImeInputAction.KeyboardModeSelected(InputMode.SelectionPanel), clickedAction)
     }
 
     private fun state(

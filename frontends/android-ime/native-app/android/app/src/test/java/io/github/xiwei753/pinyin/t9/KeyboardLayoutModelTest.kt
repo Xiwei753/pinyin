@@ -588,4 +588,54 @@ class KeyboardLayoutModelTest {
         val symMaxRight = symModel.leftRailKeys.maxOfOrNull { it.rect.right } ?: 0
         assertTrue("Symbol left rail width should match expected", symMaxRight <= expectedWidth)
     }
+
+    @Test
+    fun testClipboardPanelLayoutConstraints() {
+        val model = builder.buildClipboard(1080, 480, 96, 88, 8, 8, listOf("item1", "item2"), 0)
+        
+        assertTrue("ClipboardPanel should have no left rail keys", model.leftRailKeys.isEmpty())
+        assertNull("ClipboardPanel should have no bottom left key", model.bottomLeftKey)
+        
+        val hasDigitKeys = model.keys.any { it.id.startsWith("key_") && it.id.removePrefix("key_").toIntOrNull() != null }
+        assertFalse("ClipboardPanel should not have T9 digit keys", hasDigitKeys)
+        
+        val hasFu = model.keys.any { it.label == "符" }
+        val has123 = model.keys.any { it.label == "123" }
+        val hasChEng = model.keys.any { it.label == "中/英" || it.label == "英/中" }
+        val hasRetype = model.keys.any { it.label == "重输" }
+        
+        assertFalse("ClipboardPanel should not have '符'", hasFu)
+        assertFalse("ClipboardPanel should not have '123'", has123)
+        assertFalse("ClipboardPanel should not have '中/英'", hasChEng)
+        assertFalse("ClipboardPanel should not have '重输'", hasRetype)
+        
+        val backKey = model.keys.find { it.id == "clip_back" }
+        assertNotNull("ClipboardPanel should have back button", backKey)
+        assertEquals("返回", backKey!!.label)
+    }
+
+    @Test
+    fun testSelectionPanelLayoutConstraints() {
+        val model = builder.buildSelection(1080, 480, 96, 88, 8, 8)
+        
+        assertTrue("SelectionPanel should have no left rail keys", model.leftRailKeys.isEmpty())
+        assertNull("SelectionPanel should have no bottom left key", model.bottomLeftKey)
+        
+        val hasDigitKeys = model.keys.any { it.id.startsWith("key_") && it.id.removePrefix("key_").toIntOrNull() != null }
+        assertFalse("SelectionPanel should not have T9 digit keys", hasDigitKeys)
+        
+        val hasFu = model.keys.any { it.label == "符" }
+        val has123 = model.keys.any { it.label == "123" }
+        val hasChEng = model.keys.any { it.label == "中/英" || it.label == "英/中" }
+        val hasRetype = model.keys.any { it.label == "重输" }
+        
+        assertFalse("SelectionPanel should not have '符'", hasFu)
+        assertFalse("SelectionPanel should not have '123'", has123)
+        assertFalse("SelectionPanel should not have '中/英'", hasChEng)
+        assertFalse("SelectionPanel should not have '重输'", hasRetype)
+        
+        val backKey = model.keys.find { it.id == "select_back" }
+        assertNotNull("SelectionPanel should have back button", backKey)
+        assertEquals("返回", backKey!!.label)
+    }
 }

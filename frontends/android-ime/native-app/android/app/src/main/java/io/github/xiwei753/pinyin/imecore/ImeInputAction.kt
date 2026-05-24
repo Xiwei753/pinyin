@@ -19,6 +19,22 @@ sealed interface ImeInputAction {
     data class CandidateSelected(val index: Int) : ImeInputAction
     data class ReadingSelected(val index: Int) : ImeInputAction
     data object ClearComposing : ImeInputAction
+    
+    // Independent Panel Actions
+    data class ClipboardItemClicked(val text: String) : ImeInputAction
+    data object ClipboardPageUp : ImeInputAction
+    data object ClipboardPageDown : ImeInputAction
+    data object ClosePanel : ImeInputAction
+    data object SelectionMoveLeft : ImeInputAction
+    data object SelectionMoveRight : ImeInputAction
+    data object SelectionMoveUp : ImeInputAction
+    data object SelectionMoveDown : ImeInputAction
+    data object SelectionSelectAll : ImeInputAction
+    data object SelectionCopy : ImeInputAction
+    data object SelectionCut : ImeInputAction
+    data object SelectionPaste : ImeInputAction
+    data object SelectionUndo : ImeInputAction
+
     data class LifecycleStartInput(
         val initialMode: InputMode,
         val initialLastTextMode: InputMode = initialMode,

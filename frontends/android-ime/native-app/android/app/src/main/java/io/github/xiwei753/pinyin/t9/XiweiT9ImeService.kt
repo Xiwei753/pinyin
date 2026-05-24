@@ -1,5 +1,6 @@
 package io.github.xiwei753.pinyin.t9
 
+import android.content.Context
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
 import android.os.Looper
@@ -39,6 +40,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     internal var debugLogger: T9DebugLogger = AndroidDebugLogger()
     private var isDictPreparing = false
+    private var clipboardPage = 0
 
     private val englishTimer by lazy { Handler(Looper.getMainLooper()) }
     private var currentEnglishRunnable: Runnable? = null
@@ -214,6 +216,9 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     internal fun handleInputAction(action: ImeInputAction) {
         if (!this::handler.isInitialized) return
         if (!isActionAllowedByPolicy(action)) return
+        if (action is ImeInputAction.KeyboardModeSelected && action.mode == io.github.xiwei753.pinyin.imecore.InputMode.ClipboardPanel) {
+            clipboardPage = 0
+        }
         val debugLogging = settingsRepository.isDebugLoggingEnabled()
         val beforeMode = if (debugLogging) handler.keyboardMode else null
         val beforeBufferEmpty = if (debugLogging) handler.rawBuffer.isEmpty() else null
@@ -387,6 +392,8 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             registry = registry,
             density = density,
             symbolEntries = if (state.keyboardMode == KeyboardMode.Symbol) getEntriesForPage(state.currentSymCategory) else emptyList(),
+            clipboardHistory = ClipboardHistoryManager.getHistory(this),
+            clipboardPage = clipboardPage,
         )
     }
 
@@ -579,8 +586,26 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         logDebugInfo()
     }
 
+    private fun updateClipboardHistory() {
+        try {
+            val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            if (clipboardManager != null && clipboardManager.hasPrimaryClip()) {
+                val clip = clipboardManager.primaryClip
+                if (clip != null && clip.itemCount > 0) {
+                    val text = clip.getItemAt(0).text?.toString()
+                    if (!text.isNullOrEmpty()) {
+                        ClipboardHistoryManager.addText(this, text)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Safe fallback
+        }
+    }
+
     private fun renderCurrentState() {
         if (!this::keyboardViews.isInitialized || !this::handler.isInitialized || !this::candidateViewController.isInitialized) return
+        updateClipboardHistory()
         val state = buildKeyboardUiState()
         candidateViewController.refreshFromState(state)
         if (this::xiweiKeyboardView.isInitialized) {
@@ -596,6 +621,35 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
     override fun cancelEnglishTimeout() {
         currentEnglishRunnable?.let { englishTimer.removeCallbacks(it) }
         currentEnglishRunnable = null
+    }
+
+    override fun performContextMenuAction(actionId: Int) {
+        try {
+            currentInputConnection?.performContextMenuAction(actionId)
+        } catch (e: Exception) {}
+    }
+
+    override fun sendKeyEvent(keyCode: Int) {
+        try {
+            currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+            currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+        } catch (e: Exception) {}
+    }
+
+    override fun clipboardPageUp() {
+        if (clipboardPage > 0) {
+            clipboardPage--
+            rebuildLayoutModel()
+        }
+    }
+
+    override fun clipboardPageDown() {
+        val history = ClipboardHistoryManager.getHistory(this)
+        val totalPages = if (history.isEmpty()) 1 else (history.size + 2) / 3
+        if (clipboardPage < totalPages - 1) {
+            clipboardPage++
+            rebuildLayoutModel()
+        }
     }
 
     private fun logDebugInfo() {

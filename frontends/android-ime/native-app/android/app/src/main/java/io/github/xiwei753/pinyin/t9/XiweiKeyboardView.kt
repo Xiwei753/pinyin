@@ -254,6 +254,43 @@ class XiweiKeyboardView @JvmOverloads constructor(
                 val text = key.actionPayload ?: return
                 onInputAction?.invoke(ImeInputAction.SymbolCommitted(text)) ?: onKeyAction?.invoke("symbol:commit:$text")
             }
+            action.startsWith("clip:") -> {
+                val clipAction = action.removePrefix("clip:")
+                when (clipAction) {
+                    "commit" -> {
+                        val text = key.actionPayload ?: ""
+                        onInputAction?.invoke(ImeInputAction.ClipboardItemClicked(text))
+                    }
+                    "prev" -> {
+                        onInputAction?.invoke(ImeInputAction.ClipboardPageUp)
+                    }
+                    "next" -> {
+                        onInputAction?.invoke(ImeInputAction.ClipboardPageDown)
+                    }
+                    "back" -> {
+                        onInputAction?.invoke(ImeInputAction.ClosePanel)
+                    }
+                }
+            }
+            action.startsWith("select:") -> {
+                val selectAction = action.removePrefix("select:")
+                val inputAction = when (selectAction) {
+                    "left" -> ImeInputAction.SelectionMoveLeft
+                    "right" -> ImeInputAction.SelectionMoveRight
+                    "up" -> ImeInputAction.SelectionMoveUp
+                    "down" -> ImeInputAction.SelectionMoveDown
+                    "selectAll" -> ImeInputAction.SelectionSelectAll
+                    "copy" -> ImeInputAction.SelectionCopy
+                    "cut" -> ImeInputAction.SelectionCut
+                    "paste" -> ImeInputAction.SelectionPaste
+                    "undo" -> ImeInputAction.SelectionUndo
+                    "back" -> ImeInputAction.ClosePanel
+                    else -> null
+                }
+                if (inputAction != null) {
+                    onInputAction?.invoke(inputAction)
+                }
+            }
         }
     }
 

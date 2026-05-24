@@ -1,5 +1,6 @@
 package io.github.xiwei753.pinyin.t9
 
+import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import io.github.xiwei753.pinyin.imecore.ImeInputAction
@@ -9,10 +10,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.*
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.eq
 
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+@RunWith(RobolectricTestRunner::class)
 class XiweiT9ImeServiceUiBehaviorTest {
 
     private fun createService(): XiweiT9ImeService {
@@ -547,5 +553,58 @@ class XiweiT9ImeServiceUiBehaviorTest {
             logMock.close()
             looperMock.close()
         }
+    }
+
+    @Test
+    fun testClipboardItemClickedCommitsTextAndReturnsToTextMode() {
+        val service = createService()
+        val handler = KeyboardActionHandler(service)
+        handler.switchKeyboardMode(KeyboardMode.ClipboardPanel)
+        val ic = mock(InputConnection::class.java)
+        service.testInputConnection = ic
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleInputAction(ImeInputAction.ClipboardItemClicked("clipboard_data"))
+
+        verify(ic).commitText("clipboard_data", 1)
+        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
+    }
+
+    @Test
+    fun testSelectionPanelActionsExecuteSafely() {
+        val service = createService()
+        val handler = KeyboardActionHandler(service)
+        handler.switchKeyboardMode(KeyboardMode.SelectionPanel)
+        val ic = mock(InputConnection::class.java)
+        service.testInputConnection = ic
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleInputAction(ImeInputAction.SelectionMoveLeft)
+        val captor = ArgumentCaptor.forClass(KeyEvent::class.java)
+        verify(ic, times(2)).sendKeyEvent(captor.capture())
+        val events = captor.allValues
+        assertEquals(2, events.size)
+        assertEquals(KeyEvent.ACTION_DOWN, events[0].action)
+        assertEquals(KeyEvent.ACTION_UP, events[1].action)
+
+        service.handleInputAction(ImeInputAction.SelectionSelectAll)
+        verify(ic).performContextMenuAction(android.R.id.selectAll)
+
+        service.handleInputAction(ImeInputAction.SelectionCopy)
+        verify(ic).performContextMenuAction(android.R.id.copy)
+    }
+
+    @Test
+    fun testPanelCloseReturnsToTextMode() {
+        val service = createService()
+        val handler = KeyboardActionHandler(service)
+        handler.switchKeyboardMode(KeyboardMode.ClipboardPanel)
+        injectQuietSettings(service)
+        injectField(service, "handler", handler)
+
+        service.handleInputAction(ImeInputAction.ClosePanel)
+        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
     }
 }

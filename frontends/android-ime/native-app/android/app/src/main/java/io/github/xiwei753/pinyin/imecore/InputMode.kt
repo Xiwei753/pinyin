@@ -5,4 +5,7 @@ enum class InputMode {
     EnglishT9,
     Number,
     Symbol,
+    ClipboardPanel,
+    SelectionPanel
 }
+
