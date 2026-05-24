@@ -111,6 +111,42 @@ class KeyboardHitTestTest {
     }
 
     @Test
+    fun hitClipboardDelReturnsDel() {
+        val model = builder.buildClipboard(1080, 480, 96, 88, 8, 8, listOf("item1"), 0)
+        val delKey = model.keys.find { it.action == "del" }!!
+        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, delKey.rect.centerX().toFloat(), delKey.rect.centerY().toFloat(), 0)
+        assertNotNull("Should hit clipboard del key", hit)
+        assertEquals("del", hit!!.action)
+    }
+
+    @Test
+    fun hitClipboardEnterReturnsEnter() {
+        val model = builder.buildClipboard(1080, 480, 96, 88, 8, 8, listOf("item1"), 0)
+        val enterKey = model.keys.find { it.action == "enter" }!!
+        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, enterKey.rect.centerX().toFloat(), enterKey.rect.centerY().toFloat(), 0)
+        assertNotNull("Should hit clipboard enter key", hit)
+        assertEquals("enter", hit!!.action)
+    }
+
+    @Test
+    fun hitSelectionDelReturnsDel() {
+        val model = builder.buildSelection(1080, 480, 96, 88, 8, 8)
+        val delKey = model.keys.find { it.action == "del" }!!
+        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, delKey.rect.centerX().toFloat(), delKey.rect.centerY().toFloat(), 0)
+        assertNotNull("Should hit selection del key", hit)
+        assertEquals("del", hit!!.action)
+    }
+
+    @Test
+    fun hitSelectionEnterReturnsEnter() {
+        val model = builder.buildSelection(1080, 480, 96, 88, 8, 8)
+        val enterKey = model.keys.find { it.action == "enter" }!!
+        val hit = renderer.hitTest(model.keys, model.leftRailKeys, model.bottomLeftKey, enterKey.rect.centerX().toFloat(), enterKey.rect.centerY().toFloat(), 0)
+        assertNotNull("Should hit selection enter key", hit)
+        assertEquals("enter", hit!!.action)
+    }
+
+    @Test
     fun symbolPlaceholderIsNotReturnedByHitTest() {
         val entries = listOf(1 to "A")
         val registry = SymbolKeyRegistry()

@@ -443,8 +443,8 @@ class KeyboardLayoutModelTest {
         val firstGridRowTop = gridRows.first().key
         val gridRowHeight = gridRows.first().value.first().rect.height()
 
-        val expectedIconInset = (4 * 2.5f).toInt()
-        assertEquals("First tab top should equal symbol grid contentInsetTop", expectedIconInset, tabKeys[0].rect.top)
+        assertEquals("First tab top should align with T9 key1Rect.top", 0, tabKeys[0].rect.top)
+        assertEquals("Tab top should equal symbol grid first row top", 0, firstGridRowTop)
         assertEquals("Tab height should equal symbol grid row height", gridRowHeight, tabKeys[0].rect.height())
     }
 
@@ -591,6 +591,7 @@ class KeyboardLayoutModelTest {
 
     @Test
     fun testClipboardPanelLayoutConstraints() {
+        val geo = T9KeyboardGeometry.calculate(1080, 480, 96, 88, 8, 8)
         val model = builder.buildClipboard(1080, 480, 96, 88, 8, 8, listOf("item1", "item2"), 0)
         
         assertTrue("ClipboardPanel should have no left rail keys", model.leftRailKeys.isEmpty())
@@ -609,13 +610,60 @@ class KeyboardLayoutModelTest {
         assertFalse("ClipboardPanel should not have '中/英'", hasChEng)
         assertFalse("ClipboardPanel should not have '重输'", hasRetype)
         
+        val delKey = model.keys.find { it.action == "del" }
+        assertNotNull("ClipboardPanel should have del key", delKey)
+        assertEquals("\u232B", delKey!!.label)
+        assertEquals(geo.keyDelRect, delKey.rect)
+        
+        val enterKey = model.keys.find { it.action == "enter" }
+        assertNotNull("ClipboardPanel should have enter key", enterKey)
+        assertEquals("\u21B5", enterKey!!.label)
+        assertEquals(geo.keyEnterRect, enterKey.rect)
+        
         val backKey = model.keys.find { it.id == "clip_back" }
         assertNotNull("ClipboardPanel should have back button", backKey)
         assertEquals("返回", backKey!!.label)
     }
 
     @Test
+    fun allPanelFirstRowsHaveSameTop() {
+        val panelW = 1080
+        val panelH = 480
+        val rowH = 96
+        val bottomRowH = 88
+        val hGap = 8
+        val vGap = 8
+
+        val geo = T9KeyboardGeometry.calculate(panelW, panelH, rowH, bottomRowH, hGap, vGap)
+        val expected = geo.key1Rect.top
+
+        // T9: key_1 top
+        val t9 = builder.buildT9(panelW, panelH, rowH, bottomRowH, hGap, vGap, emptyList(), false, KeyboardMode.ChineseT9)
+        assertEquals("T9 first row top", expected, t9.keys.find { it.id == "key_1" }!!.rect.top)
+
+        // Symbol grid: first SYMBOL_KEY top
+        val sym = builder.buildSymbol(panelW, panelH, rowH, bottomRowH, hGap, vGap, listOf(1 to "，", 2 to "。"), "punct", KeyboardMode.ChineseT9, categoryToPage, registry, 2.5f)
+        val firstSym = sym.keys.first { it.role == KeyboardKeyRole.SYMBOL_KEY }
+        assertEquals("Symbol first row top", expected, firstSym.rect.top)
+
+        // Symbol tabs: first RAIL_SYMBOL_CATEGORY top
+        val firstTab = sym.leftRailKeys.first { it.role == KeyboardKeyRole.RAIL_SYMBOL_CATEGORY }
+        assertEquals("Symbol tabs first row top", expected, firstTab.rect.top)
+
+        // Clipboard: first CLIPBOARD_ITEM top
+        val clip = builder.buildClipboard(panelW, panelH, rowH, bottomRowH, hGap, vGap, listOf("item1", "item2"), 0)
+        val firstClip = clip.keys.first { it.role == KeyboardKeyRole.CLIPBOARD_ITEM }
+        assertEquals("Clipboard first row top", expected, firstClip.rect.top)
+
+        // Selection: first NORMAL key top
+        val sel = builder.buildSelection(panelW, panelH, rowH, bottomRowH, hGap, vGap)
+        val firstSel = sel.keys.first { it.role == KeyboardKeyRole.NORMAL }
+        assertEquals("Selection first row top", expected, firstSel.rect.top)
+    }
+
+    @Test
     fun testSelectionPanelLayoutConstraints() {
+        val geo = T9KeyboardGeometry.calculate(1080, 480, 96, 88, 8, 8)
         val model = builder.buildSelection(1080, 480, 96, 88, 8, 8)
         
         assertTrue("SelectionPanel should have no left rail keys", model.leftRailKeys.isEmpty())
@@ -628,14 +676,33 @@ class KeyboardLayoutModelTest {
         val has123 = model.keys.any { it.label == "123" }
         val hasChEng = model.keys.any { it.label == "中/英" || it.label == "英/中" }
         val hasRetype = model.keys.any { it.label == "重输" }
+        val hasUndo = model.keys.any { it.id == "select_undo" }
         
         assertFalse("SelectionPanel should not have '符'", hasFu)
         assertFalse("SelectionPanel should not have '123'", has123)
         assertFalse("SelectionPanel should not have '中/英'", hasChEng)
         assertFalse("SelectionPanel should not have '重输'", hasRetype)
+        assertFalse("SelectionPanel should not have undo", hasUndo)
+        
+        val delKey = model.keys.find { it.action == "del" }
+        assertNotNull("SelectionPanel should have del key", delKey)
+        assertEquals("\u232B", delKey!!.label)
+        assertEquals(geo.keyDelRect, delKey.rect)
+        
+        val enterKey = model.keys.find { it.action == "enter" }
+        assertNotNull("SelectionPanel should have enter key", enterKey)
+        assertEquals("\u21B5", enterKey!!.label)
+        assertEquals(geo.keyEnterRect, enterKey.rect)
         
         val backKey = model.keys.find { it.id == "select_back" }
         assertNotNull("SelectionPanel should have back button", backKey)
         assertEquals("返回", backKey!!.label)
+        
+        // Verify all required selection actions are present
+        val requiredActions = setOf("select:left", "select:right", "select:up", "select:down",
+            "select:selectAll", "select:copy", "select:cut", "select:paste", "select:back")
+        for (action in requiredActions) {
+            assertTrue("SelectionPanel should have action $action", model.keys.any { it.action == action })
+        }
     }
 }

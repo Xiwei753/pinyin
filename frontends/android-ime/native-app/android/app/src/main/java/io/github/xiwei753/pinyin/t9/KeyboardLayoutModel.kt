@@ -454,7 +454,7 @@ class KeyboardLayoutBuilder {
         )
         val tabCellHeight = metrics.cellHeight
         val tabVGap = metrics.verticalGap
-        val tabStartY = geo.symbolContentRect.top + metrics.contentInsetTop
+        val tabStartY = geo.key1Rect.top
         for (i in tabCategories.indices) {
             val (cat, label) = tabCategories[i]
             val tabTop = tabStartY + i * (tabCellHeight + tabVGap)
@@ -496,7 +496,7 @@ class KeyboardLayoutBuilder {
         val hGap = metrics.horizontalGap
         val vGap = metrics.verticalGap
         val startX = geo.leftRailWidth + metrics.contentInsetLeft
-        var startY = geo.symbolContentRect.top + metrics.contentInsetTop
+        var startY = geo.key1Rect.top
 
         if (catEntries.isNotEmpty()) {
             val rows = catEntries.size / columns + if (catEntries.size % columns > 0) 1 else 0
@@ -637,9 +637,11 @@ class KeyboardLayoutBuilder {
         val geo = T9KeyboardGeometry.calculate(panelWidth, panelHeight, rowHeight, bottomRowHeight, horizontalGap, verticalGap)
         val rowHeights = listOf(geo.key1Rect.height(), geo.key4Rect.height(), geo.key7Rect.height())
         val rowTops = listOf(geo.key1Rect.top, geo.key4Rect.top, geo.key7Rect.top)
+        val rightColLeft = geo.keyDelRect.left
+        val contentRight = rightColLeft - horizontalGap
         
         if (history.isEmpty()) {
-            val firstRowRect = Rect(horizontalGap, rowTops[0], panelWidth - horizontalGap, rowTops[0] + rowHeights[0])
+            val firstRowRect = Rect(horizontalGap, rowTops[0], contentRight, rowTops[0] + rowHeights[0])
             keys.add(
                 KeyboardKey(
                     id = "clip_empty",
@@ -654,7 +656,7 @@ class KeyboardLayoutBuilder {
             val pageItems = history.drop(startIndex).take(3)
             for (i in pageItems.indices) {
                 val text = pageItems[i]
-                val rowRect = Rect(horizontalGap, rowTops[i], panelWidth - horizontalGap, rowTops[i] + rowHeights[i])
+                val rowRect = Rect(horizontalGap, rowTops[i], contentRight, rowTops[i] + rowHeights[i])
                 keys.add(
                     KeyboardKey(
                         id = "clip_item_${startIndex + i}",
@@ -668,11 +670,34 @@ class KeyboardLayoutBuilder {
             }
         }
         
+        // Right rail: del and enter (no retype)
+        keys.add(
+            KeyboardKey(
+                id = "del",
+                role = KeyboardKeyRole.SPECIAL,
+                rect = geo.keyDelRect,
+                label = "\u232B",
+                action = "del",
+                isRightRail = true,
+            )
+        )
+        keys.add(
+            KeyboardKey(
+                id = "enter",
+                role = KeyboardKeyRole.SPECIAL,
+                rect = geo.keyEnterRect,
+                label = "\u21B5",
+                action = "enter",
+                isRightRail = true,
+            )
+        )
+        
         val bottomRowTop = geo.keyNumberToggleRect.top
         val bottomRowHeightVal = geo.keyNumberToggleRect.height()
         val bottomY = bottomRowTop + bottomRowHeightVal
         
-        val buttonWidth = (panelWidth - 4 * horizontalGap) / 3
+        val availableWidth = contentRight - horizontalGap
+        val buttonWidth = (availableWidth - 2 * horizontalGap) / 3
         val x0 = horizontalGap
         val x1 = x0 + buttonWidth + horizontalGap
         val x2 = x1 + buttonWidth + horizontalGap
@@ -732,39 +757,48 @@ class KeyboardLayoutBuilder {
         val geo = T9KeyboardGeometry.calculate(panelWidth, panelHeight, rowHeight, bottomRowHeight, horizontalGap, verticalGap)
         val rowHeights = listOf(geo.key1Rect.height(), geo.key4Rect.height(), geo.key7Rect.height())
         val rowTops = listOf(geo.key1Rect.top, geo.key4Rect.top, geo.key7Rect.top)
-        
-        val buttonWidth = (panelWidth - 4 * horizontalGap) / 3
+        val rightColLeft = geo.keyDelRect.left
+        val contentRight = rightColLeft - horizontalGap
+        val availableWidth = contentRight - horizontalGap
+        val buttonWidth = (availableWidth - 2 * horizontalGap) / 3
         val x0 = horizontalGap
         val x1 = x0 + buttonWidth + horizontalGap
         val x2 = x1 + buttonWidth + horizontalGap
         
-        // Row 1: [全选] [↑] [复制]
-        keys.add(KeyboardKey("select_all", KeyboardKeyRole.NORMAL, Rect(x0, rowTops[0], x0 + buttonWidth, rowTops[0] + rowHeights[0]), "全选", null, "select:selectAll"))
+        // Row 1: [←] [↑] [→]
+        keys.add(KeyboardKey("select_left", KeyboardKeyRole.NORMAL, Rect(x0, rowTops[0], x0 + buttonWidth, rowTops[0] + rowHeights[0]), "←", null, "select:left"))
         keys.add(KeyboardKey("select_up", KeyboardKeyRole.NORMAL, Rect(x1, rowTops[0], x1 + buttonWidth, rowTops[0] + rowHeights[0]), "↑", null, "select:up"))
-        keys.add(KeyboardKey("select_copy", KeyboardKeyRole.NORMAL, Rect(x2, rowTops[0], x2 + buttonWidth, rowTops[0] + rowHeights[0]), "复制", null, "select:copy"))
+        keys.add(KeyboardKey("select_right", KeyboardKeyRole.NORMAL, Rect(x2, rowTops[0], x2 + buttonWidth, rowTops[0] + rowHeights[0]), "→", null, "select:right"))
         
-        // Row 2: [←] [粘贴] [→]
-        keys.add(KeyboardKey("select_left", KeyboardKeyRole.NORMAL, Rect(x0, rowTops[1], x0 + buttonWidth, rowTops[1] + rowHeights[1]), "←", null, "select:left"))
-        keys.add(KeyboardKey("select_paste", KeyboardKeyRole.NORMAL, Rect(x1, rowTops[1], x1 + buttonWidth, rowTops[1] + rowHeights[1]), "粘贴", null, "select:paste"))
-        keys.add(KeyboardKey("select_right", KeyboardKeyRole.NORMAL, Rect(x2, rowTops[1], x2 + buttonWidth, rowTops[1] + rowHeights[1]), "→", null, "select:right"))
+        // Row 2: [全选] [复制] [粘贴]
+        keys.add(KeyboardKey("select_all", KeyboardKeyRole.NORMAL, Rect(x0, rowTops[1], x0 + buttonWidth, rowTops[1] + rowHeights[1]), "全选", null, "select:selectAll"))
+        keys.add(KeyboardKey("select_copy", KeyboardKeyRole.NORMAL, Rect(x1, rowTops[1], x1 + buttonWidth, rowTops[1] + rowHeights[1]), "复制", null, "select:copy"))
+        keys.add(KeyboardKey("select_paste", KeyboardKeyRole.NORMAL, Rect(x2, rowTops[1], x2 + buttonWidth, rowTops[1] + rowHeights[1]), "粘贴", null, "select:paste"))
         
-        // Row 3: [剪切] [↓] [撤销]
+        // Row 3: [剪切] [↓] [返回]
         keys.add(KeyboardKey("select_cut", KeyboardKeyRole.NORMAL, Rect(x0, rowTops[2], x0 + buttonWidth, rowTops[2] + rowHeights[2]), "剪切", null, "select:cut"))
         keys.add(KeyboardKey("select_down", KeyboardKeyRole.NORMAL, Rect(x1, rowTops[2], x1 + buttonWidth, rowTops[2] + rowHeights[2]), "↓", null, "select:down"))
-        keys.add(KeyboardKey("select_undo", KeyboardKeyRole.NORMAL, Rect(x2, rowTops[2], x2 + buttonWidth, rowTops[2] + rowHeights[2]), "撤销", null, "select:undo"))
+        keys.add(KeyboardKey("select_back", KeyboardKeyRole.NORMAL, Rect(x2, rowTops[2], x2 + buttonWidth, rowTops[2] + rowHeights[2]), "返回", null, "select:back"))
         
-        // Row 4: [返回] (spans full width)
-        val bottomRowTop = geo.keyNumberToggleRect.top
-        val bottomRowHeightVal = geo.keyNumberToggleRect.height()
-        val bottomY = bottomRowTop + bottomRowHeightVal
+        // Right rail: del and enter (no retype)
         keys.add(
             KeyboardKey(
-                id = "select_back",
+                id = "del",
                 role = KeyboardKeyRole.SPECIAL,
-                rect = Rect(horizontalGap, bottomRowTop, panelWidth - horizontalGap, bottomY),
-                label = "返回",
-                action = "select:back",
-                isBottomRow = true,
+                rect = geo.keyDelRect,
+                label = "\u232B",
+                action = "del",
+                isRightRail = true,
+            )
+        )
+        keys.add(
+            KeyboardKey(
+                id = "enter",
+                role = KeyboardKeyRole.SPECIAL,
+                rect = geo.keyEnterRect,
+                label = "\u21B5",
+                action = "enter",
+                isRightRail = true,
             )
         )
         
