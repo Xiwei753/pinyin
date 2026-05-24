@@ -133,17 +133,18 @@ class T9Engine(
     fun inputDigit(digit: String) {
         if (digit.matches(Regex("^[1-9]$"))) {
             buffer += digit
-            lockedSyllables.clear()
             invalidatePreeditCache()
         }
     }
 
     fun backspace() {
+        if (lockedSyllables.isNotEmpty()) {
+            lockedSyllables.removeLast()
+            invalidatePreeditCache()
+            return
+        }
         if (buffer.isNotEmpty()) {
             buffer = buffer.substring(0, buffer.length - 1)
-            while (lockedSyllables.isNotEmpty() && getValidCompositions().isEmpty()) {
-                lockedSyllables.removeLast()
-            }
             invalidatePreeditCache()
         }
     }
@@ -222,6 +223,17 @@ class T9Engine(
         lastPreeditValue = ""
     }
 
+    private val digitToLetters = mapOf(
+        '2' to listOf("a", "b", "c"),
+        '3' to listOf("d", "e", "f"),
+        '4' to listOf("g", "h", "i"),
+        '5' to listOf("j", "k", "l"),
+        '6' to listOf("m", "n", "o"),
+        '7' to listOf("p", "q", "r", "s"),
+        '8' to listOf("t", "u", "v"),
+        '9' to listOf("w", "x", "y", "z")
+    )
+
     fun getVisibleCandidates(limit: Int = 30): List<Candidate> {
         val currentDictVersion = dictionary.dictionaryVersion
         if (buffer.isEmpty()) return emptyList()
@@ -251,13 +263,17 @@ class T9Engine(
             }
         }
 
-        val hasExactPhrase = exactPhrases.isNotEmpty()
-        val hasUserCand = userCands.isNotEmpty()
-        val hasSingle = exactSingles.isNotEmpty()
-
-        // ── Layer 4: dynamic fallback (only when no other candidates exist) ──
-        val dynamicFallback = if (!hasExactPhrase && !hasUserCand && !hasSingle && buffer.length >= 5) {
+        // Only generate fallbacks and prefix completions if we don't have exact phrase candidates!
+        val dynamicFallback = if (exactPhrases.isEmpty()) {
             generateDynamicFallbackCandidates(compositions)
+        } else emptyList()
+
+        val prefixPhrases = if (exactPhrases.isEmpty()) {
+            generatePrefixCompletionCandidates(compositions, limit)
+        } else emptyList()
+
+        val prefixSingles = if (exactPhrases.isEmpty()) {
+            generatePrefixSingleCandidates(compositions, limit)
         } else emptyList()
 
         // ── Build visible list by strict sourcing: order determined by layer, not score ──
@@ -266,6 +282,8 @@ class T9Engine(
         combined.addAll(userCands.filter { uc -> combined.none { c -> c.text == uc.text } })
         combined.addAll(exactSingles.filter { es -> combined.none { c -> c.text == es.text } })
         combined.addAll(dynamicFallback.filter { d -> combined.none { c -> c.text == d.text } })
+        combined.addAll(prefixPhrases.filter { pp -> combined.none { c -> c.text == pp.text } })
+        combined.addAll(prefixSingles.filter { ps -> combined.none { c -> c.text == ps.text } })
 
         val finalCandidates = combined.toList().take(limit)
 
@@ -320,37 +338,148 @@ class T9Engine(
         return userDictionary!!.getUserCandidates(primaryPinyin)
     }
 
-    private fun generateDynamicFallbackCandidates(
+    private fun generatePrefixCompletionCandidates(
         compositions: List<PinyinComposition>,
+        limit: Int,
     ): List<Candidate> {
-        val completeComp = compositions.firstOrNull { it.isComplete } ?: return emptyList()
-        if (completeComp.pinyinList.size != 2) return emptyList()
-        val pinyins = completeComp.pinyinList
+        val results = mutableListOf<Pair<Candidate, String>>()
 
-        val batchResults = trackQuery { dictionary.getPinyinExactCandidatesMultiple(listOf(pinyins[0], pinyins[1])) }
+        for (comp in compositions.take(4)) {
+            if (comp.isComplete) continue
+            val pinyins = comp.pinyinList
+            if (pinyins.isEmpty()) continue
 
-        val firstCandidates = (batchResults[pinyins[0]] ?: emptyList())
-            .filter { it.origin == CandidateOrigin.EXACT_SINGLE && it.text.length == 1 && it.score >= 50000 }
-            .take(3)
-        val secondCandidates = (batchResults[pinyins[1]] ?: emptyList())
-            .filter { it.origin == CandidateOrigin.EXACT_SINGLE && it.text.length == 1 && it.score >= 50000 }
-            .take(3)
-        val results = mutableListOf<Candidate>()
-        for (fc in firstCandidates) {
-            for (sc in secondCandidates) {
-                val combinedText = fc.text + sc.text
-                val combinedScore = fc.score + sc.score
-                if (combinedScore > 80000) {
-                    results.add(
-                        Candidate(combinedText, fc.code + sc.code, combinedScore,
-                            CandidateType.NORMAL, completeComp.pinyinString,
-                            CandidateOrigin.SAFE_DYNAMIC_COMPOSITION)
-                    )
+            if (pinyins.size >= 2) {
+                val lastSyl = pinyins.last()
+                val isLastDigit = lastSyl.all { it.isDigit() }
+                val basePrefix = pinyins.dropLast(1).joinToString(" ")
+                
+                if (isLastDigit) {
+                    val prefixSyllables = PinyinSyllableDecoder.getPrefixSyllables(lastSyl)
+                    val commonPrefixSyllables = prefixSyllables.filter { T9PinyinComposer.COMMON_SYLLABLES.contains(it) }.take(5)
+                    for (ps in commonPrefixSyllables) {
+                        val queryPrefix = "$basePrefix $ps"
+                        val cands = trackQuery { dictionary.getPinyinPrefixCandidates(queryPrefix) }
+                        cands.forEach { results.add(it to comp.pinyinString) }
+                        val exactCands = trackQuery { dictionary.getPinyinExactCandidates(queryPrefix) }
+                        exactCands.forEach { results.add(it to comp.pinyinString) }
+                    }
+                } else {
+                    val queryPrefix = pinyins.joinToString(" ")
+                    val cands = trackQuery { dictionary.getPinyinPrefixCandidates(queryPrefix) }
+                    cands.forEach { results.add(it to comp.pinyinString) }
+                }
+            } else {
+                val syl = pinyins[0]
+                val isDigit = syl.all { it.isDigit() }
+                if (isDigit) {
+                    val prefixSyllables = PinyinSyllableDecoder.getPrefixSyllables(syl)
+                    val commonPrefixSyllables = prefixSyllables.filter { T9PinyinComposer.COMMON_SYLLABLES.contains(it) }.take(6)
+                    for (ps in commonPrefixSyllables) {
+                        val cands = trackQuery { dictionary.getSingleSyllableCandidates(ps) }
+                        cands.forEach { results.add(it to comp.pinyinString) }
+                    }
+                } else {
+                    val cands = trackQuery { dictionary.getPinyinPrefixCandidates(syl) }
+                    cands.forEach { results.add(it to comp.pinyinString) }
                 }
             }
         }
-        return results.sortedByDescending { it.score }.take(1)
-    }
+
+        return results.map { (c, sourcePinyin) ->
+            Candidate(
+                text = c.text,
+                code = c.code,
+                score = c.score - 150000,
+                type = c.type,
+                sourcePinyin = sourcePinyin,
+                origin = CandidateOrigin.PREFIX_COMPLETION
+            )
+        }.filter { c ->
+            c.text.length >= 2 && !c.text.matches(Regex("^[a-zA-Z\\s]+$"))
+        }.sortedByDescending { it.score }
+         .distinctBy { it.text }
+         .take(limit)
+     }
+
+     private fun generatePrefixSingleCandidates(
+         compositions: List<PinyinComposition>,
+         limit: Int,
+     ): List<Candidate> {
+         if (buffer.length > 2) return emptyList()
+         val results = mutableListOf<Pair<Candidate, String>>()
+         for (comp in compositions.take(3)) {
+             val pinyins = comp.pinyinList
+             if (pinyins.size == 1 && !comp.isComplete) {
+                 val syl = pinyins[0]
+                 if (syl.all { it.isDigit() }) {
+                     val prefixSyllables = PinyinSyllableDecoder.getPrefixSyllables(syl)
+                     val commonPrefixSyllables = prefixSyllables.filter { T9PinyinComposer.COMMON_SYLLABLES.contains(it) }.take(5)
+                     for (ps in commonPrefixSyllables) {
+                         val cands = trackQuery { dictionary.getSingleSyllableCandidates(ps) }
+                         cands.forEach { results.add(it to comp.pinyinString) }
+                     }
+                 }
+             }
+         }
+         return results.map { (c, sourcePinyin) ->
+             Candidate(
+                 text = c.text,
+                 code = c.code,
+                 score = c.score - 100000,
+                 type = c.type,
+                 sourcePinyin = sourcePinyin,
+                 origin = CandidateOrigin.PREFIX_COMPLETION
+             )
+         }.sortedByDescending { it.score }
+          .distinctBy { it.text }
+          .take(limit)
+     }
+
+     private fun generateDynamicFallbackCandidates(
+         compositions: List<PinyinComposition>,
+     ): List<Candidate> {
+         val completeComp = compositions.firstOrNull { it.isComplete } ?: return emptyList()
+         val pinyins = completeComp.pinyinList
+         if (pinyins.size < 2) return emptyList()
+
+         val batchResults = trackQuery { dictionary.getPinyinExactCandidatesMultiple(pinyins) }
+
+         val topSinglesPerSyllable = pinyins.map { ps ->
+             val cands = batchResults[ps] ?: emptyList()
+             cands.filter { it.origin == CandidateOrigin.EXACT_SINGLE && it.text.length == 1 }
+                  .sortedByDescending { it.score }
+                  .take(if (pinyins.size >= 4) 2 else 3)
+         }
+
+         if (topSinglesPerSyllable.any { it.isEmpty() }) return emptyList()
+
+         var currentCombinations = listOf(Candidate("", "", 0, CandidateType.NORMAL, completeComp.pinyinString, CandidateOrigin.SAFE_DYNAMIC_COMPOSITION))
+         for (i in pinyins.indices) {
+             val nextSingles = topSinglesPerSyllable[i]
+             val nextCombinations = mutableListOf<Candidate>()
+             for (curr in currentCombinations) {
+                 for (single in nextSingles) {
+                     val combinedText = curr.text + single.text
+                     val combinedCode = curr.code + single.code
+                     val combinedScore = curr.score + single.score
+                     nextCombinations.add(
+                         Candidate(
+                             text = combinedText,
+                             code = combinedCode,
+                             score = combinedScore,
+                             type = CandidateType.NORMAL,
+                             sourcePinyin = completeComp.pinyinString,
+                             origin = CandidateOrigin.SAFE_DYNAMIC_COMPOSITION
+                         )
+                     )
+                 }
+             }
+             currentCombinations = nextCombinations
+         }
+
+         return currentCombinations.sortedByDescending { it.score }.take(2)
+     }
 
     fun getCandidates(limit: Int = 30): List<Candidate> {
         val currentDictVersion = dictionary.dictionaryVersion

@@ -32,6 +32,19 @@ object ReadingRanker {
                 val syl = comp.pinyinList[nextIndex]
                 if (syl.isEmpty()) continue
 
+                val isDigit = syl.all { it.isDigit() }
+                if (isDigit) {
+                    val prefixes = PinyinSyllableDecoder.getPrefixSyllables(syl)
+                    for (ps in prefixes) {
+                        val current = multiSyllableSyllables.getOrDefault(ps, Int.MIN_VALUE)
+                        val score = comp.score - 1000
+                        if (score > current) {
+                            multiSyllableSyllables[ps] = score
+                        }
+                    }
+                    continue
+                }
+
                 val isFullSpan = comp.pinyinList.size == nextIndex + 1 && comp.isComplete
 
                 if (isFullSpan) {

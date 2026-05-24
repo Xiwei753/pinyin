@@ -10,7 +10,8 @@ import io.github.xiwei753.pinyin.imecore.ImeInputAction
 
 enum class CandidateItemType {
     CANDIDATE,
-    PREPARING
+    PREPARING,
+    FUNCTION
 }
 
 data class CandidateItem(
@@ -57,29 +58,49 @@ class CandidateViewController(
         v.pinyinFloatingBar.visibility = View.GONE
 
         if (state.candidateStripState.isDictionaryPreparing || isDictPreparing) {
-            v.candidateContainer.removeAllViews()
-            val btn = createTextView("词库准备中...", CandidateItemType.PREPARING, false, null)
-            v.candidateContainer.addView(btn)
+            try {
+                v.candidateContainer.removeAllViews()
+                val btn = createTextView("词库准备中...", CandidateItemType.PREPARING, false, null)
+                v.candidateContainer.addView(btn)
+            } catch (e: Exception) {}
             v.candidateContainer.visibility = View.VISIBLE
             return
         }
 
-        v.candidateContainer.removeAllViews()
+        try { v.candidateContainer.removeAllViews() } catch (e: Exception) {}
 
         val hasPreedit = state.preeditState.visible && state.preeditState.text.isNotEmpty()
+        val hasCandidates = state.candidateStripState.candidates.isNotEmpty()
+
+        if (!hasPreedit && !hasCandidates && state.rawBuffer.isEmpty()) {
+            val functions = listOf("剪贴板", "设置", "符号", "数字", "中/英")
+            for (func in functions) {
+                try {
+                    val chip = createTextView(func, CandidateItemType.FUNCTION, false, func)
+                    v.candidateContainer.addView(chip)
+                } catch (e: Exception) {}
+            }
+            v.candidateContainer.visibility = View.VISIBLE
+            return
+        }
+
         if (hasPreedit) {
-            val preeditChip = createTextView(state.preeditState.text, CandidateItemType.PREPARING, false, null)
-            preeditChip.isClickable = false
-            preeditChip.isFocusable = false
-            v.candidateContainer.addView(preeditChip)
+            try {
+                val preeditChip = createTextView(state.preeditState.text, CandidateItemType.PREPARING, false, null)
+                preeditChip.isClickable = false
+                preeditChip.isFocusable = false
+                v.candidateContainer.addView(preeditChip)
+            } catch (e: Exception) {}
         }
 
         for ((index, candidate) in state.candidateStripState.candidates.withIndex()) {
-            val chip = createTextView(candidate.text, CandidateItemType.CANDIDATE, false, index)
-            v.candidateContainer.addView(chip)
+            try {
+                val chip = createTextView(candidate.text, CandidateItemType.CANDIDATE, false, index)
+                v.candidateContainer.addView(chip)
+            } catch (e: Exception) {}
         }
 
-        v.candidateContainer.visibility = if (hasPreedit || state.candidateStripState.candidates.isNotEmpty()) {
+        v.candidateContainer.visibility = if (hasPreedit || hasCandidates) {
             View.VISIBLE
         } else {
             View.GONE
@@ -131,8 +152,49 @@ class CandidateViewController(
                 tv.isClickable = false
                 tv.isFocusable = false
             }
+            CandidateItemType.FUNCTION -> {
+                tv.setTextColor(palette.textColor)
+                tv.background = getCandidateBg()
+                tv.isClickable = true
+                tv.isFocusable = true
+                tv.setOnClickListener {
+                    val label = payload as? String
+                    if (label != null) {
+                        onFunctionChipClicked(label)
+                    }
+                }
+            }
         }
         return tv
+    }
+
+    private fun onFunctionChipClicked(label: String) {
+        when (label) {
+            "符号" -> onInputAction?.invoke(ImeInputAction.ToggleSymbol)
+            "数字" -> onInputAction?.invoke(ImeInputAction.ToggleNumber)
+            "中/英" -> onInputAction?.invoke(ImeInputAction.ToggleChineseEnglish)
+            "设置" -> {
+                try {
+                    val intent = android.content.Intent(context, SettingsActivity::class.java).apply {
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    // Safe fallback
+                }
+            }
+            "剪贴板" -> {
+                try {
+                    val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                    val clipText = clipboardManager?.primaryClip?.getItemAt(0)?.text?.toString()
+                    if (!clipText.isNullOrEmpty()) {
+                        onInputAction?.invoke(ImeInputAction.SymbolCommitted(clipText))
+                    }
+                } catch (e: Exception) {
+                    // Safe fallback
+                }
+            }
+        }
     }
 
     private fun getCandidateBg(): android.graphics.drawable.Drawable? {

@@ -51,7 +51,7 @@ class CandidateViewControllerTest {
 
     @Test
     fun testPreeditHiddenWhenStateHidden() {
-        controller.refreshFromState(state(preeditVisible = false, preedit = ""))
+        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = "96"))
 
         assertEquals(View.GONE, mockFloatingBar.visibility)
         assertEquals(View.GONE, candidateContainer.visibility)
@@ -245,16 +245,67 @@ class CandidateViewControllerTest {
         )
     }
 
+    @Test
+    fun testEmptyStateShowsFunctionalChips() {
+        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
+
+        assertEquals(View.VISIBLE, candidateContainer.visibility)
+        assertEquals(5, candidateContainer.childCount)
+        val chips = (0 until 5).map { (candidateContainer.getChildAt(it) as TextView).text.toString() }
+        assertEquals(listOf("剪贴板", "设置", "符号", "数字", "中/英"), chips)
+    }
+
+    @Test
+    fun testFunctionalChipsClickEmitsCorrectAction() {
+        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
+
+        var clickedAction: ImeInputAction? = null
+        controller.onInputAction = { clickedAction = it }
+
+        // Click "符号" (index 2)
+        val symbolChip = candidateContainer.getChildAt(2) as TextView
+        assertEquals("符号", symbolChip.text.toString())
+        symbolChip.performClick()
+        assertEquals(ImeInputAction.ToggleSymbol, clickedAction)
+
+        // Click "数字" (index 3)
+        val numberChip = candidateContainer.getChildAt(3) as TextView
+        assertEquals("数字", numberChip.text.toString())
+        numberChip.performClick()
+        assertEquals(ImeInputAction.ToggleNumber, clickedAction)
+
+        // Click "中/英" (index 4)
+        val zhEnChip = candidateContainer.getChildAt(4) as TextView
+        assertEquals("中/英", zhEnChip.text.toString())
+        zhEnChip.performClick()
+        assertEquals(ImeInputAction.ToggleChineseEnglish, clickedAction)
+    }
+
+    @Test
+    fun testFunctionalChipsDoNotPolluteCandidatesAndDoNotEmitCandidateSelected() {
+        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
+
+        var clickedAction: ImeInputAction? = null
+        controller.onInputAction = { clickedAction = it }
+
+        // Click "剪贴板" (index 0)
+        val clipChip = candidateContainer.getChildAt(0) as TextView
+        clipChip.performClick()
+        // Should not emit CandidateSelected(0) or similar candidate actions!
+        assert(clickedAction !is ImeInputAction.CandidateSelected)
+    }
+
     private fun state(
         mode: KeyboardMode = KeyboardMode.ChineseT9,
         preeditVisible: Boolean = false,
         preedit: String = "",
         readings: List<String> = emptyList(),
         candidates: List<CandidateSnapshotItem> = emptyList(),
+        rawBuffer: String = if (preedit.isNotEmpty()) "96" else "",
     ): KeyboardUiState = KeyboardUiState(
         keyboardMode = mode,
         lastTextMode = KeyboardMode.ChineseT9,
-        rawBuffer = if (preedit.isNotEmpty()) "96" else "",
+        rawBuffer = rawBuffer,
         preedit = preedit,
         readings = readings,
         activeReading = readings.firstOrNull(),

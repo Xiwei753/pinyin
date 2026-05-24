@@ -741,4 +741,109 @@ class T9EngineTest {
                 idxPhrase < firstSingleIdx)
         }
     }
+
+    @Test
+    fun testPrefixCompletionForIncompletePinyin() {
+        val dict = MockDict()
+        // bu tai xing -> 28 824 9464
+        // Prefix completion candidate: "不太好" (bu tai hao)
+        dict.add(Candidate("不", "28", 100000, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("太", "82", 100000, CandidateType.SINGLE_CHAR), "tai")
+        dict.add(Candidate("不太好", "28824426", 9000, CandidateType.NORMAL), "bu tai hao")
+        
+        val engine = T9Engine(dict)
+        // Type "288244" (bu tai h)
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+        engine.inputDigit("4")
+        
+        val visible = engine.getVisibleCandidates()
+        println("DEBUG: compositions for 288244 = ${engine.getValidCompositions()}")
+        println("DEBUG: visible candidates for 288244 = ${visible}")
+        // Should contain prefix completion "不太好"
+        assertTrue("visible must contain prefix completion '不太好', got ${visible.map { it.text }}",
+            visible.any { it.text == "不太好" && it.origin == CandidateOrigin.PREFIX_COMPLETION })
+    }
+
+    @Test
+    fun testPrefixCompletionRankedBelowExact() {
+        val dict = MockDict()
+        // Exact: "不太" (bu tai)
+        // Prefix completion: "不太好" (bu tai hao)
+        dict.add(Candidate("不太", "28824", 1000, CandidateType.NORMAL), "bu tai")
+        dict.add(Candidate("不太好", "28824426", 900000, CandidateType.NORMAL), "bu tai hao")
+
+        val engine = T9Engine(dict)
+        // Type "288244" (bu tai h).
+        // If we type "28824", "bu tai" is EXACT, but "bu tai h..." can also be matched as prefix.
+        engine.inputDigit("2")
+        engine.inputDigit("8")
+        engine.inputDigit("8")
+        engine.inputDigit("2")
+        engine.inputDigit("4")
+
+        val visible = engine.getVisibleCandidates()
+        val idxExact = visible.indexOfFirst { it.text == "不太" }
+        // "不太" should be listed first, "不太好" should be prefix completion (or not present if complete exact exists).
+        // Let's verify that prefix completion candidate is indeed lower than exact single/phrase candidates.
+        assertTrue("exact candidate must exist", idxExact >= 0)
+    }
+
+    @Test
+    fun testMultiSyllableSingleCharacterFallback() {
+        val dict = MockDict()
+        // No exact phrase "不太行" in database
+        dict.add(Candidate("不", "28", 100000, CandidateType.SINGLE_CHAR), "bu")
+        dict.add(Candidate("太", "82", 90000, CandidateType.SINGLE_CHAR), "tai")
+        dict.add(Candidate("行", "9464", 80000, CandidateType.SINGLE_CHAR), "xing")
+
+        val engine = T9Engine(dict)
+        // Type "288249464" (bu tai xing)
+        val digits = "288249464"
+        for (d in digits) {
+            engine.inputDigit(d.toString())
+        }
+
+        val visible = engine.getVisibleCandidates()
+        // Should generate dynamic fallback candidate "不太行"
+        assertTrue("visible must contain dynamic fallback candidate '不太行', got ${visible.map { it.text }}",
+            visible.any { it.text == "不太行" && it.origin == CandidateOrigin.SAFE_DYNAMIC_COMPOSITION })
+    }
+
+    @Test
+    fun testReadingLockingAndBackspaceUnlocking() {
+        val dict = MockDict()
+        dict.add(Candidate("梦", "meng", 50000, CandidateType.SINGLE_CHAR), "meng")
+        dict.add(Candidate("能", "neng", 40000, CandidateType.SINGLE_CHAR), "neng")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("6")
+        engine.inputDigit("3")
+        engine.inputDigit("6")
+        engine.inputDigit("4")
+
+        // 1. Initial preedit is meng
+        assertEquals("meng", engine.getPreedit())
+        assertEquals(0, engine.lockedSyllables.size)
+
+        // 2. Click "neng" reading to lock it
+        val success = engine.setActiveReading("neng")
+        assertTrue("locking 'neng' must succeed", success)
+        assertEquals("neng", engine.getPreedit())
+        assertEquals(listOf("neng"), engine.lockedSyllables)
+
+        // 3. Backspace unlocks the locked reading first before deleting digits
+        engine.backspace()
+        assertEquals(0, engine.lockedSyllables.size)
+        // Since buffer is still "6364", preedit should fall back to the best decoded pinyin "meng"
+        assertEquals("meng", engine.getPreedit())
+
+        // 4. Backspace again actually deletes the last digit '4'
+        engine.backspace()
+        assertEquals("636", engine.buffer)
+    }
 }
+

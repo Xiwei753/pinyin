@@ -13,6 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.clearInvocations
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
@@ -69,7 +70,7 @@ class ImeStateMachineTest {
 
         assertTrue(effects.contains(ImeSideEffect.CommitCandidate("我")))
         assertEquals("", machine.rawBuffer)
-        verify(dictionary).getSingleSyllableCandidates("wo")
+        verify(dictionary, atLeastOnce()).getSingleSyllableCandidates("wo")
     }
 
     @Test
