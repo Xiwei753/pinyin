@@ -4,5 +4,11 @@ enum class KeyboardMode {
     ChineseT9,
     EnglishT9,
     Symbol,
-    Number
+    Number,
+    
+    // TODO: Next step, migrate clipboard to this independent panel, no longer expand it inside CandidateViewController
+    ClipboardPanel,
+    
+    // TODO: Next step, migrate text selection to this independent panel, no longer expand it inside CandidateViewController
+    SelectionPanel
 }

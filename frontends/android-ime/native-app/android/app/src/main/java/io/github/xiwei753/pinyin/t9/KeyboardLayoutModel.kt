@@ -66,6 +66,17 @@ class KeyboardLayoutBuilder {
                 registry = registry,
                 density = density,
             )
+            KeyboardMode.ClipboardPanel, KeyboardMode.SelectionPanel -> buildT9(
+                panelWidth = panelWidth,
+                panelHeight = panelHeight,
+                rowHeight = rowHeight,
+                bottomRowHeight = bottomRowHeight,
+                horizontalGap = horizontalGap,
+                verticalGap = verticalGap,
+                readings = emptyList(),
+                isComposing = false,
+                keyboardMode = state.keyboardMode,
+            )
         }
     }
 
