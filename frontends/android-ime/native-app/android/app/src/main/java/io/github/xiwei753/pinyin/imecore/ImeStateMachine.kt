@@ -61,6 +61,8 @@ class ImeStateMachine(
     fun applyCandidateResult(result: CandidateResult): Boolean {
         if (!deferCandidateComputation) return false
         if (result.requestId != nextCandidateRequestId) return false
+        if (result.buffer != rawBuffer) return false
+        if (result.lockedSyllables != (engine?.lockedSyllables ?: emptyList<String>())) return false
         candidateSelections = result.candidates.map { snapshot ->
             CandidateSelection(snapshot) { engine?.commitCandidate(snapshot) }
         }
@@ -136,6 +138,7 @@ class ImeStateMachine(
 
         val currentEngine = engine
         if (deferCandidateComputation) {
+            candidateSelections = emptyList()
             val request = CandidateRequest(
                 requestId = ++nextCandidateRequestId,
                 buffer = rawBuffer,

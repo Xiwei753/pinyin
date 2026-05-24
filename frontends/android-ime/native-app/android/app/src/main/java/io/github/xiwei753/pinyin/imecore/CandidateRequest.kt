@@ -10,4 +10,6 @@ data class CandidateRequest(
 data class CandidateResult(
     val requestId: Long,
     val candidates: List<CandidateSnapshotItem>,
+    val buffer: String,
+    val lockedSyllables: List<String>,
 )

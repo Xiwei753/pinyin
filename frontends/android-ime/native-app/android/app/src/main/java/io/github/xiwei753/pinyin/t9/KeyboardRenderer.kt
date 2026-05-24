@@ -172,9 +172,14 @@ class KeyboardRenderer {
             KeyboardKeyRole.RAIL_PUNCT -> {
                 textPaint.color = textColor
                 textPaint.textSize = minOf(rect.height() * 0.62f, rect.width() * 0.75f)
-                val centerX = rect.centerX().toFloat()
-                val textY = rect.centerY().toFloat() - (textPaint.descent() + textPaint.ascent()) / 2
-                canvas.drawText(key.label, centerX, textY, textPaint)
+                val originalAlign = textPaint.textAlign
+                textPaint.textAlign = Paint.Align.LEFT
+                val bounds = Rect()
+                textPaint.getTextBounds(key.label, 0, key.label.length, bounds)
+                val x = rect.centerX().toFloat() - (bounds.left + bounds.right) / 2f
+                val y = rect.centerY().toFloat() - (bounds.top + bounds.bottom) / 2f
+                canvas.drawText(key.label, x, y, textPaint)
+                textPaint.textAlign = originalAlign
             }
             KeyboardKeyRole.RAIL_READING -> {
                 textPaint.color = textColor

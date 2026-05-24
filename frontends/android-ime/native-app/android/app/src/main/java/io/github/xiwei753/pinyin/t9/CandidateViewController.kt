@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import io.github.xiwei753.pinyin.imecore.ImeInputAction
+import org.json.JSONArray
 
 enum class CandidateItemType {
     CANDIDATE,
@@ -21,6 +22,12 @@ data class CandidateItem(
     val payload: Any? = null
 )
 
+enum class CandidateBarMode {
+    EMPTY_STATE,
+    CLIPBOARD,
+    SELECTION
+}
+
 class CandidateViewController(
     private val context: Context,
     private val v: KeyboardViews,
@@ -29,6 +36,12 @@ class CandidateViewController(
 ) {
     private var isDictPreparing = false
     var onInputAction: ((ImeInputAction) -> Unit)? = null
+    var onEditorAction: ((Int) -> Unit)? = null
+    var onMoveCursor: ((Boolean) -> Unit)? = null
+
+    private var currentBarMode = CandidateBarMode.EMPTY_STATE
+    private var lastState: KeyboardUiState? = null
+
     private var palette: ThemePalette = ThemePalette(
         bgColor = ThemeColors.LIGHT_BG,
         candidateBarColor = ThemeColors.LIGHT_CANDIDATE_BAR,
@@ -55,6 +68,7 @@ class CandidateViewController(
     }
 
     fun refreshFromState(state: KeyboardUiState) {
+        lastState = state
         v.pinyinFloatingBar.visibility = View.GONE
 
         if (state.candidateStripState.isDictionaryPreparing || isDictPreparing) {
@@ -72,38 +86,75 @@ class CandidateViewController(
         val hasPreedit = state.preeditState.visible && state.preeditState.text.isNotEmpty()
         val hasCandidates = state.candidateStripState.candidates.isNotEmpty()
 
-        if (!hasPreedit && !hasCandidates && state.rawBuffer.isEmpty()) {
-            val functions = listOf("剪贴板", "设置", "符号", "数字", "中/英")
-            for (func in functions) {
+        if (hasPreedit || hasCandidates || state.rawBuffer.isNotEmpty()) {
+            currentBarMode = CandidateBarMode.EMPTY_STATE
+            if (hasPreedit) {
                 try {
-                    val chip = createTextView(func, CandidateItemType.FUNCTION, false, func)
+                    val preeditChip = createTextView(state.preeditState.text, CandidateItemType.PREPARING, false, null)
+                    preeditChip.isClickable = false
+                    preeditChip.isFocusable = false
+                    v.candidateContainer.addView(preeditChip)
+                } catch (e: Exception) {}
+            }
+
+            for ((index, candidate) in state.candidateStripState.candidates.withIndex()) {
+                try {
+                    val chip = createTextView(candidate.text, CandidateItemType.CANDIDATE, false, index)
                     v.candidateContainer.addView(chip)
                 } catch (e: Exception) {}
             }
-            v.candidateContainer.visibility = View.VISIBLE
-            return
-        }
 
-        if (hasPreedit) {
-            try {
-                val preeditChip = createTextView(state.preeditState.text, CandidateItemType.PREPARING, false, null)
-                preeditChip.isClickable = false
-                preeditChip.isFocusable = false
-                v.candidateContainer.addView(preeditChip)
-            } catch (e: Exception) {}
-        }
-
-        for ((index, candidate) in state.candidateStripState.candidates.withIndex()) {
-            try {
-                val chip = createTextView(candidate.text, CandidateItemType.CANDIDATE, false, index)
-                v.candidateContainer.addView(chip)
-            } catch (e: Exception) {}
-        }
-
-        v.candidateContainer.visibility = if (hasPreedit || hasCandidates) {
-            View.VISIBLE
+            v.candidateContainer.visibility = if (hasPreedit || hasCandidates) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
         } else {
-            View.GONE
+            updateClipboardHistory()
+            when (currentBarMode) {
+                CandidateBarMode.EMPTY_STATE -> {
+                    val functions = listOf("剪贴板", "设置", "选择", "，", "。", "？", "！", "：", "…")
+                    for (func in functions) {
+                        try {
+                            val chip = createTextView(func, CandidateItemType.FUNCTION, false, func)
+                            v.candidateContainer.addView(chip)
+                        } catch (e: Exception) {}
+                    }
+                }
+                CandidateBarMode.CLIPBOARD -> {
+                    try {
+                        val closeChip = createTextView("关闭", CandidateItemType.FUNCTION, false, "clipboard_close")
+                        v.candidateContainer.addView(closeChip)
+                    } catch (e: Exception) {}
+
+                    val history = getClipboardHistory()
+                    if (history.isEmpty()) {
+                        try {
+                            val emptyChip = createTextView("剪贴板为空", CandidateItemType.PREPARING, false, null)
+                            v.candidateContainer.addView(emptyChip)
+                        } catch (e: Exception) {}
+                    } else {
+                        for ((idx, text) in history.withIndex()) {
+                            try {
+                                val chip = createTextView(text, CandidateItemType.FUNCTION, false, "clip_item_$idx")
+                                chip.isSingleLine = true
+                                chip.ellipsize = android.text.TextUtils.TruncateAt.END
+                                v.candidateContainer.addView(chip)
+                            } catch (e: Exception) {}
+                        }
+                    }
+                }
+                CandidateBarMode.SELECTION -> {
+                    val selectionChips = listOf("←", "→", "全选", "复制", "剪切", "粘贴", "关闭")
+                    for (label in selectionChips) {
+                        try {
+                            val chip = createTextView(label, CandidateItemType.FUNCTION, false, "select_$label")
+                            v.candidateContainer.addView(chip)
+                        } catch (e: Exception) {}
+                    }
+                }
+            }
+            v.candidateContainer.visibility = View.VISIBLE
         }
     }
 
@@ -168,12 +219,9 @@ class CandidateViewController(
         return tv
     }
 
-    private fun onFunctionChipClicked(label: String) {
-        when (label) {
-            "符号" -> onInputAction?.invoke(ImeInputAction.ToggleSymbol)
-            "数字" -> onInputAction?.invoke(ImeInputAction.ToggleNumber)
-            "中/英" -> onInputAction?.invoke(ImeInputAction.ToggleChineseEnglish)
-            "设置" -> {
+    private fun onFunctionChipClicked(payload: String) {
+        when {
+            payload == "设置" -> {
                 try {
                     val intent = android.content.Intent(context, SettingsActivity::class.java).apply {
                         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -183,18 +231,98 @@ class CandidateViewController(
                     // Safe fallback
                 }
             }
-            "剪贴板" -> {
-                try {
-                    val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-                    val clipText = clipboardManager?.primaryClip?.getItemAt(0)?.text?.toString()
-                    if (!clipText.isNullOrEmpty()) {
-                        onInputAction?.invoke(ImeInputAction.SymbolCommitted(clipText))
+            payload == "选择" -> {
+                currentBarMode = CandidateBarMode.SELECTION
+                lastState?.let { refreshFromState(it) }
+            }
+            payload == "剪贴板" -> {
+                currentBarMode = CandidateBarMode.CLIPBOARD
+                lastState?.let { refreshFromState(it) }
+            }
+            payload == "clipboard_close" -> {
+                currentBarMode = CandidateBarMode.EMPTY_STATE
+                lastState?.let { refreshFromState(it) }
+            }
+            payload.startsWith("clip_item_") -> {
+                val idx = payload.removePrefix("clip_item_").toIntOrNull()
+                if (idx != null) {
+                    val history = getClipboardHistory()
+                    val text = history.getOrNull(idx)
+                    if (!text.isNullOrEmpty()) {
+                        onInputAction?.invoke(ImeInputAction.SymbolCommitted(text))
+                        currentBarMode = CandidateBarMode.EMPTY_STATE
+                        lastState?.let { refreshFromState(it) }
                     }
-                } catch (e: Exception) {
-                    // Safe fallback
                 }
             }
+            payload.startsWith("select_") -> {
+                val action = payload.removePrefix("select_")
+                when (action) {
+                    "←" -> onMoveCursor?.invoke(false)
+                    "→" -> onMoveCursor?.invoke(true)
+                    "全选" -> onEditorAction?.invoke(android.R.id.selectAll)
+                    "复制" -> onEditorAction?.invoke(android.R.id.copy)
+                    "剪切" -> onEditorAction?.invoke(android.R.id.cut)
+                    "粘贴" -> onEditorAction?.invoke(android.R.id.paste)
+                    "关闭" -> {
+                        currentBarMode = CandidateBarMode.EMPTY_STATE
+                        lastState?.let { refreshFromState(it) }
+                    }
+                }
+            }
+            payload in listOf("，", "。", "？", "！", "：", "…") -> {
+                onInputAction?.invoke(ImeInputAction.SymbolCommitted(payload))
+            }
         }
+    }
+
+    private fun updateClipboardHistory() {
+        try {
+            val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            if (clipboardManager != null && clipboardManager.hasPrimaryClip()) {
+                val clip = clipboardManager.primaryClip
+                if (clip != null && clip.itemCount > 0) {
+                    val text = clip.getItemAt(0).text?.toString()
+                    if (!text.isNullOrEmpty()) {
+                        addTextToClipboardHistory(text)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Safe fallback
+        }
+    }
+
+    private fun addTextToClipboardHistory(text: String) {
+        val list = getClipboardHistory().toMutableList()
+        if (list.isNotEmpty() && list[0] == text) {
+            return
+        }
+        list.remove(text)
+        list.add(0, text)
+        if (list.size > 20) {
+            list.removeAt(list.size - 1)
+        }
+        saveClipboardHistory(list)
+    }
+
+    private fun getClipboardHistory(): List<String> {
+        val sharedPrefs = context.getSharedPreferences("xiwei_clipboard_history", Context.MODE_PRIVATE)
+        val jsonStr = sharedPrefs.getString("history", null) ?: return emptyList()
+        val list = mutableListOf<String>()
+        try {
+            val jsonArray = JSONArray(jsonStr)
+            for (i in 0 until jsonArray.length()) {
+                list.add(jsonArray.getString(i))
+            }
+        } catch (e: Exception) {}
+        return list
+    }
+
+    private fun saveClipboardHistory(list: List<String>) {
+        val sharedPrefs = context.getSharedPreferences("xiwei_clipboard_history", Context.MODE_PRIVATE)
+        val jsonArray = JSONArray(list)
+        sharedPrefs.edit().putString("history", jsonArray.toString()).apply()
     }
 
     private fun getCandidateBg(): android.graphics.drawable.Drawable? {
@@ -209,5 +337,6 @@ class CandidateViewController(
         v.pinyinFloatingBar.visibility = View.GONE
         v.candidateContainer.removeAllViews()
         v.candidateContainer.visibility = View.GONE
+        currentBarMode = CandidateBarMode.EMPTY_STATE
     }
 }

@@ -157,6 +157,19 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 settingsRepository = settingsRepository,
             )
             candidateViewController.onInputAction = { handleInputAction(it) }
+            candidateViewController.onEditorAction = { actionId ->
+                try {
+                    currentInputConnection?.performContextMenuAction(actionId)
+                } catch (e: Exception) {}
+            }
+            candidateViewController.onMoveCursor = { isRight ->
+                try {
+                    val keyCode = if (isRight) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
+                    currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+                    currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+                } catch (e: Exception) {}
+            }
+    
     
             setupKeyboardViewActions()
             debugLogger.log("XiweiT9ImeService", "xiweiKeyboardView init done")

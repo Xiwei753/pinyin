@@ -76,4 +76,31 @@ class MengNengTest {
         assertEquals("meng", mengCandidate?.sourcePinyin)
         assertEquals(CandidateOrigin.EXACT_SINGLE, mengCandidate?.origin)
     }
+
+    @Test
+    fun testNengMultipleCandidatesFromFakeDict() {
+        val dict = MockDict()
+        dict.add(Candidate("能", "neng", 1000, CandidateType.SINGLE_CHAR), "neng")
+        dict.add(Candidate("嗯", "neng", 900, CandidateType.SINGLE_CHAR), "neng")
+        dict.add(Candidate("呢", "neng", 800, CandidateType.SINGLE_CHAR), "neng")
+
+        val engine = T9Engine(dict)
+        engine.inputDigit("6")
+        engine.inputDigit("3")
+        engine.inputDigit("6")
+        engine.inputDigit("4")
+        
+        // Lock "neng" reading to filter candidates to neng
+        engine.setActiveReading("neng")
+
+        val visible = engine.getVisibleCandidates()
+        val texts = visible.map { it.text }
+
+        assertTrue("Candidates should contain '能'", texts.contains("能"))
+        assertTrue("Candidates should contain '嗯'", texts.contains("嗯"))
+        assertTrue("Candidates should contain '呢'", texts.contains("呢"))
+        for (c in visible) {
+            assertEquals("neng", c.sourcePinyin)
+        }
+    }
 }

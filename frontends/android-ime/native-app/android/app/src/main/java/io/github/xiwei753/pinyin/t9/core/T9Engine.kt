@@ -268,11 +268,11 @@ class T9Engine(
             generateDynamicFallbackCandidates(compositions)
         } else emptyList()
 
-        val prefixPhrases = if (exactPhrases.isEmpty()) {
+        val prefixPhrases = if (exactPhrases.isEmpty() && dynamicFallback.isEmpty()) {
             generatePrefixCompletionCandidates(compositions, limit)
         } else emptyList()
 
-        val prefixSingles = if (exactPhrases.isEmpty()) {
+        val prefixSingles = if (exactPhrases.isEmpty() && dynamicFallback.isEmpty()) {
             generatePrefixSingleCandidates(compositions, limit)
         } else emptyList()
 

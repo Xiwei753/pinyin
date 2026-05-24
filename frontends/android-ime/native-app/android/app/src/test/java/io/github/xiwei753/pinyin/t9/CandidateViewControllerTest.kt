@@ -250,35 +250,23 @@ class CandidateViewControllerTest {
         controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
 
         assertEquals(View.VISIBLE, candidateContainer.visibility)
-        assertEquals(5, candidateContainer.childCount)
-        val chips = (0 until 5).map { (candidateContainer.getChildAt(it) as TextView).text.toString() }
-        assertEquals(listOf("剪贴板", "设置", "符号", "数字", "中/英"), chips)
+        assertEquals(9, candidateContainer.childCount)
+        val chips = (0 until 9).map { (candidateContainer.getChildAt(it) as TextView).text.toString() }
+        assertEquals(listOf("剪贴板", "设置", "选择", "，", "。", "？", "！", "：", "…"), chips)
     }
 
     @Test
-    fun testFunctionalChipsClickEmitsCorrectAction() {
+    fun testPunctuationChipsCommitSymbol() {
         controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
 
         var clickedAction: ImeInputAction? = null
         controller.onInputAction = { clickedAction = it }
 
-        // Click "符号" (index 2)
-        val symbolChip = candidateContainer.getChildAt(2) as TextView
-        assertEquals("符号", symbolChip.text.toString())
-        symbolChip.performClick()
-        assertEquals(ImeInputAction.ToggleSymbol, clickedAction)
-
-        // Click "数字" (index 3)
-        val numberChip = candidateContainer.getChildAt(3) as TextView
-        assertEquals("数字", numberChip.text.toString())
-        numberChip.performClick()
-        assertEquals(ImeInputAction.ToggleNumber, clickedAction)
-
-        // Click "中/英" (index 4)
-        val zhEnChip = candidateContainer.getChildAt(4) as TextView
-        assertEquals("中/英", zhEnChip.text.toString())
-        zhEnChip.performClick()
-        assertEquals(ImeInputAction.ToggleChineseEnglish, clickedAction)
+        // Click "，" (index 3)
+        val commaChip = candidateContainer.getChildAt(3) as TextView
+        assertEquals("，", commaChip.text.toString())
+        commaChip.performClick()
+        assertEquals(ImeInputAction.SymbolCommitted("，"), clickedAction)
     }
 
     @Test
@@ -291,8 +279,128 @@ class CandidateViewControllerTest {
         // Click "剪贴板" (index 0)
         val clipChip = candidateContainer.getChildAt(0) as TextView
         clipChip.performClick()
-        // Should not emit CandidateSelected(0) or similar candidate actions!
         assert(clickedAction !is ImeInputAction.CandidateSelected)
+    }
+
+    @Test
+    fun testClipboardHistoryDeduplicationAndSaving() {
+        // Clear history first
+        val sharedPrefs = context.getSharedPreferences("xiwei_clipboard_history", Context.MODE_PRIVATE)
+        sharedPrefs.edit().clear().commit()
+
+        // Mock system clipboard manager to have new text
+        val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("text", "hello world")
+        clipboardManager.setPrimaryClip(clip)
+
+        // Trigger refresh which updates history
+        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
+
+        // Click clipboard button to view history
+        val clipChip = candidateContainer.getChildAt(0) as TextView
+        clipChip.performClick()
+
+        // Candidate bar should now show close and the list of history
+        assertEquals(2, candidateContainer.childCount)
+        assertEquals("关闭", (candidateContainer.getChildAt(0) as TextView).text.toString())
+        assertEquals("hello world", (candidateContainer.getChildAt(1) as TextView).text.toString())
+
+        // Test deduplication and 20 limit
+        for (i in 1..25) {
+            val c = android.content.ClipData.newPlainText("text", "text_$i")
+            clipboardManager.setPrimaryClip(c)
+            controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
+        }
+
+        // Open clipboard again
+        clipChip.performClick()
+        // Child count should be 1 (close button) + 20 (history limit) = 21
+        assertEquals(21, candidateContainer.childCount)
+        assertEquals("text_25", (candidateContainer.getChildAt(1) as TextView).text.toString())
+
+        // Click a history item, it should commit full text and close
+        var clickedAction: ImeInputAction? = null
+        controller.onInputAction = { clickedAction = it }
+        val itemChip = candidateContainer.getChildAt(1) as TextView
+        itemChip.performClick()
+
+        assertEquals(ImeInputAction.SymbolCommitted("text_25"), clickedAction)
+        
+        // It should return to empty state
+        assertEquals(9, candidateContainer.childCount)
+        assertEquals("剪贴板", (candidateContainer.getChildAt(0) as TextView).text.toString())
+    }
+
+    @Test
+    fun testClipboardEmptyState() {
+        val sharedPrefs = context.getSharedPreferences("xiwei_clipboard_history", Context.MODE_PRIVATE)
+        sharedPrefs.edit().clear().commit()
+
+        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
+
+        // Click clipboard
+        val clipChip = candidateContainer.getChildAt(0) as TextView
+        clipChip.performClick()
+
+        assertEquals(2, candidateContainer.childCount)
+        assertEquals("关闭", (candidateContainer.getChildAt(0) as TextView).text.toString())
+        assertEquals("剪贴板为空", (candidateContainer.getChildAt(1) as TextView).text.toString())
+    }
+
+    @Test
+    fun testSelectionPanelOperations() {
+        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
+
+        // Click "选择" (index 2)
+        val selectChip = candidateContainer.getChildAt(2) as TextView
+        selectChip.performClick()
+
+        // Checks child count: ←, →, 全选, 复制, 剪切, 粘贴, 关闭 (total 7)
+        assertEquals(7, candidateContainer.childCount)
+        val chips = (0 until 7).map { (candidateContainer.getChildAt(it) as TextView).text.toString() }
+        assertEquals(listOf("←", "→", "全选", "复制", "剪切", "粘贴", "关闭"), chips)
+
+        var moveLeft: Boolean? = null
+        controller.onMoveCursor = { moveLeft = it }
+        candidateContainer.getChildAt(0).performClick()
+        assertEquals(false, moveLeft) // Moves left
+
+        var moveRight: Boolean? = null
+        controller.onMoveCursor = { moveRight = it }
+        candidateContainer.getChildAt(1).performClick()
+        assertEquals(true, moveRight) // Moves right
+
+        var editAction: Int? = null
+        controller.onEditorAction = { editAction = it }
+        candidateContainer.getChildAt(2).performClick() // 全选
+        assertEquals(android.R.id.selectAll, editAction)
+
+        // Close should return to empty state
+        candidateContainer.getChildAt(6).performClick()
+        assertEquals(9, candidateContainer.childCount)
+    }
+
+    @Test
+    fun testRegressionNormalTypingOverridesEmptyState() {
+        // First switch to Selection panel
+        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
+        candidateContainer.getChildAt(2).performClick() // Open selection
+        assertEquals(7, candidateContainer.childCount)
+
+        // Now type a digit (non-empty rawBuffer and candidates)
+        controller.refreshFromState(
+            state(
+                preeditVisible = true,
+                preedit = "a",
+                candidates = listOf(candidate("啊", "2", 900)),
+                rawBuffer = "2"
+            )
+        )
+
+        // Should render candidates, not selection panel!
+        assertEquals(2, candidateContainer.childCount)
+        assertEquals("a", (candidateContainer.getChildAt(0) as TextView).text.toString())
+        assertEquals("啊", (candidateContainer.getChildAt(1) as TextView).text.toString())
     }
 
     private fun state(

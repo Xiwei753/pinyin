@@ -182,7 +182,12 @@ class KeyboardActionHandler(
                 val candidates = detachedEngine.getVisibleCandidates(request.limit).map { candidate ->
                     CandidateSnapshotMapper.toSnapshotItem(candidate)
                 }
-                io.github.xiwei753.pinyin.imecore.CandidateResult(request.requestId, candidates)
+                io.github.xiwei753.pinyin.imecore.CandidateResult(
+                    requestId = request.requestId,
+                    candidates = candidates,
+                    buffer = request.buffer,
+                    lockedSyllables = request.lockedSyllables
+                )
             },
             onResult = { result ->
                 if (stateMachine.applyCandidateResult(result)) {

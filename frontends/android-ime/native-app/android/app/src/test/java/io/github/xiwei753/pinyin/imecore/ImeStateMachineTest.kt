@@ -235,6 +235,8 @@ class ImeStateMachineTest {
             CandidateResult(
                 requestId = request3.requestId,
                 candidates = listOf(CandidateSnapshotItem("乙", "964", "wo", 20, "TEST")),
+                buffer = "964",
+                lockedSyllables = emptyList(),
             )
         )
         assertTrue(appliedNewer)
@@ -244,6 +246,8 @@ class ImeStateMachineTest {
             CandidateResult(
                 requestId = request1.requestId,
                 candidates = listOf(CandidateSnapshotItem("甲", "96", "wo", 10, "TEST")),
+                buffer = "9",
+                lockedSyllables = emptyList(),
             )
         )
         assertFalse(appliedStale)
@@ -266,6 +270,8 @@ class ImeStateMachineTest {
             CandidateResult(
                 requestId = request.requestId,
                 candidates = listOf(CandidateSnapshotItem("甲", "96", "wo", 10, "TEST")),
+                buffer = "96",
+                lockedSyllables = emptyList(),
             )
         )
         assertTrue(applied)
@@ -335,6 +341,65 @@ class ImeStateMachineTest {
         assertEquals("punct", localMachine.currentSymbolCategory)
         assertTrue(localMachine.currentCandidates.isEmpty())
         assertEquals("", localMachine.rawBuffer)
+    }
+
+    @Test
+    fun testStaleCandidateSuppressionOnBufferChange() {
+        val localMachine = ImeStateMachine({ 30 }, deferCandidateComputation = true)
+        val engine = MutableEngine(buffer = "", preedit = "")
+        localMachine.attachEngine(engine)
+
+        // Type '9' -> rawBuffer is "9"
+        localMachine.dispatch(ImeInputAction.DigitPressed("9"))
+        val request = localMachine.drainPendingCandidateRequest()!!
+        
+        // Immediately cleared or starts empty
+        assertTrue("candidate selections should be empty immediately when request is dispatched", localMachine.currentCandidates.isEmpty())
+
+        // Apply a result for '9'
+        val applied = localMachine.applyCandidateResult(
+            CandidateResult(
+                requestId = request.requestId,
+                candidates = listOf(CandidateSnapshotItem("我", "9", "wo", 10, "TEST")),
+                buffer = "9",
+                lockedSyllables = emptyList(),
+            )
+        )
+        assertTrue(applied)
+        assertEquals("我", localMachine.currentCandidates.first().text)
+
+        // Type '6' -> rawBuffer is now "96"
+        localMachine.dispatch(ImeInputAction.DigitPressed("6"))
+        
+        // Immediate clearing on buffer change
+        assertTrue("candidate selections should be cleared immediately on buffer change", localMachine.currentCandidates.isEmpty())
+    }
+
+    @Test
+    fun testStaleCandidateResultDiscardedIfBufferMismatched() {
+        val localMachine = ImeStateMachine({ 30 }, deferCandidateComputation = true)
+        val engine = MutableEngine(buffer = "", preedit = "")
+        localMachine.attachEngine(engine)
+
+        // Type '9' -> rawBuffer is "9"
+        localMachine.dispatch(ImeInputAction.DigitPressed("9"))
+        val request = localMachine.drainPendingCandidateRequest()!!
+
+        // Type '6' -> rawBuffer is "96"
+        localMachine.dispatch(ImeInputAction.DigitPressed("6"))
+        localMachine.drainPendingCandidateRequest()!!
+
+        // A late-arriving result for the old buffer "9" should be discarded
+        val appliedStale = localMachine.applyCandidateResult(
+            CandidateResult(
+                requestId = request.requestId,
+                candidates = listOf(CandidateSnapshotItem("我", "9", "wo", 10, "TEST")),
+                buffer = "9",
+                lockedSyllables = emptyList(),
+            )
+        )
+        assertFalse("result with mismatched buffer must be discarded", appliedStale)
+        assertTrue(localMachine.currentCandidates.isEmpty())
     }
 
     private fun candidate(text: String, pinyin: String): Candidate = Candidate(

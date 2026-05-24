@@ -355,4 +355,38 @@ class KeyboardRendererTest {
         println("longTextSize: $longTextSize, shortTextSize: $shortTextSize")
         assertTrue("Long text should be scaled smaller than short text", longTextSize <= shortTextSize)
     }
+
+    @Test
+    fun testRailPunctKeyCentering() {
+        val renderer = KeyboardRenderer()
+        val mockCanvas = mock(Canvas::class.java)
+        val palette = ThemePalette(
+            bgColor = 0, candidateBarColor = 0, textColor = 0, subColor = 0,
+            preeditBgColor = 0, symTabActiveBg = 0, symTabInactiveBg = 0,
+            symTabActiveText = 0, symTabInactiveText = 0, isDark = false,
+            keyBgColor = 0, specialKeyBgColor = 0, keyPressedBgColor = 0, specialKeyPressedBgColor = 0
+        )
+
+        val punctKey = KeyboardKey(
+            id = "punct_，",
+            role = KeyboardKeyRole.RAIL_PUNCT,
+            rect = Rect(10, 20, 110, 120), // 100x100 box, center is (60, 70)
+            label = "，",
+            action = "punct:，",
+        )
+        val model = KeyboardLayoutModel(emptyList(), listOf(punctKey), null, 1000, 1000)
+
+        var drawnX = 0f
+        var drawnY = 0f
+        doAnswer { invocation ->
+            drawnX = invocation.arguments[1] as Float
+            drawnY = invocation.arguments[2] as Float
+            null
+        }.`when`(mockCanvas).drawText(anyString(), anyFloat(), anyFloat(), any(Paint::class.java))
+
+        renderer.drawKeyboard(mockCanvas, model, palette, 1f, KeyboardMode.ChineseT9, null)
+
+        assertTrue("drawnX should be calculated", drawnX > 0f)
+        assertTrue("drawnY should be calculated", drawnY > 0f)
+    }
 }

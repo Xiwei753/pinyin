@@ -1,9 +1,22 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
 val t9AssetsDir = layout.buildDirectory.dir("generated/t9Assets")
+
+val ciVersionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+val fallbackVersionCode = localProperties.getProperty("versionCode")?.toIntOrNull() ?: 1
+val computedVersionCode = ciVersionCode ?: fallbackVersionCode
+
+println("Computed versionCode: $computedVersionCode (CI GITHUB_RUN_NUMBER: $ciVersionCode, local fallback: $fallbackVersionCode)")
 
 android {
     namespace = "io.github.xiwei753.pinyin.t9"
@@ -13,8 +26,17 @@ android {
         applicationId = "io.github.xiwei753.pinyin.t9"
         minSdk = 23
         targetSdk = 34
-        versionCode = 1
+        versionCode = computedVersionCode
         versionName = "1.0"
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("keystore/xiwei-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -24,6 +46,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+            versionNameSuffix = "-debug"
         }
     }
     compileOptions {
