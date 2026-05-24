@@ -164,10 +164,15 @@ class T9PinyinComposer {
 
     companion object {
         val COMMON_SYLLABLES = setOf(
-            "de", "shi", "yi", "bu", "le", "wo", "ta", "you", "zhe", "shang", "zhong", "guo",
+            "de", "shi", "yi", "bu", "le", "wo", "ta", "ni", "nin", "you", "zhe", "shang", "zhong", "guo",
             "ren", "zai", "dao", "ge", "hui", "ji", "ke", "chu", "ye", "zi", "wan", "tian", "jin",
             "xing", "tai", "ming", "dong", "xiao", "da", "di", "xue", "sheng", "nian", "yue", "ri",
-            "hao", "kan", "ting", "shuo", "hua", "men", "duo", "shao", "qian", "lai", "qu"
+            "hao", "kan", "ting", "shuo", "hua", "men", "duo", "shao", "qian", "lai", "qu",
+            "mei", "shen", "zhi", "hai", "xiang", "jian", "jiao", "xia", "hou", "jue", "qiao",
+            "pian", "bian", "mian", "dian", "tiao", "liao", "liu", "xiu", "qiu", "ti", "li", "ji",
+            "pi", "mi", "di", "si", "zi", "ci", "ri", "qi", "bi", "neng", "zou", "dou", "tou",
+            "wan", "guan", "kuan", "huan", "chuan", "zhu", "chu", "shu", "ru", "lu", "nu", "du",
+            "tu", "gu", "ku", "hu", "zu", "cu", "su", "ju", "qu", "xu", "yu"
         )
     }
 

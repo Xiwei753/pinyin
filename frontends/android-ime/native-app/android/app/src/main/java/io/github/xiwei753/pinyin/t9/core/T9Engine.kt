@@ -119,7 +119,6 @@ class T9Engine(
     private var lastInternalCandidates = listOf<Candidate>()
     private var lastPreeditBuffer = ""
     private var lastPreeditLockedSyllables = listOf<String>()
-    private var lastPreeditDictVersion = -1
     private var lastPreeditValue = ""
 
     fun getCompositions(): List<PinyinComposition> {
@@ -163,24 +162,55 @@ class T9Engine(
 
     fun getPreedit(): String {
         if (buffer.isEmpty()) return ""
-        val currentDictVersion = dictionary.dictionaryVersion
-        if (buffer == lastPreeditBuffer && lockedSyllables == lastPreeditLockedSyllables && currentDictVersion == lastPreeditDictVersion && lastPreeditValue.isNotEmpty()) {
+        if (buffer == lastPreeditBuffer && lockedSyllables == lastPreeditLockedSyllables && lastPreeditValue.isNotEmpty()) {
             return lastPreeditValue
         }
-        val visible = getVisibleCandidates()
-        val bestCandidate = visible.firstOrNull()
-
-        val result = if (bestCandidate != null && bestCandidate.text != buffer) {
-            bestCandidate.sourcePinyin
-        } else {
-            val compositions = getValidCompositions()
-            val first = compositions.firstOrNull()
-            if (first == null || first.pinyinString.isEmpty()) "" else first.pinyinString
+        val compositions = getValidCompositions()
+        if (compositions.isEmpty()) {
+            lastPreeditBuffer = buffer
+            lastPreeditLockedSyllables = lockedSyllables.toList()
+            lastPreeditValue = ""
+            return ""
         }
+        if (compositions.size == 1) {
+            val result = compositions.first().pinyinString
+            lastPreeditBuffer = buffer
+            lastPreeditLockedSyllables = lockedSyllables.toList()
+            lastPreeditValue = result
+            return result
+        }
+
+        // Find the best composition using dictionary frequency.
+        // Priority: exact phrase > best single-char > first composition.
+        var bestSinglePinyin: String? = null
+        var bestSingleScore = 0
+        var bestPhrasePinyin: String? = null
+        var bestPhraseScore = 0
+
+        for (comp in compositions) {
+            if (comp.isComplete && comp.pinyinList.size >= 2) {
+                val phrases = trackQuery { dictionary.getPinyinExactCandidates(comp.pinyinString) }
+                val maxScore = phrases.maxOfOrNull { it.score } ?: 0
+                if (maxScore > bestPhraseScore) {
+                    bestPhraseScore = maxScore
+                    bestPhrasePinyin = comp.pinyinString
+                }
+            }
+            if (comp.isComplete && comp.pinyinList.size == 1) {
+                val pinyin = comp.pinyinList[0]
+                val cands = trackQuery { dictionary.getSingleSyllableCandidates(pinyin) }
+                val maxScore = cands.maxOfOrNull { it.score } ?: 0
+                if (maxScore > bestSingleScore) {
+                    bestSingleScore = maxScore
+                    bestSinglePinyin = comp.pinyinString
+                }
+            }
+        }
+
+        val result = bestPhrasePinyin ?: bestSinglePinyin ?: compositions.first().pinyinString
 
         lastPreeditBuffer = buffer
         lastPreeditLockedSyllables = lockedSyllables.toList()
-        lastPreeditDictVersion = currentDictVersion
         lastPreeditValue = result
         return result
     }
@@ -219,20 +249,8 @@ class T9Engine(
     private fun invalidatePreeditCache() {
         lastPreeditBuffer = ""
         lastPreeditLockedSyllables = emptyList()
-        lastPreeditDictVersion = -1
         lastPreeditValue = ""
     }
-
-    private val digitToLetters = mapOf(
-        '2' to listOf("a", "b", "c"),
-        '3' to listOf("d", "e", "f"),
-        '4' to listOf("g", "h", "i"),
-        '5' to listOf("j", "k", "l"),
-        '6' to listOf("m", "n", "o"),
-        '7' to listOf("p", "q", "r", "s"),
-        '8' to listOf("t", "u", "v"),
-        '9' to listOf("w", "x", "y", "z")
-    )
 
     fun getVisibleCandidates(limit: Int = 30): List<Candidate> {
         val currentDictVersion = dictionary.dictionaryVersion
@@ -345,7 +363,6 @@ class T9Engine(
         val results = mutableListOf<Pair<Candidate, String>>()
 
         for (comp in compositions.take(4)) {
-            if (comp.isComplete) continue
             val pinyins = comp.pinyinList
             if (pinyins.isEmpty()) continue
 
@@ -353,28 +370,25 @@ class T9Engine(
                 val lastSyl = pinyins.last()
                 val isLastDigit = lastSyl.all { it.isDigit() }
                 val basePrefix = pinyins.dropLast(1).joinToString(" ")
-                
-                if (isLastDigit) {
-                    val prefixSyllables = PinyinSyllableDecoder.getPrefixSyllables(lastSyl)
-                    val commonPrefixSyllables = prefixSyllables.filter { T9PinyinComposer.COMMON_SYLLABLES.contains(it) }.take(5)
-                    for (ps in commonPrefixSyllables) {
-                        val queryPrefix = "$basePrefix $ps"
-                        val cands = trackQuery { dictionary.getPinyinPrefixCandidates(queryPrefix) }
-                        cands.forEach { results.add(it to comp.pinyinString) }
-                        val exactCands = trackQuery { dictionary.getPinyinExactCandidates(queryPrefix) }
-                        exactCands.forEach { results.add(it to comp.pinyinString) }
-                    }
-                } else {
-                    val queryPrefix = pinyins.joinToString(" ")
+
+                val prefixCode = if (isLastDigit) lastSyl else T9CodeMapper.toCode(lastSyl)
+                val prefixSyllables = PinyinSyllableDecoder.getPrefixSyllables(prefixCode)
+                val commonPrefixSyllables = prefixSyllables
+                    .filter { T9PinyinComposer.COMMON_SYLLABLES.contains(it) && it != lastSyl }
+                for (ps in commonPrefixSyllables) {
+                    val queryPrefix = "$basePrefix $ps"
                     val cands = trackQuery { dictionary.getPinyinPrefixCandidates(queryPrefix) }
                     cands.forEach { results.add(it to comp.pinyinString) }
+                    val exactCands = trackQuery { dictionary.getPinyinExactCandidates(queryPrefix) }
+                    exactCands.forEach { results.add(it to comp.pinyinString) }
                 }
             } else {
                 val syl = pinyins[0]
                 val isDigit = syl.all { it.isDigit() }
                 if (isDigit) {
                     val prefixSyllables = PinyinSyllableDecoder.getPrefixSyllables(syl)
-                    val commonPrefixSyllables = prefixSyllables.filter { T9PinyinComposer.COMMON_SYLLABLES.contains(it) }.take(6)
+                    val commonPrefixSyllables = prefixSyllables
+                        .filter { T9PinyinComposer.COMMON_SYLLABLES.contains(it) }
                     for (ps in commonPrefixSyllables) {
                         val cands = trackQuery { dictionary.getSingleSyllableCandidates(ps) }
                         cands.forEach { results.add(it to comp.pinyinString) }
