@@ -203,6 +203,7 @@ fun KeyboardMode.toInputMode(): InputMode = when (this) {
     KeyboardMode.EnglishT9 -> InputMode.EnglishT9
     KeyboardMode.Number -> InputMode.Number
     KeyboardMode.Symbol -> InputMode.Symbol
+    KeyboardMode.ClipboardPanel, KeyboardMode.SelectionPanel -> InputMode.Symbol
 }
 
 fun InputMode.toKeyboardMode(): KeyboardMode = when (this) {

@@ -28,6 +28,8 @@ enum class CandidateBarMode {
     SELECTION
 }
 
+// TODO: ClipboardPanel and SelectionPanel inside CandidateViewController are temporary. 
+// They should be migrated to independent Keyboard Panels in the next step.
 class CandidateViewController(
     private val context: Context,
     private val v: KeyboardViews,
@@ -74,7 +76,7 @@ class CandidateViewController(
         if (state.candidateStripState.isDictionaryPreparing || isDictPreparing) {
             try {
                 v.candidateContainer.removeAllViews()
-                val btn = createTextView("词库准备中...", CandidateItemType.PREPARING, false, null)
+                val btn = createTextView("词库准备中...", CandidateItemType.PREPARING, null)
                 v.candidateContainer.addView(btn)
             } catch (e: Exception) {}
             v.candidateContainer.visibility = View.VISIBLE
@@ -90,7 +92,7 @@ class CandidateViewController(
             currentBarMode = CandidateBarMode.EMPTY_STATE
             if (hasPreedit) {
                 try {
-                    val preeditChip = createTextView(state.preeditState.text, CandidateItemType.PREPARING, false, null)
+                    val preeditChip = createTextView(state.preeditState.text, CandidateItemType.PREPARING, null)
                     preeditChip.isClickable = false
                     preeditChip.isFocusable = false
                     v.candidateContainer.addView(preeditChip)
@@ -99,7 +101,7 @@ class CandidateViewController(
 
             for ((index, candidate) in state.candidateStripState.candidates.withIndex()) {
                 try {
-                    val chip = createTextView(candidate.text, CandidateItemType.CANDIDATE, false, index)
+                    val chip = createTextView(candidate.text, CandidateItemType.CANDIDATE, index)
                     v.candidateContainer.addView(chip)
                 } catch (e: Exception) {}
             }
@@ -113,30 +115,30 @@ class CandidateViewController(
             updateClipboardHistory()
             when (currentBarMode) {
                 CandidateBarMode.EMPTY_STATE -> {
-                    val functions = listOf("剪贴板", "设置", "选择", "，", "。", "？", "！", "：", "…")
+                    val functions = listOf("📋", "⚙", "↔")
                     for (func in functions) {
                         try {
-                            val chip = createTextView(func, CandidateItemType.FUNCTION, false, func)
+                            val chip = createTextView(func, CandidateItemType.FUNCTION, func)
                             v.candidateContainer.addView(chip)
                         } catch (e: Exception) {}
                     }
                 }
                 CandidateBarMode.CLIPBOARD -> {
                     try {
-                        val closeChip = createTextView("关闭", CandidateItemType.FUNCTION, false, "clipboard_close")
+                        val closeChip = createTextView("关闭", CandidateItemType.FUNCTION, "clipboard_close")
                         v.candidateContainer.addView(closeChip)
                     } catch (e: Exception) {}
 
                     val history = getClipboardHistory()
                     if (history.isEmpty()) {
                         try {
-                            val emptyChip = createTextView("剪贴板为空", CandidateItemType.PREPARING, false, null)
+                            val emptyChip = createTextView("剪贴板为空", CandidateItemType.PREPARING, null)
                             v.candidateContainer.addView(emptyChip)
                         } catch (e: Exception) {}
                     } else {
                         for ((idx, text) in history.withIndex()) {
                             try {
-                                val chip = createTextView(text, CandidateItemType.FUNCTION, false, "clip_item_$idx")
+                                val chip = createTextView(text, CandidateItemType.FUNCTION, "clip_item_$idx")
                                 chip.isSingleLine = true
                                 chip.ellipsize = android.text.TextUtils.TruncateAt.END
                                 v.candidateContainer.addView(chip)
@@ -148,7 +150,7 @@ class CandidateViewController(
                     val selectionChips = listOf("←", "→", "全选", "复制", "剪切", "粘贴", "关闭")
                     for (label in selectionChips) {
                         try {
-                            val chip = createTextView(label, CandidateItemType.FUNCTION, false, "select_$label")
+                            val chip = createTextView(label, CandidateItemType.FUNCTION, "select_$label")
                             v.candidateContainer.addView(chip)
                         } catch (e: Exception) {}
                     }
@@ -161,7 +163,6 @@ class CandidateViewController(
     private fun createTextView(
         text: String,
         type: CandidateItemType,
-        isActive: Boolean,
         payload: Any?,
     ): TextView {
         val tv = TextView(context).apply {
@@ -221,7 +222,7 @@ class CandidateViewController(
 
     private fun onFunctionChipClicked(payload: String) {
         when {
-            payload == "设置" -> {
+            payload == "⚙" -> {
                 try {
                     val intent = android.content.Intent(context, SettingsActivity::class.java).apply {
                         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -231,11 +232,11 @@ class CandidateViewController(
                     // Safe fallback
                 }
             }
-            payload == "选择" -> {
+            payload == "↔" -> {
                 currentBarMode = CandidateBarMode.SELECTION
                 lastState?.let { refreshFromState(it) }
             }
-            payload == "剪贴板" -> {
+            payload == "📋" -> {
                 currentBarMode = CandidateBarMode.CLIPBOARD
                 lastState?.let { refreshFromState(it) }
             }
@@ -269,9 +270,6 @@ class CandidateViewController(
                         lastState?.let { refreshFromState(it) }
                     }
                 }
-            }
-            payload in listOf("，", "。", "？", "！", "：", "…") -> {
-                onInputAction?.invoke(ImeInputAction.SymbolCommitted(payload))
             }
         }
     }

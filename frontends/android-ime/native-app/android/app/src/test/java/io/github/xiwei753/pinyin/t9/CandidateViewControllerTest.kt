@@ -250,23 +250,9 @@ class CandidateViewControllerTest {
         controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
 
         assertEquals(View.VISIBLE, candidateContainer.visibility)
-        assertEquals(9, candidateContainer.childCount)
-        val chips = (0 until 9).map { (candidateContainer.getChildAt(it) as TextView).text.toString() }
-        assertEquals(listOf("剪贴板", "设置", "选择", "，", "。", "？", "！", "：", "…"), chips)
-    }
-
-    @Test
-    fun testPunctuationChipsCommitSymbol() {
-        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
-
-        var clickedAction: ImeInputAction? = null
-        controller.onInputAction = { clickedAction = it }
-
-        // Click "，" (index 3)
-        val commaChip = candidateContainer.getChildAt(3) as TextView
-        assertEquals("，", commaChip.text.toString())
-        commaChip.performClick()
-        assertEquals(ImeInputAction.SymbolCommitted("，"), clickedAction)
+        assertEquals(3, candidateContainer.childCount)
+        val chips = (0 until 3).map { (candidateContainer.getChildAt(it) as TextView).text.toString() }
+        assertEquals(listOf("📋", "⚙", "↔"), chips)
     }
 
     @Test
@@ -276,7 +262,7 @@ class CandidateViewControllerTest {
         var clickedAction: ImeInputAction? = null
         controller.onInputAction = { clickedAction = it }
 
-        // Click "剪贴板" (index 0)
+        // Click "📋" (index 0)
         val clipChip = candidateContainer.getChildAt(0) as TextView
         clipChip.performClick()
         assert(clickedAction !is ImeInputAction.CandidateSelected)
@@ -327,8 +313,8 @@ class CandidateViewControllerTest {
         assertEquals(ImeInputAction.SymbolCommitted("text_25"), clickedAction)
         
         // It should return to empty state
-        assertEquals(9, candidateContainer.childCount)
-        assertEquals("剪贴板", (candidateContainer.getChildAt(0) as TextView).text.toString())
+        assertEquals(3, candidateContainer.childCount)
+        assertEquals("📋", (candidateContainer.getChildAt(0) as TextView).text.toString())
     }
 
     @Test
@@ -351,7 +337,7 @@ class CandidateViewControllerTest {
     fun testSelectionPanelOperations() {
         controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
 
-        // Click "选择" (index 2)
+        // Click "↔" (index 2)
         val selectChip = candidateContainer.getChildAt(2) as TextView
         selectChip.performClick()
 
@@ -377,7 +363,7 @@ class CandidateViewControllerTest {
 
         // Close should return to empty state
         candidateContainer.getChildAt(6).performClick()
-        assertEquals(9, candidateContainer.childCount)
+        assertEquals(3, candidateContainer.childCount)
     }
 
     @Test
@@ -401,6 +387,13 @@ class CandidateViewControllerTest {
         assertEquals(2, candidateContainer.childCount)
         assertEquals("a", (candidateContainer.getChildAt(0) as TextView).text.toString())
         assertEquals("啊", (candidateContainer.getChildAt(1) as TextView).text.toString())
+    }
+
+    @Test
+    fun testKeyboardModeClipboardAndSelectionPanelPlaceholder() {
+        val modes = KeyboardMode.values()
+        assert(modes.contains(KeyboardMode.ClipboardPanel))
+        assert(modes.contains(KeyboardMode.SelectionPanel))
     }
 
     private fun state(
