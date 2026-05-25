@@ -51,8 +51,8 @@ class EditorInputTypePolicyTest {
 
         assertEquals(KeyboardMode.EnglishT9, urlPolicy.defaultKeyboardMode)
         assertEquals(KeyboardMode.EnglishT9, emailPolicy.defaultKeyboardMode)
-        assertFalse(urlPolicy.allowChineseCandidates)
-        assertFalse(emailPolicy.allowChineseCandidates)
+        assertTrue(urlPolicy.allowChineseCandidates)
+        assertTrue(emailPolicy.allowChineseCandidates)
     }
 
     @Test
@@ -92,7 +92,7 @@ class EditorInputTypePolicyTest {
         ))
         assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
         assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
-        assertFalse(policy.allowChineseCandidates)
+        assertTrue(policy.allowChineseCandidates)
     }
 
     @Test
@@ -102,7 +102,7 @@ class EditorInputTypePolicyTest {
         ))
         assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
         assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
-        assertFalse(policy.allowChineseCandidates)
+        assertTrue(policy.allowChineseCandidates)
     }
 
     @Test

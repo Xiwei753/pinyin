@@ -65,7 +65,7 @@ object EditorInputTypePolicy {
         return EditorInputPolicy(
             defaultKeyboardMode = defaultKeyboardMode,
             defaultLastTextMode = defaultLastTextMode,
-            allowChineseCandidates = defaultKeyboardMode == KeyboardMode.ChineseT9,
+            allowChineseCandidates = !isPassword && !isPhone && !isNumber,
             enterBehavior = enterBehavior,
         )
     }
