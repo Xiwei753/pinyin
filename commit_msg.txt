@@ -1,0 +1,7 @@
+Fix: Decouple COMMON_SYLLABLES from T9Engine preedit and candidate logic
+
+1. Removed T9PinyinComposer.COMMON_SYLLABLES dependencies from prefix candidate generations.
+2. Refactored `getVisibleCandidates` exact match short-circuit. If `exactPhrases` or `exactSingles` yield any valid matches, the engine will NOT generate garbage dynamic fallback or prefix completions.
+3. Updated SQLite queries with `ORDER BY CASE WHEN origin = '8105' THEN 1 ELSE 0 END, freq DESC LIMIT 100` to ensure `8105.dict.yaml` single characters don't overwhelm core `base.dict.yaml` dictionary results.
+4. Simplified `getPreedit` generation to purely follow the `T9PinyinComposer.kt` exact string output paths. It uses dictionary single syllable frequency strictly as a tie-breaker when multiple decoded paths have identical decoder scores.
+5. Fixed connection leak in `T9EngineGoldenRealDictTest.kt` by correctly closing the real SQLite test DB with `@After`.

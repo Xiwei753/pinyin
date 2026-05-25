@@ -172,42 +172,34 @@ class T9Engine(
             lastPreeditValue = ""
             return ""
         }
-        if (compositions.size == 1) {
-            val result = compositions.first().pinyinString
-            lastPreeditBuffer = buffer
-            lastPreeditLockedSyllables = lockedSyllables.toList()
-            lastPreeditValue = result
-            return result
-        }
 
-        // Find the best composition using dictionary frequency.
-        // Priority: exact phrase > best single-char > first composition.
-        var bestSinglePinyin: String? = null
-        var bestSingleScore = 0
-        var bestPhrasePinyin: String? = null
-        var bestPhraseScore = 0
+        var bestResult = compositions.first().pinyinString
 
-        for (comp in compositions) {
-            if (comp.isComplete && comp.pinyinList.size >= 2) {
-                val phrases = trackQuery { dictionary.getPinyinExactCandidates(comp.pinyinString) }
-                val maxScore = phrases.maxOfOrNull { it.score } ?: 0
-                if (maxScore > bestPhraseScore) {
-                    bestPhraseScore = maxScore
-                    bestPhrasePinyin = comp.pinyinString
-                }
-            }
-            if (comp.isComplete && comp.pinyinList.size == 1) {
-                val pinyin = comp.pinyinList[0]
-                val cands = trackQuery { dictionary.getSingleSyllableCandidates(pinyin) }
-                val maxScore = cands.maxOfOrNull { it.score } ?: 0
-                if (maxScore > bestSingleScore) {
-                    bestSingleScore = maxScore
-                    bestSinglePinyin = comp.pinyinString
+        // Tie-break equally scored paths using dictionary single syllable frequency
+        val topScore = compositions.first().score
+        val tiedComps = compositions.takeWhile { it.score == topScore }
+        if (tiedComps.size > 1) {
+            var bestFreq = -1
+            for (comp in tiedComps) {
+                if (comp.pinyinList.size == 1) {
+                    val cands = trackQuery { dictionary.getSingleSyllableCandidates(comp.pinyinList[0]) }
+                    val maxFreq = cands.maxOfOrNull { it.score } ?: 0
+                    if (maxFreq > bestFreq) {
+                        bestFreq = maxFreq
+                        bestResult = comp.pinyinString
+                    }
+                } else if (comp.pinyinList.size > 1) {
+                    val cands = trackQuery { dictionary.getPinyinExactCandidates(comp.pinyinString) }
+                    val maxFreq = cands.maxOfOrNull { it.score } ?: 0
+                    if (maxFreq > bestFreq) {
+                        bestFreq = maxFreq
+                        bestResult = comp.pinyinString
+                    }
                 }
             }
         }
 
-        val result = bestPhrasePinyin ?: bestSinglePinyin ?: compositions.first().pinyinString
+        val result = bestResult
 
         lastPreeditBuffer = buffer
         lastPreeditLockedSyllables = lockedSyllables.toList()
@@ -281,16 +273,18 @@ class T9Engine(
             }
         }
 
-        // Only generate fallbacks and prefix completions if we don't have exact phrase candidates!
-        val dynamicFallback = if (exactPhrases.isEmpty()) {
+        // Only generate fallbacks and prefix completions if we don't have ANY exact matches!
+        val hasExact = exactPhrases.isNotEmpty() || exactSingles.isNotEmpty()
+
+        val dynamicFallback = if (!hasExact) {
             generateDynamicFallbackCandidates(compositions)
         } else emptyList()
 
-        val prefixPhrases = if (exactPhrases.isEmpty() && dynamicFallback.isEmpty()) {
+        val prefixPhrases = if (!hasExact && dynamicFallback.isEmpty()) {
             generatePrefixCompletionCandidates(compositions, limit)
         } else emptyList()
 
-        val prefixSingles = if (exactPhrases.isEmpty() && dynamicFallback.isEmpty()) {
+        val prefixSingles = if (!hasExact && dynamicFallback.isEmpty()) {
             generatePrefixSingleCandidates(compositions, limit)
         } else emptyList()
 
