@@ -40,4 +40,5 @@ sealed interface ImeInputAction {
         val initialLastTextMode: InputMode = initialMode,
     ) : ImeInputAction
     data object LifecycleFinishInput : ImeInputAction
+    data object HideKeyboard : ImeInputAction
 }

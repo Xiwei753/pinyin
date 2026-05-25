@@ -23,5 +23,6 @@ sealed interface ImeSideEffect {
     data object SelectionCut : ImeSideEffect
     data object SelectionPaste : ImeSideEffect
     data object SelectionUndo : ImeSideEffect
+    data object HideKeyboard : ImeSideEffect
 
 }
