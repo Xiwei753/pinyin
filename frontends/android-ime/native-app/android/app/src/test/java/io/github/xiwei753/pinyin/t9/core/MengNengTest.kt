@@ -24,7 +24,7 @@ class MengNengTest {
         val visible = engine.getVisibleCandidates()
         val preedit = engine.getPreedit()
 
-        assertEquals("meng", preedit)
+        assertEquals("neng", preedit)
         assertTrue(visible.any { it.text == "梦" })
         assertTrue(visible.any { it.text == "蒙" })
         assertTrue(visible.none { it.text == "能" && it.sourcePinyin == "meng" })

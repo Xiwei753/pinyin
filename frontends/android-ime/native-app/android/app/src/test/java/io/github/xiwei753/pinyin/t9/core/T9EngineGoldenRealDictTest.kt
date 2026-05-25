@@ -5,12 +5,22 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.After
 import java.io.FileInputStream
 import io.github.xiwei753.pinyin.t9.testutil.TestPaths
 
 class T9EngineGoldenRealDictTest {
+    private var dict: TestSQLiteDictionary? = null
+
     private fun realEngine(): T9Engine {
-        return T9Engine(TestSQLiteDictionary(TestPaths.assetDatabase().absolutePath))
+        val d = TestSQLiteDictionary(TestPaths.assetDatabase().absolutePath)
+        dict = d
+        return T9Engine(d)
+    }
+
+    @After
+    fun tearDown() {
+        dict?.close()
     }
 
     private fun typeDigits(engine: T9Engine, digits: String) {

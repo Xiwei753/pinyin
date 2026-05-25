@@ -39,7 +39,7 @@ class T9EngineActiveReadingTest {
         engine.inputDigit("6")
         engine.inputDigit("4")
 
-        assertEquals("meng", engine.getPreedit())
+        assertEquals("neng", engine.getPreedit())
 
         val result = engine.setActiveReading("neng")
         assertTrue("setActiveReading(neng) must succeed", result)

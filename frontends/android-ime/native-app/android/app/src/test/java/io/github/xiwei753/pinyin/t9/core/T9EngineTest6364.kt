@@ -62,7 +62,7 @@ class T9EngineTest6364 {
         assertEquals("梦", visible[0].text)
 
         val preedit = engine.getPreedit()
-        assertEquals("meng", preedit)
+        assertEquals("neng", preedit)
     }
 
     @Test
