@@ -102,6 +102,15 @@ class CandidateViewController(
             }
         } else {
             val functions = listOf("📋", "⚙", "↔")
+            try {
+                val spacer = View(context)
+                spacer.layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
+                v.candidateContainer.addView(spacer)
+            } catch (e: Exception) {}
+            try {
+                val hideChip = createTextView("🔽", CandidateItemType.FUNCTION, "🔽")
+                v.candidateContainer.addView(hideChip)
+            } catch (e: Exception) {}
             for (func in functions) {
                 try {
                     val chip = createTextView(func, CandidateItemType.FUNCTION, func)
@@ -189,6 +198,9 @@ class CandidateViewController(
             }
             payload == "↔" -> {
                 onInputAction?.invoke(ImeInputAction.KeyboardModeSelected(io.github.xiwei753.pinyin.imecore.InputMode.SelectionPanel))
+            }
+            payload == "🔽" -> {
+                onInputAction?.invoke(ImeInputAction.HideKeyboard)
             }
         }
     }

@@ -101,6 +101,7 @@ class ImeStateMachine(
             is ImeInputAction.ReadingSelected -> onReadingSelected(action.index, effects)
             ImeInputAction.ClearComposing -> clearComposing(effects, finishComposing = false)
             is ImeInputAction.LifecycleStartInput -> onLifecycleStart(action, effects)
+            ImeInputAction.HideKeyboard -> effects.add(ImeSideEffect.HideKeyboard)
             ImeInputAction.LifecycleFinishInput -> {
                 clearComposing(effects, finishComposing = true)
                 mode = InputMode.ChineseT9
@@ -359,7 +360,10 @@ class ImeStateMachine(
         when (mode) {
             InputMode.EnglishT9 -> switchMode(InputMode.ChineseT9, effects)
             InputMode.ChineseT9 -> switchMode(InputMode.EnglishT9, effects)
-            else -> switchMode(InputMode.ChineseT9, effects)
+            else -> {
+                val target = lastTextMode
+                if (target == InputMode.ChineseT9 || target == InputMode.EnglishT9) switchMode(target, effects) else switchMode(InputMode.ChineseT9, effects)
+            }
         }
     }
 
@@ -383,7 +387,7 @@ class ImeStateMachine(
             InputMode.EnglishT9 -> if (englishPending) commitEnglishChar(effects)
             else -> {}
         }
-        effects.add(ImeSideEffect.FinishComposingText)
+        clearComposing(effects, finishComposing = true)
     }
 
     private fun onEnterShort(effects: MutableList<ImeSideEffect>) {

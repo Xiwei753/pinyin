@@ -643,6 +643,11 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         }
     }
 
+    override fun hideKeyboard() {
+        finishComposingText()
+        requestHideSelf(0)
+    }
+
     override fun clipboardPageDown() {
         val history = ClipboardHistoryManager.getHistory(this)
         val totalPages = if (history.isEmpty()) 1 else (history.size + 2) / 3

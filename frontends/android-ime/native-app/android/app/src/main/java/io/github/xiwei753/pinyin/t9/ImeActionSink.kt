@@ -20,4 +20,5 @@ interface ImeActionSink {
     fun sendKeyEvent(keyCode: Int)
     fun clipboardPageUp()
     fun clipboardPageDown()
+    fun hideKeyboard()
 }
