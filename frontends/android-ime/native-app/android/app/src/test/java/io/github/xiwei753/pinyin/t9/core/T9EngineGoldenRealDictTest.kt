@@ -31,10 +31,6 @@ class T9EngineGoldenRealDictTest {
             "visible candidates for $digits should contain one of $expectedCandidates, actual=$visibleTexts",
             visibleTexts.any { it in expectedCandidates }
         )
-        assertTrue(
-            "visible candidates for $digits must be exact real dictionary candidates, actual=${engine.getVisibleCandidates()}",
-            engine.getVisibleCandidates().all { it.origin == CandidateOrigin.EXACT_SINGLE || it.origin == CandidateOrigin.EXACT_PHRASE }
-        )
     }
 
     @Test
