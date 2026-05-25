@@ -250,9 +250,14 @@ class CandidateViewControllerTest {
         controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
 
         assertEquals(View.VISIBLE, candidateContainer.visibility)
-        assertEquals(3, candidateContainer.childCount)
-        val chips = (0 until 3).map { (candidateContainer.getChildAt(it) as TextView).text.toString() }
-        assertEquals(listOf("📋", "⚙", "↔"), chips)
+
+        var chips = mutableListOf<String>()
+        for (i in 0 until candidateContainer.childCount) {
+            val child = candidateContainer.getChildAt(i)
+            if (child is TextView) chips.add(child.text.toString())
+        }
+        assertEquals(listOf("🔽", "📋", "⚙", "↔"), chips)
+
     }
 
     @Test
@@ -262,8 +267,12 @@ class CandidateViewControllerTest {
         var clickedAction: ImeInputAction? = null
         controller.onInputAction = { clickedAction = it }
 
-        val clipChip = candidateContainer.getChildAt(0) as TextView
-        clipChip.performClick()
+        var clipChip: TextView? = null
+        for (i in 0 until candidateContainer.childCount) {
+            val child = candidateContainer.getChildAt(i)
+            if (child is TextView && child.text.toString() == "📋") clipChip = child
+        }
+        clipChip!!.performClick()
         assert(clickedAction !is ImeInputAction.CandidateSelected)
     }
 
@@ -274,8 +283,12 @@ class CandidateViewControllerTest {
         var clickedAction: ImeInputAction? = null
         controller.onInputAction = { clickedAction = it }
 
-        val clipChip = candidateContainer.getChildAt(0) as TextView
-        clipChip.performClick()
+        var clipChip: TextView? = null
+        for (i in 0 until candidateContainer.childCount) {
+            val child = candidateContainer.getChildAt(i)
+            if (child is TextView && child.text.toString() == "📋") clipChip = child
+        }
+        clipChip!!.performClick()
 
         assertEquals(ImeInputAction.KeyboardModeSelected(InputMode.ClipboardPanel), clickedAction)
     }
@@ -287,8 +300,13 @@ class CandidateViewControllerTest {
         var clickedAction: ImeInputAction? = null
         controller.onInputAction = { clickedAction = it }
 
-        val selectChip = candidateContainer.getChildAt(2) as TextView
-        selectChip.performClick()
+        var selectChip: TextView? = null
+        for (i in 0 until candidateContainer.childCount) {
+            val child = candidateContainer.getChildAt(i)
+            if (child is TextView && child.text.toString() == "↔") selectChip = child
+        }
+
+        selectChip!!.performClick()
 
         assertEquals(ImeInputAction.KeyboardModeSelected(InputMode.SelectionPanel), clickedAction)
     }
@@ -337,4 +355,30 @@ class CandidateViewControllerTest {
         score = score,
         origin = "TEST",
     )
+
+
+    @Test
+    fun testClickHideChipEmitsHideKeyboard() {
+        controller.refreshFromState(state(preeditVisible = false, preedit = "", rawBuffer = ""))
+
+        var clickedAction: ImeInputAction? = null
+        controller.onInputAction = { clickedAction = it }
+
+        var lastTextView: TextView? = null
+        for (i in 0 until candidateContainer.childCount) {
+            val child = candidateContainer.getChildAt(i)
+            if (child is TextView) lastTextView = child
+        }
+        var hideChip: TextView? = null
+        for (i in 0 until candidateContainer.childCount) {
+            val child = candidateContainer.getChildAt(i)
+            if (child is TextView && child.text.toString() == "🔽") hideChip = child
+        }
+        assertEquals("🔽", hideChip!!.text.toString())
+        hideChip!!.performClick()
+
+        assertEquals(ImeInputAction.HideKeyboard, clickedAction)
+    }
+
+
 }

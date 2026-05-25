@@ -180,6 +180,7 @@ class KeyboardActionHandler(
                 ImeSideEffect.SelectionCut -> actionSink.performContextMenuAction(android.R.id.cut)
                 ImeSideEffect.SelectionPaste -> actionSink.performContextMenuAction(android.R.id.paste)
                 ImeSideEffect.SelectionUndo -> actionSink.performContextMenuAction(android.R.id.undo)
+                ImeSideEffect.HideKeyboard -> actionSink.hideKeyboard()
             }
         }
     }

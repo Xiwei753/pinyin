@@ -463,4 +463,39 @@ class ImeStateMachineTest {
         override fun commitCandidate(candidate: CandidateSnapshotItem) {}
         override fun setActiveReading(reading: String): Boolean = false
     }
+
+
+    @Test
+    fun testChineseToEnglishToggle() {
+        assertEquals(InputMode.ChineseT9, machine.mode)
+        val effects = machine.dispatch(ImeInputAction.ToggleChineseEnglish)
+        assertEquals(InputMode.EnglishT9, machine.mode)
+        assertTrue(effects.contains(ImeSideEffect.RefreshUi))
+    }
+
+    @Test
+    fun testEnglishToChineseToggle() {
+        machine.dispatch(ImeInputAction.KeyboardModeSelected(InputMode.EnglishT9))
+        val effects = machine.dispatch(ImeInputAction.ToggleChineseEnglish)
+        assertEquals(InputMode.ChineseT9, machine.mode)
+        assertTrue(effects.contains(ImeSideEffect.RefreshUi))
+    }
+
+    @Test
+    fun testSymbolToEnglishToggle() {
+        machine.dispatch(ImeInputAction.KeyboardModeSelected(InputMode.EnglishT9))
+        machine.dispatch(ImeInputAction.ToggleSymbol)
+        val effects = machine.dispatch(ImeInputAction.ToggleChineseEnglish)
+        assertEquals(InputMode.EnglishT9, machine.mode)
+    }
+
+    @Test
+    fun testSymbolToChineseToggle() {
+        machine.dispatch(ImeInputAction.KeyboardModeSelected(InputMode.ChineseT9))
+        machine.dispatch(ImeInputAction.ToggleSymbol)
+        val effects = machine.dispatch(ImeInputAction.ToggleChineseEnglish)
+        assertEquals(InputMode.ChineseT9, machine.mode)
+    }
+
+
 }
