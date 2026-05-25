@@ -166,7 +166,6 @@ class T9EngineUserDictTest {
         val engine = T9Engine(dict, userDict)
         engine.inputDigit("9")
         engine.inputDigit("6")
-        println("Candidates for 96 before clear: " + engine.getVisibleCandidates())
         assertTrue("清空前有用户候选", engine.getVisibleCandidates().any { it.origin == CandidateOrigin.USER_HISTORY })
 
         userDict.clearUserDictionary()
