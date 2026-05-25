@@ -429,12 +429,12 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     // --- ImeActionSink implementation ---
     override fun commitText(text: String) {
-        logAction("COMMIT", text)
+        logAction("COMMIT", "text_len=${text.length}")
         currentInputConnection?.commitText(text, 1)
     }
 
     override fun commitNewline() {
-        logAction("NEWLINE", "\\n")
+        logAction("NEWLINE", "text_len=1")
         currentInputConnection?.commitText("\n", 1)
     }
 
@@ -657,7 +657,9 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         val tag = "XiweiT9Debug"
         val engine = handler.engine
         if (engine == null) { debugLogger.log(tag, "Engine not initialized yet."); return }
-        debugLogger.log(tag, "mode=${handler.keyboardMode} raw=${engine.buffer} preedit=${engine.getPreedit()}")
+        val buffer = engine.buffer
+        val preedit = engine.getPreedit()
+        debugLogger.log(tag, "mode=${handler.keyboardMode} raw_empty=${buffer.isEmpty()} raw_len=${buffer.length} preedit_empty=${preedit.isEmpty()} preedit_len=${preedit.length}")
     }
 
     private fun logAction(action: String, detail: String) {
