@@ -367,9 +367,9 @@ class T9Engine(
 
                 val prefixCode = if (isLastDigit) lastSyl else T9CodeMapper.toCode(lastSyl)
                 val prefixSyllables = PinyinSyllableDecoder.getPrefixSyllables(prefixCode)
-                val commonPrefixSyllables = prefixSyllables
-                    .filter { T9PinyinComposer.COMMON_SYLLABLES.contains(it) && it != lastSyl }
-                for (ps in commonPrefixSyllables) {
+                val validPrefixSyllables = prefixSyllables
+                    .filter { it != lastSyl }
+                for (ps in validPrefixSyllables) {
                     val queryPrefix = "$basePrefix $ps"
                     val cands = trackQuery { dictionary.getPinyinPrefixCandidates(queryPrefix) }
                     cands.forEach { results.add(it to comp.pinyinString) }
@@ -381,9 +381,7 @@ class T9Engine(
                 val isDigit = syl.all { it.isDigit() }
                 if (isDigit) {
                     val prefixSyllables = PinyinSyllableDecoder.getPrefixSyllables(syl)
-                    val commonPrefixSyllables = prefixSyllables
-                        .filter { T9PinyinComposer.COMMON_SYLLABLES.contains(it) }
-                    for (ps in commonPrefixSyllables) {
+                    for (ps in prefixSyllables) {
                         val cands = trackQuery { dictionary.getSingleSyllableCandidates(ps) }
                         cands.forEach { results.add(it to comp.pinyinString) }
                     }
@@ -422,8 +420,7 @@ class T9Engine(
                  val syl = pinyins[0]
                  if (syl.all { it.isDigit() }) {
                      val prefixSyllables = PinyinSyllableDecoder.getPrefixSyllables(syl)
-                     val commonPrefixSyllables = prefixSyllables.filter { T9PinyinComposer.COMMON_SYLLABLES.contains(it) }.take(5)
-                     for (ps in commonPrefixSyllables) {
+                     for (ps in prefixSyllables.take(5)) {
                          val cands = trackQuery { dictionary.getSingleSyllableCandidates(ps) }
                          cands.forEach { results.add(it to comp.pinyinString) }
                      }
