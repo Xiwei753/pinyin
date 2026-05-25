@@ -62,7 +62,7 @@ class XiweiT9ImeServiceInputPolicyTest {
     }
 
     @Test
-    fun passwordToggleChineseEnglishStaysEnglishT9() {
+    fun passwordToggleChineseEnglishSwitchesToChineseT9() {
         val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
         val info = editorInfo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
 
@@ -70,7 +70,7 @@ class XiweiT9ImeServiceInputPolicyTest {
         assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
 
         service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
-        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
     }
 
     @Test
@@ -98,7 +98,7 @@ class XiweiT9ImeServiceInputPolicyTest {
     }
 
     @Test
-    fun numberToggleChineseEnglishStaysNumber() {
+    fun numberToggleChineseEnglishSwitchesToEnglishT9() {
         val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
         val info = editorInfo(InputType.TYPE_CLASS_NUMBER)
 
@@ -106,11 +106,11 @@ class XiweiT9ImeServiceInputPolicyTest {
         assertEquals(KeyboardMode.Number, handler.keyboardMode)
 
         service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
-        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
     }
 
     @Test
-    fun phoneToggleChineseEnglishStaysPhone() {
+    fun phoneToggleChineseEnglishSwitchesToEnglishT9() {
         val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
         val info = editorInfo(InputType.TYPE_CLASS_PHONE)
 
@@ -118,7 +118,7 @@ class XiweiT9ImeServiceInputPolicyTest {
         assertEquals(KeyboardMode.Number, handler.keyboardMode)
 
         service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
-        assertEquals(KeyboardMode.Number, handler.keyboardMode)
+        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
     }
 
     @Test
