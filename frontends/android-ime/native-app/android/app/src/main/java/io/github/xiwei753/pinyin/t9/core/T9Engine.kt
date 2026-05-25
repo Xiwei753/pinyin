@@ -288,16 +288,9 @@ class T9Engine(
             generatePrefixSingleCandidates(compositions, limit)
         } else emptyList()
 
-        // ── Build visible list by strict sourcing: order determined by layer, not score ──
-        val combined = linkedSetOf<Candidate>()
-        combined.addAll(exactPhrases)
-        combined.addAll(userCands.filter { uc -> combined.none { c -> c.text == uc.text } })
-        combined.addAll(exactSingles.filter { es -> combined.none { c -> c.text == es.text } })
-        combined.addAll(dynamicFallback.filter { d -> combined.none { c -> c.text == d.text } })
-        combined.addAll(prefixPhrases.filter { pp -> combined.none { c -> c.text == pp.text } })
-        combined.addAll(prefixSingles.filter { ps -> combined.none { c -> c.text == ps.text } })
-
-        val finalCandidates = combined.toList().take(limit)
+        // ── Build visible list by unified scoring ──
+        val combined = (exactPhrases + userCands + exactSingles + dynamicFallback + prefixPhrases + prefixSingles)
+        val finalCandidates = combined.sortedByDescending { it.score }.distinctBy { it.text }.take(limit)
 
         lastVisibleCandidates = finalCandidates
         lastVisibleLimit = limit
@@ -339,7 +332,7 @@ class T9Engine(
             ).filter { c ->
                 c.origin == CandidateOrigin.EXACT_SINGLE && c.text.length == 1 &&
                 !c.text.matches(Regex("^[a-zA-Z\\s]+$"))
-            }
+            }.map { Candidate(it.text, it.code, it.score + 100000, it.type, it.sourcePinyin, it.origin) }
             results.addAll(candidates)
         }
         return results.sortedByDescending { it.score }.distinctBy { it.text }.take(limit)
@@ -720,7 +713,7 @@ class T9Engine(
                         val prevSpaceCount = prevCandidate.text.count { it == ' ' }
                         val newSpaceCount = newText.count { it == ' ' }
                         if (newSpaceCount > prevSpaceCount) {
-                            baseScore -= 100000
+                            baseScore -= 20000
                         }
 
                         if (partCandidate.code == partCode) {
@@ -744,20 +737,20 @@ class T9Engine(
 
                         if (comp.rawDigits.length <= 4 && prevCandidate.text.isNotEmpty()) {
                             // Heavily penalize multiple word combinations for short inputs
-                            baseScore -= 1000000
+                            baseScore -= 50000
                         }
 
                         if (comp.rawDigits.length <= 9 && prevCandidate.text.isNotEmpty() && partCandidate.origin == CandidateOrigin.PREFIX_COMPLETION && partCandidate.text.length >= 2) {
                             // Penalize long prefix concatenations on short-ish inputs (like bu tai xinggu)
-                            baseScore -= 1000000
+                            baseScore -= 50000
                         }
 
                         if (comp.rawDigits.length <= 9 && isDynamic && partCandidate.origin == CandidateOrigin.PREFIX_COMPLETION) {
-                            baseScore -= 500000
+                            baseScore -= 30000
                         }
 
                         if (comp.rawDigits.length <= 4 && isDynamic) {
-                            baseScore -= 500000
+                            baseScore -= 30000
                         }
 
                         if (isDynamic) {
@@ -767,11 +760,11 @@ class T9Engine(
 
                         // Overpower any dynamic combination if space count is high on short input
                         if (comp.rawDigits.length <= 9 && newSpaceCount > 0) {
-                            baseScore -= 2000000
+                            baseScore -= 100000
                         }
 
                         if (comp.rawDigits.length <= 9 && isDynamic && newText.contains(" ") && partCandidate.text.length == 1) {
-                            baseScore -= 2000000
+                            baseScore -= 100000
                         }
 
                         val origin = if (isDynamic) CandidateOrigin.DYNAMIC_COMPOSITION else partCandidate.origin

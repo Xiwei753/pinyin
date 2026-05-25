@@ -101,7 +101,7 @@ open class UserDictionary private constructor(
                 val pinyin = cursor.getString(pinyinIdx)
                 val count = cursor.getInt(countIdx)
 
-                val score = 200000 + count * 10000
+                val score = 5000000 + count * 50000
                 val type = if (text.length == 1) CandidateType.SINGLE_CHAR else CandidateType.NORMAL
 
                 candidates.add(
