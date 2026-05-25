@@ -215,7 +215,6 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
 
     internal fun handleInputAction(action: ImeInputAction) {
         if (!this::handler.isInitialized) return
-        if (!isActionAllowedByPolicy(action)) return
         if (action is ImeInputAction.KeyboardModeSelected && action.mode == io.github.xiwei753.pinyin.imecore.InputMode.ClipboardPanel) {
             clipboardPage = 0
         }
@@ -238,16 +237,6 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 "candidateCount=$candidateCount " +
                 "preeditVisible=$preeditVisible " +
                 "currentSymbolCategory=$symbolCategory")
-        }
-    }
-
-    private fun isActionAllowedByPolicy(action: ImeInputAction): Boolean {
-        val policy = EditorInputTypePolicy.resolve(currentEditorInfo)
-        if (policy.allowChineseCandidates) return true
-        return when (action) {
-            ImeInputAction.ToggleChineseEnglish -> false
-            is ImeInputAction.KeyboardModeSelected -> action.mode != io.github.xiwei753.pinyin.imecore.InputMode.ChineseT9
-            else -> true
         }
     }
 
@@ -322,11 +311,11 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             )
             debugLogger.log("XiweiT9EditorPolicy",
                 String.format("inputType=0x%08x imeOptions=0x%08x classMask=0x%08x variation=0x%08x " +
-                    "defaultKeyboardMode=%s defaultLastTextMode=%s allowChineseCandidates=%s " +
+                    "defaultKeyboardMode=%s defaultLastTextMode=%s " +
                     "enterBehavior=%s restarting=%s " +
                     "password=%s number=%s phone=%s url=%s email=%s",
                     inputTypeVal, info?.imeOptions ?: 0, classMask, variation,
-                    policy.defaultKeyboardMode, policy.defaultLastTextMode, policy.allowChineseCandidates,
+                    policy.defaultKeyboardMode, policy.defaultLastTextMode,
                     policy.enterBehavior, restarting,
                     isPassword, isNumber, isPhone, isUrl, isEmail))
         }
@@ -571,13 +560,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 themePalette = palette
             )
         }
-        val policy = EditorInputTypePolicy.resolve(currentEditorInfo)
-        if (policy.allowChineseCandidates) return baseState
-        return baseState.copy(
-            candidateStripState = baseState.candidateStripState.copy(visible = false, candidates = emptyList()),
-            compositionState = baseState.compositionState.copy(preedit = "", readings = emptyList(), activeReading = null),
-            preeditState = baseState.preeditState.copy(visible = false, text = ""),
-        )
+        return baseState
     }
 
     override fun refreshUi() {

@@ -15,7 +15,6 @@ enum class EditorEnterBehavior {
 data class EditorInputPolicy(
     val defaultKeyboardMode: KeyboardMode,
     val defaultLastTextMode: KeyboardMode,
-    val allowChineseCandidates: Boolean,
     val enterBehavior: EditorEnterBehavior,
 )
 
@@ -65,7 +64,6 @@ object EditorInputTypePolicy {
         return EditorInputPolicy(
             defaultKeyboardMode = defaultKeyboardMode,
             defaultLastTextMode = defaultLastTextMode,
-            allowChineseCandidates = defaultKeyboardMode == KeyboardMode.ChineseT9,
             enterBehavior = enterBehavior,
         )
     }

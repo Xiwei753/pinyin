@@ -16,11 +16,10 @@ class EditorInputTypePolicyTest {
 
         assertEquals(KeyboardMode.ChineseT9, policy.defaultKeyboardMode)
         assertEquals(EditorEnterBehavior.NEWLINE, policy.enterBehavior)
-        assertTrue(policy.allowChineseCandidates)
     }
 
     @Test
-    fun passwordUsesEnglishOrNumberAndDisablesChinese() {
+    fun passwordUsesEnglishOrNumber() {
         val textPassword = editorInfo(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
         val numberPassword = editorInfo(inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD)
 
@@ -29,8 +28,6 @@ class EditorInputTypePolicyTest {
 
         assertEquals(KeyboardMode.EnglishT9, textPolicy.defaultKeyboardMode)
         assertEquals(KeyboardMode.Number, numberPolicy.defaultKeyboardMode)
-        assertFalse(textPolicy.allowChineseCandidates)
-        assertFalse(numberPolicy.allowChineseCandidates)
     }
 
     @Test
@@ -40,8 +37,6 @@ class EditorInputTypePolicyTest {
 
         assertEquals(KeyboardMode.Number, numberPolicy.defaultKeyboardMode)
         assertEquals(KeyboardMode.Number, phonePolicy.defaultKeyboardMode)
-        assertFalse(numberPolicy.allowChineseCandidates)
-        assertFalse(phonePolicy.allowChineseCandidates)
     }
 
     @Test
@@ -51,8 +46,6 @@ class EditorInputTypePolicyTest {
 
         assertEquals(KeyboardMode.EnglishT9, urlPolicy.defaultKeyboardMode)
         assertEquals(KeyboardMode.EnglishT9, emailPolicy.defaultKeyboardMode)
-        assertFalse(urlPolicy.allowChineseCandidates)
-        assertFalse(emailPolicy.allowChineseCandidates)
     }
 
     @Test
@@ -62,7 +55,6 @@ class EditorInputTypePolicyTest {
         ))
         assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
         assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
-        assertFalse(policy.allowChineseCandidates)
     }
 
     @Test
@@ -72,7 +64,6 @@ class EditorInputTypePolicyTest {
         ))
         assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
         assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
-        assertFalse(policy.allowChineseCandidates)
     }
 
     @Test
@@ -82,7 +73,6 @@ class EditorInputTypePolicyTest {
         ))
         assertEquals(KeyboardMode.Number, policy.defaultKeyboardMode)
         assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
-        assertFalse(policy.allowChineseCandidates)
     }
 
     @Test
@@ -92,7 +82,6 @@ class EditorInputTypePolicyTest {
         ))
         assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
         assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
-        assertFalse(policy.allowChineseCandidates)
     }
 
     @Test
@@ -102,7 +91,6 @@ class EditorInputTypePolicyTest {
         ))
         assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
         assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
-        assertFalse(policy.allowChineseCandidates)
     }
 
     @Test
