@@ -222,11 +222,7 @@ class SQLiteDictionary private constructor(
     }
 
     override fun getExactCandidates(code: String): List<Candidate> {
-        if (isFallback) {
-            if (code == "64426") return getFallbackCandidates().filter { it.text == "你好" }
-            if (code == "7487832") return getFallbackCandidates().filter { it.text == "输入法" }
-            return emptyList()
-        }
+        if (isFallback) return emptyList()
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
             "SELECT text, pinyin, code, freq, origin FROM entries WHERE code = ? ORDER BY freq DESC LIMIT 100",
@@ -236,12 +232,7 @@ class SQLiteDictionary private constructor(
     }
 
     override fun getPrefixCandidates(code: String): List<Candidate> {
-        if (isFallback) {
-            val res = mutableListOf<Candidate>()
-            if ("64426".startsWith(code)) res.addAll(getFallbackCandidates().filter { it.text == "你好" }.map { it.copy(origin = CandidateOrigin.PREFIX_COMPLETION) })
-            if ("7487832".startsWith(code)) res.addAll(getFallbackCandidates().filter { it.text == "输入法" }.map { it.copy(origin = CandidateOrigin.PREFIX_COMPLETION) })
-            return res
-        }
+        if (isFallback) return emptyList()
         val db = db ?: return emptyList()
         val cursor = db.rawQuery(
             "SELECT text, pinyin, code, freq, origin FROM entries WHERE code LIKE ? ORDER BY freq DESC LIMIT 100",
