@@ -6,7 +6,9 @@ import io.github.xiwei753.pinyin.imecore.ImeStateMachine
 import io.github.xiwei753.pinyin.imecore.ImeUiState
 import io.github.xiwei753.pinyin.imecore.InputMode
 import io.github.xiwei753.pinyin.imecore.CandidateSnapshotItem
+import io.github.xiwei753.pinyin.t9.core.QwertyPinyinEngine
 import io.github.xiwei753.pinyin.t9.core.T9Engine
+import io.github.xiwei753.pinyin.t9.data.UserDictionaryProvider
 
 class KeyboardActionHandler(
     val actionSink: ImeActionSink,
@@ -16,6 +18,7 @@ class KeyboardActionHandler(
     private val stateMachine = ImeStateMachine(candidateLimitProvider, deferCandidateComputation)
     private val englishTimeoutRunnable = Runnable { commitEnglishChar() }
     private var engineAdapter: T9EngineAdapter? = null
+    private var qwertyEngine: QwertyPinyinEngine? = null
     private val candidateScheduler: CandidateScheduler? = if (deferCandidateComputation) AsyncCandidateScheduler() else null
 
     val engine: T9Engine? get() = engineAdapter?.rawEngine
@@ -44,10 +47,22 @@ class KeyboardActionHandler(
             if (value != null) setActiveReading(value)
         }
 
-    fun attachEngine(newEngine: T9Engine) {
+    fun attachEngine(newEngine: T9Engine, userDictionary: UserDictionaryProvider? = null) {
         engineAdapter = T9EngineAdapter(newEngine)
         stateMachine.attachEngine(engineAdapter!!)
+        if (qwertyEngine == null) {
+            val dict = newEngine.dictionary
+            if (dict != null) {
+                qwertyEngine = QwertyPinyinEngine(dict, userDictionary, null)
+                stateMachine.attachQwertyEngine(qwertyEngine!!)
+            }
+        }
         schedulePendingCandidateRefresh()
+    }
+
+    fun attachQwertyEngine(qwerty: QwertyPinyinEngine) {
+        qwertyEngine = qwerty
+        stateMachine.attachQwertyEngine(qwerty)
     }
 
     fun uiState(isDictionaryPreparing: Boolean = false): ImeUiState = stateMachine.uiState(isDictionaryPreparing)
@@ -105,13 +120,13 @@ class KeyboardActionHandler(
 
     fun onEnterShortPress() {
         val hasComposing = when (keyboardMode) {
-            KeyboardMode.ChineseT9 -> rawBuffer.isNotEmpty()
+            KeyboardMode.ChineseT9, KeyboardMode.ChinesePinyin -> rawBuffer.isNotEmpty()
             KeyboardMode.EnglishT9 -> englishPending
             else -> false
         }
 
         if (hasComposing) {
-            if (keyboardMode == KeyboardMode.ChineseT9) handle(ImeInputAction.SpacePressed)
+            if (keyboardMode == KeyboardMode.ChineseT9 || keyboardMode == KeyboardMode.ChinesePinyin) handle(ImeInputAction.SpacePressed)
             else commitEnglishChar()
         }
         actionSink.performEditorActionOrNewline()
@@ -143,7 +158,7 @@ class KeyboardActionHandler(
     fun resetToChineseModeForLifecycle() = switchMode(KeyboardMode.ChineseT9)
 
     fun onHideKey() {
-        if (keyboardMode == KeyboardMode.ChineseT9 && rawBuffer.isNotEmpty()) {
+        if ((keyboardMode == KeyboardMode.ChineseT9 || keyboardMode == KeyboardMode.ChinesePinyin) && rawBuffer.isNotEmpty()) {
             handle(ImeInputAction.SpacePressed)
         } else if (keyboardMode == KeyboardMode.EnglishT9 && englishPending) {
             commitEnglishChar()
@@ -215,6 +230,8 @@ class KeyboardActionHandler(
 fun KeyboardMode.toInputMode(): InputMode = when (this) {
     KeyboardMode.ChineseT9 -> InputMode.ChineseT9
     KeyboardMode.EnglishT9 -> InputMode.EnglishT9
+    KeyboardMode.ChinesePinyin -> InputMode.ChinesePinyin
+    KeyboardMode.EnglishQWERTY -> InputMode.EnglishQWERTY
     KeyboardMode.Number -> InputMode.Number
     KeyboardMode.Symbol -> InputMode.Symbol
     KeyboardMode.ClipboardPanel -> InputMode.ClipboardPanel
@@ -224,6 +241,8 @@ fun KeyboardMode.toInputMode(): InputMode = when (this) {
 fun InputMode.toKeyboardMode(): KeyboardMode = when (this) {
     InputMode.ChineseT9 -> KeyboardMode.ChineseT9
     InputMode.EnglishT9 -> KeyboardMode.EnglishT9
+    InputMode.ChinesePinyin -> KeyboardMode.ChinesePinyin
+    InputMode.EnglishQWERTY -> KeyboardMode.EnglishQWERTY
     InputMode.Number -> KeyboardMode.Number
     InputMode.Symbol -> KeyboardMode.Symbol
     InputMode.ClipboardPanel -> KeyboardMode.ClipboardPanel

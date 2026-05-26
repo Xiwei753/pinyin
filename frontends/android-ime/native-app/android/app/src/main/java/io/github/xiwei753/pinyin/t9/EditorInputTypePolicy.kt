@@ -42,13 +42,13 @@ object EditorInputTypePolicy {
 
         val defaultKeyboardMode = when {
             isPhone || isNumber -> KeyboardMode.Number
-            isPassword || isUrl || isEmail -> KeyboardMode.EnglishT9
+            isPassword || isUrl || isEmail -> KeyboardMode.EnglishQWERTY
             else -> KeyboardMode.ChineseT9
         }
 
         val defaultLastTextMode = when {
             isPhone || isNumber -> KeyboardMode.EnglishT9
-            isPassword || isUrl || isEmail -> KeyboardMode.EnglishT9
+            isPassword || isUrl || isEmail -> KeyboardMode.EnglishQWERTY
             else -> KeyboardMode.ChineseT9
         }
 

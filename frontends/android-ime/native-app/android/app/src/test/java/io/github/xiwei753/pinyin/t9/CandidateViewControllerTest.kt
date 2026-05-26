@@ -256,7 +256,8 @@ class CandidateViewControllerTest {
             val child = candidateContainer.getChildAt(i)
             if (child is TextView) chips.add(child.text.toString())
         }
-        assertEquals(listOf("⬇\uFE0E", "📋\uFE0E", "⚙\uFE0E", "⌨\uFE0E"), chips)
+        val expected = listOf("▽", "板", "设", "选")
+        assertEquals(expected, chips)
 
     }
 
@@ -270,7 +271,7 @@ class CandidateViewControllerTest {
         var clipChip: TextView? = null
         for (i in 0 until candidateContainer.childCount) {
             val child = candidateContainer.getChildAt(i)
-            if (child is TextView && child.text.toString() == "📋\uFE0E") clipChip = child
+            if (child is TextView && child.text.toString() == "板") clipChip = child
         }
         clipChip!!.performClick()
         assert(clickedAction !is ImeInputAction.CandidateSelected)
@@ -286,7 +287,7 @@ class CandidateViewControllerTest {
         var clipChip: TextView? = null
         for (i in 0 until candidateContainer.childCount) {
             val child = candidateContainer.getChildAt(i)
-            if (child is TextView && child.text.toString() == "📋\uFE0E") clipChip = child
+            if (child is TextView && child.text.toString() == "板") clipChip = child
         }
         clipChip!!.performClick()
 
@@ -303,7 +304,7 @@ class CandidateViewControllerTest {
         var selectChip: TextView? = null
         for (i in 0 until candidateContainer.childCount) {
             val child = candidateContainer.getChildAt(i)
-            if (child is TextView && child.text.toString() == "⌨\uFE0E") selectChip = child
+            if (child is TextView && child.text.toString() == "选") selectChip = child
         }
 
         selectChip!!.performClick()
@@ -372,9 +373,9 @@ class CandidateViewControllerTest {
         var hideChip: TextView? = null
         for (i in 0 until candidateContainer.childCount) {
             val child = candidateContainer.getChildAt(i)
-            if (child is TextView && child.text.toString() == "⬇\uFE0E") hideChip = child
+            if (child is TextView && child.text.toString() == "▽") hideChip = child
         }
-        assertEquals("⬇\uFE0E", hideChip!!.text.toString())
+        assertEquals("▽", hideChip!!.text.toString())
         hideChip!!.performClick()
 
         assertEquals(ImeInputAction.HideKeyboard, clickedAction)

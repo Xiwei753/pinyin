@@ -101,19 +101,19 @@ class CandidateViewController(
                 View.GONE
             }
         } else {
-            val functions = listOf("📋\uFE0E", "⚙\uFE0E", "⌨\uFE0E")
+            val functions = listOf("板" to "📋", "设" to "⚙", "选" to "⌨")
             try {
                 val spacer = View(context)
                 spacer.layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
                 v.candidateContainer.addView(spacer)
             } catch (e: Exception) {}
             try {
-                val hideChip = createTextView("⬇\uFE0E", CandidateItemType.FUNCTION, "⬇\uFE0E")
+                val hideChip = createTextView("▽", CandidateItemType.FUNCTION, "⬇")
                 v.candidateContainer.addView(hideChip)
             } catch (e: Exception) {}
-            for (func in functions) {
+            for ((label, payload) in functions) {
                 try {
-                    val chip = createTextView(func, CandidateItemType.FUNCTION, func)
+                    val chip = createTextView(label, CandidateItemType.FUNCTION, payload)
                     v.candidateContainer.addView(chip)
                 } catch (e: Exception) {}
             }
@@ -182,24 +182,22 @@ class CandidateViewController(
     }
 
     private fun onFunctionChipClicked(payload: String) {
-        when {
-            payload == "⚙\uFE0E" -> {
+        when (payload) {
+            "⚙" -> {
                 try {
                     val intent = android.content.Intent(context, SettingsActivity::class.java).apply {
                         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     context.startActivity(intent)
-                } catch (e: Exception) {
-                    // Safe fallback
-                }
+                } catch (e: Exception) {}
             }
-            payload == "📋\uFE0E" -> {
+            "📋" -> {
                 onInputAction?.invoke(ImeInputAction.KeyboardModeSelected(io.github.xiwei753.pinyin.imecore.InputMode.ClipboardPanel))
             }
-            payload == "⌨\uFE0E" -> {
+            "⌨" -> {
                 onInputAction?.invoke(ImeInputAction.KeyboardModeSelected(io.github.xiwei753.pinyin.imecore.InputMode.SelectionPanel))
             }
-            payload == "⬇\uFE0E" -> {
+            "⬇" -> {
                 onInputAction?.invoke(ImeInputAction.HideKeyboard)
             }
         }

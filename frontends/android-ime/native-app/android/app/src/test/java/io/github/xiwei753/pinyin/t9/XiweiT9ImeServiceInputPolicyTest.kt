@@ -15,15 +15,15 @@ import org.mockito.Mockito.mock
 class XiweiT9ImeServiceInputPolicyTest {
 
     @Test
-    fun passwordStartInputClearsOldBufferAndUsesEnglishT9() {
+    fun passwordStartInputClearsOldBufferAndUsesEnglishQWERTY() {
         val (service, handler, engine) = createServiceWithFakeEngine(buffer = "96", preedit = "wo")
         val info = editorInfo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
 
         service.onStartInput(info, false)
         val uiState = buildKeyboardUiState(service)
 
-        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
-        assertEquals(KeyboardMode.EnglishT9, handler.lastTextMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, handler.keyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, handler.lastTextMode)
         assertTrue(engine.cleared)
         assertEquals("", handler.rawBuffer)
         assertTrue(uiState.candidateStripState.candidates.isEmpty())
@@ -39,10 +39,8 @@ class XiweiT9ImeServiceInputPolicyTest {
         service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
         val uiState = buildKeyboardUiState(service)
 
-        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
+        assertEquals(KeyboardMode.ChinesePinyin, handler.keyboardMode)
         assertTrue(engine.cleared) // onStartInput clears the buffer
-        // Note: engine is cleared, so candidates will be empty initially, but visible could be false or true depending on the cleared state
-        // We mainly want to test that it allows the transition to Chinese
     }
 
     @Test
@@ -62,39 +60,39 @@ class XiweiT9ImeServiceInputPolicyTest {
     }
 
     @Test
-    fun passwordToggleChineseEnglishSwitchesToChineseT9() {
+    fun passwordToggleChineseEnglishSwitchesToChinesePinyin() {
         val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
         val info = editorInfo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
 
         service.onStartInput(info, false)
-        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, handler.keyboardMode)
 
         service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
-        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
+        assertEquals(KeyboardMode.ChinesePinyin, handler.keyboardMode)
     }
 
     @Test
-    fun urlToggleChineseEnglishSwitchesToChineseT9() {
+    fun urlToggleChineseEnglishSwitchesToChinesePinyin() {
         val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
         val info = editorInfo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
 
         service.onStartInput(info, false)
-        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, handler.keyboardMode)
 
         service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
-        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
+        assertEquals(KeyboardMode.ChinesePinyin, handler.keyboardMode)
     }
 
     @Test
-    fun emailToggleChineseEnglishSwitchesToChineseT9() {
+    fun emailToggleChineseEnglishSwitchesToChinesePinyin() {
         val (service, handler, _) = createServiceWithFakeEngine(buffer = "", preedit = "")
         val info = editorInfo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
 
         service.onStartInput(info, false)
-        assertEquals(KeyboardMode.EnglishT9, handler.keyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, handler.keyboardMode)
 
         service.handleInputAction(io.github.xiwei753.pinyin.imecore.ImeInputAction.ToggleChineseEnglish)
-        assertEquals(KeyboardMode.ChineseT9, handler.keyboardMode)
+        assertEquals(KeyboardMode.ChinesePinyin, handler.keyboardMode)
     }
 
     @Test

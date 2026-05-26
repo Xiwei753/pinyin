@@ -26,7 +26,7 @@ class EditorInputTypePolicyTest {
         val textPolicy = EditorInputTypePolicy.resolve(textPassword)
         val numberPolicy = EditorInputTypePolicy.resolve(numberPassword)
 
-        assertEquals(KeyboardMode.EnglishT9, textPolicy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, textPolicy.defaultKeyboardMode)
         assertEquals(KeyboardMode.Number, numberPolicy.defaultKeyboardMode)
     }
 
@@ -44,8 +44,8 @@ class EditorInputTypePolicyTest {
         val urlPolicy = EditorInputTypePolicy.resolve(editorInfo(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI))
         val emailPolicy = EditorInputTypePolicy.resolve(editorInfo(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS))
 
-        assertEquals(KeyboardMode.EnglishT9, urlPolicy.defaultKeyboardMode)
-        assertEquals(KeyboardMode.EnglishT9, emailPolicy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, urlPolicy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, emailPolicy.defaultKeyboardMode)
     }
 
     @Test
@@ -53,8 +53,8 @@ class EditorInputTypePolicyTest {
         val policy = EditorInputTypePolicy.resolve(editorInfo(
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
         ))
-        assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
-        assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, policy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, policy.defaultLastTextMode)
     }
 
     @Test
@@ -62,8 +62,8 @@ class EditorInputTypePolicyTest {
         val policy = EditorInputTypePolicy.resolve(editorInfo(
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
         ))
-        assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
-        assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, policy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, policy.defaultLastTextMode)
     }
 
     @Test
@@ -80,8 +80,8 @@ class EditorInputTypePolicyTest {
         val policy = EditorInputTypePolicy.resolve(editorInfo(
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
         ))
-        assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
-        assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, policy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, policy.defaultLastTextMode)
     }
 
     @Test
@@ -89,8 +89,8 @@ class EditorInputTypePolicyTest {
         val policy = EditorInputTypePolicy.resolve(editorInfo(
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
         ))
-        assertEquals(KeyboardMode.EnglishT9, policy.defaultKeyboardMode)
-        assertEquals(KeyboardMode.EnglishT9, policy.defaultLastTextMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, policy.defaultKeyboardMode)
+        assertEquals(KeyboardMode.EnglishQWERTY, policy.defaultLastTextMode)
     }
 
     @Test

@@ -2,6 +2,7 @@ package io.github.xiwei753.pinyin.imecore
 
 sealed interface ImeInputAction {
     data class DigitPressed(val digit: String) : ImeInputAction
+    data class LetterPressed(val letter: Char) : ImeInputAction
     data object SeparatorPressed : ImeInputAction
     data object ZeroPressed : ImeInputAction
     data object DeletePressed : ImeInputAction
@@ -11,6 +12,7 @@ sealed interface ImeInputAction {
     data object ToggleSymbol : ImeInputAction
     data object ToggleNumber : ImeInputAction
     data object ToggleChineseEnglish : ImeInputAction
+    data object ToggleKeyboardType : ImeInputAction
     data class KeyboardModeSelected(val mode: InputMode) : ImeInputAction
     data class CandidateLimitChanged(val limit: Int) : ImeInputAction
     data class SymbolCommitted(val text: String) : ImeInputAction

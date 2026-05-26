@@ -29,6 +29,18 @@ class KeyboardLayoutBuilder {
         clipboardPage: Int = 0,
     ): KeyboardLayoutModel {
         return when (state.keyboardMode) {
+            KeyboardMode.ChinesePinyin -> buildQwerty(
+                panelWidth = panelWidth, panelHeight = panelHeight,
+                rowHeight = rowHeight, bottomRowHeight = bottomRowHeight,
+                horizontalGap = horizontalGap, verticalGap = verticalGap,
+                isEnglish = false,
+            )
+            KeyboardMode.EnglishQWERTY -> buildQwerty(
+                panelWidth = panelWidth, panelHeight = panelHeight,
+                rowHeight = rowHeight, bottomRowHeight = bottomRowHeight,
+                horizontalGap = horizontalGap, verticalGap = verticalGap,
+                isEnglish = true,
+            )
             KeyboardMode.ChineseT9, KeyboardMode.EnglishT9 -> buildT9(
                 panelWidth = panelWidth,
                 panelHeight = panelHeight,
@@ -276,6 +288,94 @@ class KeyboardLayoutBuilder {
             bottomLeftKey = bottomLeftKey,
             panelWidth = panelWidth,
             panelHeight = panelHeight,
+        )
+    }
+
+    fun buildQwerty(
+        panelWidth: Int, panelHeight: Int, rowHeight: Int, bottomRowHeight: Int,
+        horizontalGap: Int, verticalGap: Int, isEnglish: Boolean,
+    ): KeyboardLayoutModel {
+        val geo = QwertyKeyboardGeometry.calculate(panelWidth, panelHeight, rowHeight, bottomRowHeight, horizontalGap, verticalGap)
+        val keys = mutableListOf<KeyboardKey>()
+
+        val labels = if (isEnglish) {
+            listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p")
+        } else {
+            listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P")
+        }
+        for (i in 0..9) {
+            keys.add(KeyboardKey(
+                id = "letter_${labels[i]}", role = KeyboardKeyRole.NORMAL,
+                rect = geo.row1Keys[i], label = labels[i],
+                action = "letter:${labels[i].lowercase()}",
+            ))
+        }
+
+        keys.add(KeyboardKey(
+            id = "del", role = KeyboardKeyRole.SPECIAL,
+            rect = geo.delRect, label = "\u232B", action = "del", isRightRail = true,
+        ))
+
+        val row2Labels = if (isEnglish) {
+            listOf("a", "s", "d", "f", "g", "h", "j", "k", "l")
+        } else {
+            listOf("A", "S", "D", "F", "G", "H", "J", "K", "L")
+        }
+        for (i in 0..8) {
+            keys.add(KeyboardKey(
+                id = "letter_${row2Labels[i]}", role = KeyboardKeyRole.NORMAL,
+                rect = geo.row2Keys[i], label = row2Labels[i],
+                action = "letter:${row2Labels[i].lowercase()}",
+            ))
+        }
+
+        keys.add(KeyboardKey(
+            id = "enter", role = KeyboardKeyRole.SPECIAL,
+            rect = geo.enterRect, label = "\u21B5", action = "enter", isRightRail = true,
+        ))
+
+        val row3Labels = if (isEnglish) {
+            listOf("z", "x", "c", "v", "b", "n", "m")
+        } else {
+            listOf("Z", "X", "C", "V", "B", "N", "M")
+        }
+        for (i in 0..6) {
+            keys.add(KeyboardKey(
+                id = "letter_${row3Labels[i]}", role = KeyboardKeyRole.NORMAL,
+                rect = geo.row3Keys[i], label = row3Labels[i],
+                action = "letter:${row3Labels[i].lowercase()}",
+            ))
+        }
+
+        val bottomLeftLabel = "九键"
+        val bottomRightLabel = if (isEnglish) "英/中" else "中/英"
+
+        keys.add(
+            KeyboardKey(
+                id = "toggle_keyboard_type", role = KeyboardKeyRole.SPECIAL,
+                rect = geo.bottomLeftRect, label = bottomLeftLabel,
+                action = "toggle:keyboardtype", isBottomRow = true,
+            )
+        )
+
+        keys.add(
+            KeyboardKey(
+                id = "space", role = KeyboardKeyRole.SPACE,
+                rect = geo.spaceRect, label = "",
+                action = "space", isBottomRow = true,
+            )
+        )
+        keys.add(
+            KeyboardKey(
+                id = "toggle_english", role = KeyboardKeyRole.SPECIAL,
+                rect = geo.bottomRightRect, label = bottomRightLabel,
+                action = "toggle:english", isBottomRow = true,
+            )
+        )
+
+        return KeyboardLayoutModel(
+            keys = keys, leftRailKeys = emptyList(), bottomLeftKey = null,
+            panelWidth = panelWidth, panelHeight = panelHeight,
         )
     }
 

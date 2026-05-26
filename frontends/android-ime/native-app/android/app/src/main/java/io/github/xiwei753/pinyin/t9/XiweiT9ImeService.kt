@@ -94,7 +94,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                 is DictionaryState.Ready -> {
                     if (this::handler.isInitialized) {
                         val engine = T9Engine(state.dictionary, userDictionary, debugLogger)
-                        handler.attachEngine(engine)
+                        handler.attachEngine(engine, userDictionary)
                         if (this::keyboardViews.isInitialized) refreshUi()
                     }
                 }
@@ -104,7 +104,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
                             val dict = DictionaryManager.getProviderBlocking(this)
                             Handler(Looper.getMainLooper()).post {
                                 val engine = T9Engine(dict, userDictionary, debugLogger)
-                                handler.attachEngine(engine)
+                                handler.attachEngine(engine, userDictionary)
                                 if (this::keyboardViews.isInitialized) refreshUi()
                             }
                         }.start()
@@ -129,7 +129,7 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
             DictionaryManager.prepareAsync(this)
             val readyDict = DictionaryManager.getReadyProviderOrNull()
             if (readyDict != null) {
-                handler.attachEngine(T9Engine(readyDict, userDictionary, debugLogger))
+                handler.attachEngine(T9Engine(readyDict, userDictionary, debugLogger), userDictionary)
             }
         }
     }
@@ -244,12 +244,17 @@ open class XiweiT9ImeService : InputMethodService(), DictionaryStateListener, Im
         val inputAction = when {
             action == "separator" -> ImeInputAction.SeparatorPressed
             action.startsWith("digit:") -> ImeInputAction.DigitPressed(action.removePrefix("digit:"))
+            action.startsWith("letter:") -> {
+                val letter = action.removePrefix("letter:")
+                if (letter.length == 1) ImeInputAction.LetterPressed(letter[0]) else null
+            }
             action == "del" -> ImeInputAction.DeletePressed
             action == "retype" -> ImeInputAction.ClearComposing
             action == "space" -> ImeInputAction.SpacePressed
             action == "toggle:symbol" -> ImeInputAction.ToggleSymbol
             action == "toggle:english" -> ImeInputAction.ToggleChineseEnglish
             action == "toggle:number" -> ImeInputAction.ToggleNumber
+            action == "toggle:keyboardtype" -> ImeInputAction.ToggleKeyboardType
             action.startsWith("punct:") -> ImeInputAction.PunctuationCommitted(action.removePrefix("punct:"))
             action.startsWith("reading:") -> action.removePrefix("reading:").toIntOrNull()?.let { ImeInputAction.ReadingSelected(it) }
             action.startsWith("symtab:") -> ImeInputAction.SymbolCategorySelected(action.removePrefix("symtab:"))

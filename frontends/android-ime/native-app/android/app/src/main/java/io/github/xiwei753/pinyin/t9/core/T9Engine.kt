@@ -3,7 +3,7 @@ package io.github.xiwei753.pinyin.t9.core
 import io.github.xiwei753.pinyin.t9.data.DictionaryProvider
 
 class T9Engine(
-    private val dictionary: DictionaryProvider,
+    val dictionary: DictionaryProvider,
     private var userDictionary: io.github.xiwei753.pinyin.t9.data.UserDictionaryProvider? = null,
     private val logger: io.github.xiwei753.pinyin.t9.T9DebugLogger? = null
 ) {

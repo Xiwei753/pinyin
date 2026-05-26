@@ -1,10 +1,15 @@
 package io.github.xiwei753.pinyin.imecore
 
+import io.github.xiwei753.pinyin.t9.core.QwertyPinyinEngine
+
 class ImeStateMachine(
     private val candidateLimitProvider: () -> Int = { 9 },
     private val deferCandidateComputation: Boolean = false,
 ) {
     var engine: T9InputEngine? = null
+        private set
+
+    var qwertyEngine: QwertyPinyinEngine? = null
         private set
 
     var mode: InputMode = InputMode.ChineseT9
@@ -32,11 +37,26 @@ class ImeStateMachine(
         private set
 
     val currentCandidates: List<CandidateSnapshotItem> get() = candidateSelections.map { it.snapshot }
-    val rawBuffer: String get() = engine?.buffer ?: fallbackBuffer
-    val readings: List<String> get() = engine?.readings ?: emptyList()
-    val activeReading: String? get() = engine?.activeReading
+    val rawBuffer: String
+        get() = when (mode) {
+            InputMode.ChinesePinyin -> qwertyEngine?.buffer ?: fallbackBuffer
+            else -> engine?.buffer ?: fallbackBuffer
+        }
+    val readings: List<String>
+        get() = when (mode) {
+            InputMode.ChinesePinyin -> emptyList()
+            else -> engine?.readings ?: emptyList()
+        }
+    val activeReading: String?
+        get() = when (mode) {
+            InputMode.ChinesePinyin -> null
+            else -> engine?.activeReading
+        }
     val preedit: String
         get() {
+            if (mode == InputMode.ChinesePinyin) {
+                return qwertyEngine?.getPreedit() ?: fallbackBuffer
+            }
             if (mode == InputMode.EnglishT9 && englishPending) {
                 val letters = englishMultiTapLetters[englishDigit]
                 if (letters != null && englishIndex < letters.length) return letters[englishIndex].toString()
@@ -48,6 +68,13 @@ class ImeStateMachine(
     fun attachEngine(newEngine: T9InputEngine) {
         engine = newEngine
         for (char in fallbackBuffer) newEngine.inputDigit(char.toString())
+        fallbackBuffer = ""
+        refreshCandidates()
+    }
+
+    fun attachQwertyEngine(newEngine: QwertyPinyinEngine) {
+        qwertyEngine = newEngine
+        for (char in fallbackBuffer) newEngine.inputLetter(char)
         fallbackBuffer = ""
         refreshCandidates()
     }
@@ -73,6 +100,7 @@ class ImeStateMachine(
         val effects = mutableListOf<ImeSideEffect>()
         when (action) {
             is ImeInputAction.DigitPressed -> onDigitPressed(action.digit, effects)
+            is ImeInputAction.LetterPressed -> onLetterPressed(action.letter, effects)
             ImeInputAction.SeparatorPressed -> onSeparator(effects)
             ImeInputAction.ZeroPressed -> onZero(effects)
             ImeInputAction.DeletePressed -> onDelete(effects)
@@ -82,6 +110,7 @@ class ImeStateMachine(
             ImeInputAction.ToggleSymbol -> onToggleSymbol(effects)
             ImeInputAction.ToggleNumber -> onToggleNumber(effects)
             ImeInputAction.ToggleChineseEnglish -> onToggleChineseEnglish(effects)
+            ImeInputAction.ToggleKeyboardType -> onToggleKeyboardType(effects)
             is ImeInputAction.KeyboardModeSelected -> switchMode(action.mode, effects)
             is ImeInputAction.CandidateLimitChanged -> {
                 candidateLimit = action.limit
@@ -113,7 +142,8 @@ class ImeStateMachine(
             // Clipboard actions
             is ImeInputAction.ClipboardItemClicked -> {
                 effects.add(ImeSideEffect.CommitText(action.text))
-                val targetMode = if (lastTextMode == InputMode.ChineseT9 || lastTextMode == InputMode.EnglishT9) lastTextMode else InputMode.ChineseT9
+                val targetMode = if (lastTextMode == InputMode.ChineseT9 || lastTextMode == InputMode.EnglishT9 ||
+                    lastTextMode == InputMode.ChinesePinyin || lastTextMode == InputMode.EnglishQWERTY) lastTextMode else InputMode.ChineseT9
                 switchMode(targetMode, effects)
             }
             ImeInputAction.ClipboardPageUp -> {
@@ -123,7 +153,8 @@ class ImeStateMachine(
                 effects.add(ImeSideEffect.ClipboardPageDown)
             }
             ImeInputAction.ClosePanel -> {
-                val targetMode = if (lastTextMode == InputMode.ChineseT9 || lastTextMode == InputMode.EnglishT9) lastTextMode else InputMode.ChineseT9
+                val targetMode = if (lastTextMode == InputMode.ChineseT9 || lastTextMode == InputMode.EnglishT9 ||
+                    lastTextMode == InputMode.ChinesePinyin || lastTextMode == InputMode.EnglishQWERTY) lastTextMode else InputMode.ChineseT9
                 switchMode(targetMode, effects)
             }
             
@@ -152,7 +183,7 @@ class ImeStateMachine(
     }
 
     private fun refreshCandidates() {
-        if (mode != InputMode.ChineseT9) {
+        if (mode != InputMode.ChineseT9 && mode != InputMode.ChinesePinyin) {
             candidateSelections = emptyList()
             pendingCandidateRequest = null
             nextCandidateRequestId++
@@ -163,6 +194,23 @@ class ImeStateMachine(
             candidateSelections = emptyList()
             pendingCandidateRequest = null
             nextCandidateRequestId++
+            return
+        }
+
+        if (mode == InputMode.ChinesePinyin) {
+            val eng = qwertyEngine
+            if (eng != null) {
+                candidateSelections = eng.getVisibleCandidates(candidateLimit).map { candidate ->
+                    CandidateSelection(
+                        snapshot = CandidateSnapshotItem(
+                            text = candidate.text, code = candidate.code,
+                            sourcePinyin = candidate.sourcePinyin, score = candidate.score,
+                            origin = candidate.origin.name,
+                        ),
+                        commit = { eng.commitCandidate(candidate) },
+                    )
+                }
+            }
             return
         }
 
@@ -184,12 +232,14 @@ class ImeStateMachine(
 
     fun uiState(isDictionaryPreparing: Boolean = false): ImeUiState {
         val composing = rawBuffer.isNotEmpty()
-        val isTextMode = mode == InputMode.ChineseT9 || mode == InputMode.EnglishT9
+        val isTextMode = mode == InputMode.ChineseT9 || mode == InputMode.EnglishT9 ||
+            mode == InputMode.ChinesePinyin
         val candidatesSnapshot = currentCandidates
         val candidateVisible = candidatesSnapshot.isNotEmpty() || isDictionaryPreparing
         val rail = when (mode) {
             InputMode.Symbol -> RailState(RailKind.SymbolCategories, listOf("标点", "数学", "括号", "其他"))
             InputMode.Number -> RailState(RailKind.NumberAux, listOf(".", "0"))
+            InputMode.ChinesePinyin -> RailState(RailKind.Punctuation)
             else -> if (composing) RailState(RailKind.Readings, readings) else RailState(RailKind.Punctuation)
         }
         val symbolPanel = SymbolPanelState(currentSymbolCategory)
@@ -200,12 +250,18 @@ class ImeStateMachine(
             symbolPanelState = symbolPanel,
             bottomRowKeys = bottomRowKeys(mode),
         )
+        val preeditVisible = when (mode) {
+            InputMode.ChinesePinyin -> composing && preedit.isNotEmpty()
+            InputMode.EnglishQWERTY -> false
+            InputMode.ChineseT9, InputMode.EnglishT9 -> isTextMode && composing && preedit.isNotEmpty()
+            else -> false
+        }
         return ImeUiState(
             mode = mode,
             lastTextMode = lastTextMode,
             composition = CompositionState(rawBuffer, preedit, readings, activeReading),
             candidateStrip = CandidateStripState(candidateVisible, candidatesSnapshot, isDictionaryPreparing),
-            preeditState = PreeditState(isTextMode && composing && preedit.isNotEmpty(), preedit),
+            preeditState = PreeditState(preeditVisible, preedit),
             keyboardSurface = surface,
             symbolPanel = symbolPanel,
             isDictionaryPreparing = isDictionaryPreparing,
@@ -214,7 +270,11 @@ class ImeStateMachine(
 
     private fun bottomRowKeys(currentMode: InputMode): List<String> = when (currentMode) {
         InputMode.Symbol -> listOf("123", "space", "disabled")
-        InputMode.Number -> listOf(if (lastTextMode == InputMode.EnglishT9) "英" else "中", "space", "中/英")
+        InputMode.Number -> listOf(if (lastTextMode == InputMode.EnglishT9 || lastTextMode == InputMode.EnglishQWERTY) "英" else "中", "space", "中/英")
+        InputMode.ChinesePinyin -> listOf("123", "space", "中/英")
+        InputMode.EnglishQWERTY -> listOf("123", "space", "英/中")
+        InputMode.ChineseT9 -> listOf("符", "space", "中/英")
+        InputMode.EnglishT9 -> listOf("符", "space", "英/中")
         else -> listOf("符", "space", "中/英")
     }
 
@@ -227,11 +287,38 @@ class ImeStateMachine(
                 effects.add(ImeSideEffect.RefreshUi)
             }
             InputMode.EnglishT9 -> onEnglishDigit(digit, effects)
+            InputMode.ChinesePinyin -> {
+                if (digit.length == 1) onLetterPressed(digit[0], effects)
+            }
+            InputMode.EnglishQWERTY -> {
+                effects.add(ImeSideEffect.CommitText(digit))
+                effects.add(ImeSideEffect.RefreshUi)
+            }
             InputMode.Number, InputMode.Symbol -> {
                 effects.add(ImeSideEffect.CommitText(digit))
                 effects.add(ImeSideEffect.RefreshUi)
             }
             InputMode.ClipboardPanel, InputMode.SelectionPanel -> {}
+        }
+    }
+
+    private fun onLetterPressed(letter: Char, effects: MutableList<ImeSideEffect>) {
+        when (mode) {
+            InputMode.ChinesePinyin -> {
+                val eng = qwertyEngine
+                if (eng != null && letter in 'a'..'z') {
+                    eng.inputLetter(letter)
+                } else if (letter in 'a'..'z') {
+                    fallbackBuffer += letter
+                }
+                refreshCandidates()
+                effects.add(ImeSideEffect.RefreshUi)
+            }
+            InputMode.EnglishQWERTY -> {
+                effects.add(ImeSideEffect.CommitText(letter.toString()))
+                effects.add(ImeSideEffect.RefreshUi)
+            }
+            else -> {}
         }
     }
 
@@ -276,15 +363,15 @@ class ImeStateMachine(
 
     private fun onZero(effects: MutableList<ImeSideEffect>) {
         when (mode) {
-            InputMode.ChineseT9 -> {
+            InputMode.ChineseT9, InputMode.ChinesePinyin -> {
                 if (rawBuffer.isEmpty()) {
                     effects.add(ImeSideEffect.CommitText(" "))
                 } else if (candidateSelections.isNotEmpty()) {
                     commitCandidate(candidateSelections[0], effects)
                 }
             }
-            InputMode.EnglishT9 -> {
-                commitEnglishChar(effects)
+            InputMode.EnglishT9, InputMode.EnglishQWERTY -> {
+                if (mode == InputMode.EnglishT9) commitEnglishChar(effects)
                 effects.add(ImeSideEffect.CommitText(" "))
             }
             InputMode.Number -> effects.add(ImeSideEffect.CommitText("0"))
@@ -305,6 +392,12 @@ class ImeStateMachine(
             }
             return
         }
+        if (mode == InputMode.ChinesePinyin && rawBuffer.isNotEmpty()) {
+            qwertyEngine?.backspace() ?: run { fallbackBuffer = fallbackBuffer.dropLast(1) }
+            refreshCandidates()
+            effects.add(ImeSideEffect.RefreshUi)
+            return
+        }
         if (mode == InputMode.ChineseT9 && rawBuffer.isNotEmpty()) {
             engine?.backspace() ?: run { fallbackBuffer = fallbackBuffer.dropLast(1) }
             refreshCandidates()
@@ -322,9 +415,18 @@ class ImeStateMachine(
                 else if (candidateSelections.isNotEmpty()) commitCandidate(candidateSelections[0], effects)
                 else if (preedit.isNotEmpty()) commitPreedit(effects)
             }
+            InputMode.ChinesePinyin -> {
+                if (rawBuffer.isEmpty()) effects.add(ImeSideEffect.CommitText(" "))
+                else if (candidateSelections.isNotEmpty()) commitCandidate(candidateSelections[0], effects)
+                else if (preedit.isNotEmpty()) commitPreedit(effects)
+            }
             InputMode.EnglishT9 -> {
                 commitEnglishChar(effects)
                 effects.add(ImeSideEffect.CommitText(" "))
+            }
+            InputMode.EnglishQWERTY -> {
+                effects.add(ImeSideEffect.CommitText(" "))
+                effects.add(ImeSideEffect.RefreshUi)
             }
             InputMode.Symbol, InputMode.Number -> effects.add(ImeSideEffect.CommitText(" "))
             InputMode.ClipboardPanel, InputMode.SelectionPanel -> {}
@@ -333,7 +435,7 @@ class ImeStateMachine(
 
     private fun onPunctuationCommitted(text: String, effects: MutableList<ImeSideEffect>) {
         when {
-            mode == InputMode.ChineseT9 && rawBuffer.isNotEmpty() -> commitFirstCandidateOrPreedit(effects)
+            (mode == InputMode.ChineseT9 || mode == InputMode.ChinesePinyin) && rawBuffer.isNotEmpty() -> commitFirstCandidateOrPreedit(effects)
             mode == InputMode.EnglishT9 && englishPending -> commitEnglishChar(effects)
         }
         effects.add(ImeSideEffect.CommitText(text))
@@ -360,9 +462,35 @@ class ImeStateMachine(
         when (mode) {
             InputMode.EnglishT9 -> switchMode(InputMode.ChineseT9, effects)
             InputMode.ChineseT9 -> switchMode(InputMode.EnglishT9, effects)
+            InputMode.EnglishQWERTY -> switchMode(InputMode.ChinesePinyin, effects)
+            InputMode.ChinesePinyin -> switchMode(InputMode.EnglishQWERTY, effects)
             else -> {
                 val target = lastTextMode
-                if (target == InputMode.ChineseT9 || target == InputMode.EnglishT9) switchMode(target, effects) else switchMode(InputMode.ChineseT9, effects)
+                if (target == InputMode.ChineseT9 || target == InputMode.EnglishT9 ||
+                    target == InputMode.ChinesePinyin || target == InputMode.EnglishQWERTY) {
+                    switchMode(target, effects)
+                } else {
+                    switchMode(InputMode.ChineseT9, effects)
+                }
+            }
+        }
+    }
+
+    private fun onToggleKeyboardType(effects: MutableList<ImeSideEffect>) {
+        when (mode) {
+            InputMode.ChineseT9 -> switchMode(InputMode.ChinesePinyin, effects)
+            InputMode.ChinesePinyin -> switchMode(InputMode.ChineseT9, effects)
+            InputMode.EnglishT9 -> switchMode(InputMode.EnglishQWERTY, effects)
+            InputMode.EnglishQWERTY -> switchMode(InputMode.EnglishT9, effects)
+            else -> {
+                val target = lastTextMode
+                when (target) {
+                    InputMode.ChineseT9 -> switchMode(InputMode.ChinesePinyin, effects)
+                    InputMode.ChinesePinyin -> switchMode(InputMode.ChineseT9, effects)
+                    InputMode.EnglishT9 -> switchMode(InputMode.EnglishQWERTY, effects)
+                    InputMode.EnglishQWERTY -> switchMode(InputMode.EnglishT9, effects)
+                    else -> switchMode(InputMode.ChinesePinyin, effects)
+                }
             }
         }
     }
@@ -371,9 +499,11 @@ class ImeStateMachine(
         if (mode == targetMode) return
         val oldMode = mode
         leavingCurrentMode(effects)
-        if ((oldMode == InputMode.ChineseT9 || oldMode == InputMode.EnglishT9) &&
-            (targetMode == InputMode.Symbol || targetMode == InputMode.Number ||
-             targetMode == InputMode.ClipboardPanel || targetMode == InputMode.SelectionPanel)) {
+        val isTextMode = oldMode == InputMode.ChineseT9 || oldMode == InputMode.EnglishT9 ||
+            oldMode == InputMode.ChinesePinyin || oldMode == InputMode.EnglishQWERTY
+        val isPanelMode = targetMode == InputMode.Symbol || targetMode == InputMode.Number ||
+            targetMode == InputMode.ClipboardPanel || targetMode == InputMode.SelectionPanel
+        if (isTextMode && isPanelMode) {
             lastTextMode = oldMode
         }
         mode = targetMode
@@ -383,7 +513,7 @@ class ImeStateMachine(
 
     private fun leavingCurrentMode(effects: MutableList<ImeSideEffect>) {
         when (mode) {
-            InputMode.ChineseT9 -> if (rawBuffer.isNotEmpty()) commitFirstCandidateOrPreedit(effects)
+            InputMode.ChineseT9, InputMode.ChinesePinyin -> if (rawBuffer.isNotEmpty()) commitFirstCandidateOrPreedit(effects)
             InputMode.EnglishT9 -> if (englishPending) commitEnglishChar(effects)
             else -> {}
         }
@@ -391,21 +521,21 @@ class ImeStateMachine(
     }
 
     private fun onEnterShort(effects: MutableList<ImeSideEffect>) {
-        if (mode == InputMode.ChineseT9 && rawBuffer.isNotEmpty()) commitFirstCandidateOrPreedit(effects)
+        if ((mode == InputMode.ChineseT9 || mode == InputMode.ChinesePinyin) && rawBuffer.isNotEmpty()) commitFirstCandidateOrPreedit(effects)
         if (mode == InputMode.EnglishT9 && englishPending) commitEnglishChar(effects)
         effects.add(ImeSideEffect.CommitNewline)
         effects.add(ImeSideEffect.RefreshUi)
     }
 
     private fun onEnterLong(effects: MutableList<ImeSideEffect>) {
-        if (mode == InputMode.ChineseT9 && rawBuffer.isNotEmpty()) commitFirstCandidateOrPreedit(effects)
+        if ((mode == InputMode.ChineseT9 || mode == InputMode.ChinesePinyin) && rawBuffer.isNotEmpty()) commitFirstCandidateOrPreedit(effects)
         if (mode == InputMode.EnglishT9 && englishPending) commitEnglishChar(effects)
         effects.add(ImeSideEffect.CommitNewline)
         effects.add(ImeSideEffect.RefreshUi)
     }
 
     private fun onCandidateSelected(index: Int, effects: MutableList<ImeSideEffect>) {
-        if (mode != InputMode.ChineseT9 || index !in candidateSelections.indices) return
+        if ((mode != InputMode.ChineseT9 && mode != InputMode.ChinesePinyin) || index !in candidateSelections.indices) return
         commitCandidate(candidateSelections[index], effects)
     }
 
@@ -435,6 +565,7 @@ class ImeStateMachine(
     private fun commitPreedit(effects: MutableList<ImeSideEffect>) {
         effects.add(ImeSideEffect.CommitText(preedit))
         engine?.clear()
+        qwertyEngine?.clear()
         fallbackBuffer = ""
         candidateSelections = emptyList()
         pendingCandidateRequest = null
@@ -444,6 +575,7 @@ class ImeStateMachine(
 
     private fun clearComposing(effects: MutableList<ImeSideEffect>, finishComposing: Boolean) {
         engine?.clear()
+        qwertyEngine?.clear()
         fallbackBuffer = ""
         candidateSelections = emptyList()
         pendingCandidateRequest = null
