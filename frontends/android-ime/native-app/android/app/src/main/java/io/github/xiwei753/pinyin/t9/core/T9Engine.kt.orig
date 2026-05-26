@@ -263,7 +263,6 @@ class T9Engine(
 
         // ── Layer 2: user candidates ──
         val userCands = generateUserCandidates(primaryPinyin)
-        val userTexts = userCands.map { it.text }.toSet()
 
         // ── Layer 3: exact single chars (from single-syllable compositions) ──
         val exactSingles = generateExactSingleCandidates(compositions, limit).let { singles ->
@@ -274,14 +273,14 @@ class T9Engine(
             }
         }
 
+        // Only generate fallbacks and prefix completions if we don't have ANY exact matches!
         val hasExact = exactPhrases.isNotEmpty() || exactSingles.isNotEmpty()
 
         val dynamicFallback = if (!hasExact) {
             generateDynamicFallbackCandidates(compositions)
         } else emptyList()
 
-        // Remove the block on generating prefixPhrases so partial matches can be displayed mid-typing!
-        val prefixPhrases = if (!hasExact) {
+        val prefixPhrases = if (!hasExact && dynamicFallback.isEmpty()) {
             generatePrefixCompletionCandidates(compositions, limit)
         } else emptyList()
 
@@ -290,16 +289,7 @@ class T9Engine(
         } else emptyList()
 
         // ── Build visible list by unified scoring ──
-        // Ensure EXACT phrases beat dynamic compositions if any, though dynamic should be empty here based on the boolean check.
-        // We boost EXACT phrases so that they outrank prefix completions.
-        val boostedExactPhrases = exactPhrases.map { it.copy(score = it.score + 10000000) }
-        val boostedExactSingles = exactSingles.map { it.copy(score = it.score + 500000) }
-        val deflatedDynamic = dynamicFallback.map { it.copy(score = it.score / 1000) }
-
-        // Increase user candidate score so it properly boosts over exact singles
-        val boostedUserCands = userCands.map { it.copy(score = it.score + 20000000) }
-        val filteredExactSingles = boostedExactSingles.filter { it.text !in userTexts }
-        val combined = (boostedExactPhrases + boostedUserCands + filteredExactSingles + deflatedDynamic + prefixPhrases + prefixSingles)
+        val combined = (exactPhrases + userCands + exactSingles + dynamicFallback + prefixPhrases + prefixSingles)
         val finalCandidates = combined.sortedByDescending { it.score }.distinctBy { it.text }.take(limit)
 
         lastVisibleCandidates = finalCandidates

@@ -610,6 +610,7 @@ class T9EngineTest {
         engine.inputDigit("4")
 
         val visible = engine.getVisibleCandidates()
+        println("Candidates for 288249464: \n" + visible.joinToString("\n"))
         assertEquals("第一候选应是不太行", "不太行", visible.firstOrNull()?.text)
         assertTrue("不应出现不太新股", visible.none { it.text == "不太新股" })
         assertTrue("不应出现不太英语", visible.none { it.text == "不太英语" })

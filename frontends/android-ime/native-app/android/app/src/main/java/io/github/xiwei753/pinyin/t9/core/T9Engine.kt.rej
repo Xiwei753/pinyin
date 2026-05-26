@@ -1,0 +1,15 @@
+--- frontends/android-ime/native-app/android/app/src/main/java/io/github/xiwei753/pinyin/t9/core/T9Engine.kt
++++ frontends/android-ime/native-app/android/app/src/main/java/io/github/xiwei753/pinyin/t9/core/T9Engine.kt
+@@ -274,8 +274,10 @@
+         }
+
+-        val dynamicFallback = generateDynamicFallbackCandidates(compositions)
+-
+-        // ── Build visible list by unified scoring ──
+-        val combined = (exactPhrases + userCands + exactSingles + dynamicFallback + prefixPhrases + prefixSingles)
++        val hasExact = exactPhrases.isNotEmpty() || exactSingles.isNotEmpty()
++        val dynamicFallback = if (exactPhrases.isEmpty()) generateDynamicFallbackCandidates(compositions) else emptyList()
++        val prefixPhrases = generatePrefixCompletionCandidates(compositions, limit)
++        val prefixSingles = generatePrefixSingleCandidates(compositions, limit)
++
++        val combined = (exactPhrases + userCands + exactSingles + dynamicFallback + prefixPhrases + prefixSingles)

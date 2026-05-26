@@ -154,6 +154,7 @@ class T9EngineGoldenTest {
         assertTrue("neng candidates must contain 能", visible.any { it.text == "能" })
         // 能 should be near the top
         val firstText = visible.first().text
+        println("First candidate for 6364 neng is: ${visible.first()}")
         assertTrue("neng first candidate should be 能, was $firstText", firstText == "能")
     }
 
