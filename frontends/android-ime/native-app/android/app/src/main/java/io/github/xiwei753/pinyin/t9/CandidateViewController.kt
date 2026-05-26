@@ -101,14 +101,14 @@ class CandidateViewController(
                 View.GONE
             }
         } else {
-            val functions = listOf("📋", "⚙", "↔")
+            val functions = listOf("📋\uFE0E", "⚙\uFE0E", "⌨\uFE0E")
             try {
                 val spacer = View(context)
                 spacer.layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
                 v.candidateContainer.addView(spacer)
             } catch (e: Exception) {}
             try {
-                val hideChip = createTextView("🔽", CandidateItemType.FUNCTION, "🔽")
+                val hideChip = createTextView("⬇\uFE0E", CandidateItemType.FUNCTION, "⬇\uFE0E")
                 v.candidateContainer.addView(hideChip)
             } catch (e: Exception) {}
             for (func in functions) {
@@ -183,7 +183,7 @@ class CandidateViewController(
 
     private fun onFunctionChipClicked(payload: String) {
         when {
-            payload == "⚙" -> {
+            payload == "⚙\uFE0E" -> {
                 try {
                     val intent = android.content.Intent(context, SettingsActivity::class.java).apply {
                         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -193,13 +193,13 @@ class CandidateViewController(
                     // Safe fallback
                 }
             }
-            payload == "📋" -> {
+            payload == "📋\uFE0E" -> {
                 onInputAction?.invoke(ImeInputAction.KeyboardModeSelected(io.github.xiwei753.pinyin.imecore.InputMode.ClipboardPanel))
             }
-            payload == "↔" -> {
+            payload == "⌨\uFE0E" -> {
                 onInputAction?.invoke(ImeInputAction.KeyboardModeSelected(io.github.xiwei753.pinyin.imecore.InputMode.SelectionPanel))
             }
-            payload == "🔽" -> {
+            payload == "⬇\uFE0E" -> {
                 onInputAction?.invoke(ImeInputAction.HideKeyboard)
             }
         }
